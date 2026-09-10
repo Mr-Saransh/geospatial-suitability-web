@@ -1,0 +1,120 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --font-display: 'Outfit', system-ui, sans-serif;
+  --font-body: 'Source Sans 3', system-ui, sans-serif;
+  --font-mono: 'DM Mono', monospace;
+
+  /* Ground */
+  --c-base:    #080d18;
+  --c-surface: #0c1424;
+  --c-panel:   #0e1828;
+  --c-raised:  #111d33;
+  --c-overlay: #162038;
+
+  /* Borders */
+  --c-border:  #1c2e48;
+  --c-border2: #243852;
+
+  /* Text */
+  --c-text:    #c4d4e8;
+  --c-text2:   #647d9a;
+  --c-text3:   #374f6a;
+
+  /* Accents */
+  --c-blue:    #2d9cdb;
+  --c-cyan:    #00b4d8;
+  --c-teal:    #00c896;
+
+  /* Suitability scale */
+  --c-vh: #00c896;
+  --c-h:  #4ade80;
+  --c-m:  #fbbf24;
+  --c-l:  #f97316;
+  --c-vl: #ef4444;
+
+  /* Status */
+  --c-success: #10b981;
+  --c-warn:    #f59e0b;
+  --c-error:   #ef4444;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  font-family: var(--font-body);
+  background: var(--c-base);
+  color: var(--c-text);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+* { box-sizing: border-box; }
+
+/* Scrollbars — hidden until hovered */
+* { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+*:hover { scrollbar-color: #1c2e48 transparent; }
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #1c2e48; border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #243852; }
+
+/* Range inputs */
+input[type=range] {
+  -webkit-appearance: none;
+  background: transparent;
+  height: 4px;
+}
+input[type=range]::-webkit-slider-track {
+  background: var(--c-border);
+  border-radius: 2px;
+  height: 3px;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 11px; height: 11px;
+  border-radius: 50%;
+  background: var(--c-cyan);
+  border: 2px solid var(--c-panel);
+  margin-top: -4px;
+  cursor: pointer;
+}
+
+/* Checkbox */
+input[type=checkbox] { accent-color: var(--c-cyan); }
+
+/* Select */
+select {
+  -webkit-appearance: none;
+  background: var(--c-raised);
+  border: 1px solid var(--c-border);
+  color: var(--c-text);
+  font-family: var(--font-body);
+  font-size: 12px;
+  border-radius: 4px;
+  padding: 4px 24px 4px 8px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23374f6a'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  cursor: pointer;
+  outline: none;
+}
+select:focus { border-color: var(--c-cyan); }
+
+/* Transitions */
+.fade { transition: opacity 0.15s ease; }
+.slide { transition: transform 0.2s ease, opacity 0.2s ease; }
+
+/* Recharts tooltip override */
+.recharts-tooltip-wrapper { outline: none !important; }
+.recharts-default-tooltip {
+  background: #0e1828 !important;
+  border: 1px solid #1c2e48 !important;
+  border-radius: 4px !important;
+  font-family: var(--font-mono) !important;
+  font-size: 11px !important;
+  color: var(--c-text) !important;
+}
