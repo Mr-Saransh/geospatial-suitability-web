@@ -12,7 +12,7 @@ interface Props {
 
 const SYSTEM_INIT: AIMessage = {
   role: 'assistant',
-  text: 'I have loaded scientific context for the **Groundwater Recharge Potential v2.1** model (West Bengal — Jalpaiguri region, run GRP-2024-WB-0042). I can analyse suitability factors, criterion weights, evidence links, and compare study zones. Select a zone or ask a question below.',
+  text: 'I have loaded scientific context for the **11-Factor Flood Suitability AHP Model** (Himachal Pradesh, run ID 51). I can analyze multi-criteria flood susceptibility, AHP weights, pairwise consistency (CR = 0.0158), and point inspections. Click any location on the map or ask an analytical question below.',
   actions: [],
 };
 
@@ -40,16 +40,29 @@ export default function AIPanel({ zone, onClose, onLayerEvidence }: Props) {
     setInput('');
     setLoading(true);
     setTimeout(() => {
-      const ans = AI_ANSWERS[q] || AI_ANSWERS['default'];
+      let ans = AI_ANSWERS[q];
+      if (!ans) {
+        if (q.toLowerCase().includes('cr') || q.toLowerCase().includes('consistency')) {
+          ans = AI_ANSWERS['What is the Consistency Ratio (CR) of this model?'];
+        } else if (q.toLowerCase().includes('slope')) {
+          ans = AI_ANSWERS['How does terrain slope affect flood susceptibility?'] || AI_ANSWERS['default'];
+        } else if (q.toLowerCase().includes('weight') || q.toLowerCase().includes('highest')) {
+          ans = AI_ANSWERS['Which criterion has the highest AHP weight?'];
+        } else if (zone) {
+          ans = AI_ANSWERS['Why is this location classified as Low flood suitability?'];
+        } else {
+          ans = AI_ANSWERS['default'];
+        }
+      }
       setMessages(m => [...m, { role: 'assistant', text: ans.text, actions: ans.actions }]);
       setLoading(false);
-    }, 900);
+    }, 700);
   };
 
   const contextPresets = AI_PRESETS.filter(p => !p.context || p.context === 'model' || (p.context === 'zone' && zone));
 
   return (
-    <div className="flex flex-col" style={{ width: 340, background: '#0c1424', borderLeft: '1px solid #1c2e48' }}>
+    <div className="flex flex-col z-20" style={{ width: 340, background: '#0c1424', borderLeft: '1px solid #1c2e48' }}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 flex-shrink-0"
         style={{ background: '#080d18', borderBottom: '1px solid #1c2e48' }}>
@@ -60,8 +73,8 @@ export default function AIPanel({ zone, onClose, onLayerEvidence }: Props) {
           </div>
           <div>
             <div className="text-xs font-semibold" style={{ fontFamily: 'var(--font-display)', color: '#c4d4e8' }}>MCGSE AI Assistant</div>
-            <div className="text-[10px]" style={{ color: '#374f6a', fontFamily: 'var(--font-mono)' }}>
-              Ollama · llama3.1:8b · scientific context
+            <div className="text-[10px]" style={{ color: '#00b4d8', fontFamily: 'var(--font-mono)' }}>
+              Himachal Spatial Context · AHP Flood Engine
             </div>
           </div>
         </div>
@@ -72,12 +85,12 @@ export default function AIPanel({ zone, onClose, onLayerEvidence }: Props) {
       <div className="px-4 py-2 flex-shrink-0 flex items-center gap-2 flex-wrap"
         style={{ background: '#090f1e', borderBottom: '1px solid #1c2e48' }}>
         <div className="flex items-center gap-1">
-          <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#00b4d8' }} />
-          <Mono color="#374f6a" >GRP v2.1</Mono>
+          <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#00c896' }} />
+          <Mono color="#00b4d8">Flood AHP v1.0</Mono>
         </div>
         {zone
-          ? <><span style={{ color: '#1c2e48' }}>·</span><Pill color="#00b4d8">Sector {zone.label} · {zone.score.toFixed(2)}</Pill></>
-          : <><span style={{ color: '#1c2e48' }}>·</span><Mono color="#374f6a">No zone selected</Mono></>
+          ? <><span style={{ color: '#1c2e48' }}>·</span><Pill color="#00b4d8">{zone.district || `${zone.lat.toFixed(2)}°N`} · Score {zone.score.toFixed(2)}</Pill></>
+          : <><span style={{ color: '#1c2e48' }}>·</span><Mono color="#647d9a">Statewide Coverage</Mono></>
         }
       </div>
 
@@ -95,7 +108,7 @@ export default function AIPanel({ zone, onClose, onLayerEvidence }: Props) {
               <div className="px-3 py-2.5 rounded-lg text-[11px] leading-relaxed"
                 style={{
                   background: msg.role === 'user' ? 'rgba(0,180,216,0.1)' : '#0e1828',
-                  color: msg.role === 'user' ? '#00b4d8' : '#647d9a',
+                  color: msg.role === 'user' ? '#00b4d8' : '#c4d4e8',
                   border: `1px solid ${msg.role === 'user' ? 'rgba(0,180,216,0.25)' : '#1c2e48'}`,
                 }}>
                 <p dangerouslySetInnerHTML={{ __html: `<p>${formatText(msg.text)}</p>` }}
@@ -105,7 +118,7 @@ export default function AIPanel({ zone, onClose, onLayerEvidence }: Props) {
                 <div className="flex flex-wrap gap-1.5 pl-1">
                   {msg.actions.map(a => (
                     <button key={a.label} onClick={() => a.type === 'layer' && onLayerEvidence(a.target)}
-                      className="text-[10px] px-2 py-0.5 rounded flex items-center gap-1 transition-colors"
+                      className="text-[10px] px-2 py-0.5 rounded flex items-center gap-1 transition-colors hover:bg-[#00b4d822]"
                       style={{ color: '#00b4d8', border: '1px solid rgba(0,180,216,0.25)', background: 'rgba(0,180,216,0.06)' }}>
                       {a.type === 'layer' && '⊞ '}
                       {a.type === 'stats' && '↗ '}
@@ -146,14 +159,14 @@ export default function AIPanel({ zone, onClose, onLayerEvidence }: Props) {
       {/* Suggested questions */}
       {messages.length <= 1 && (
         <div className="px-4 py-2 flex-shrink-0" style={{ borderTop: '1px solid #1c2e48' }}>
-          <div className="text-[10px] mb-1.5" style={{ color: '#374f6a', fontFamily: 'var(--font-mono)' }}>
+          <div className="text-[10px] mb-1.5" style={{ color: '#647d9a', fontFamily: 'var(--font-mono)' }}>
             SUGGESTED QUESTIONS
           </div>
           <div className="flex flex-col gap-1">
             {contextPresets.slice(0, 4).map(p => (
               <button key={p.q} onClick={() => send(p.q)}
                 className="text-left text-[11px] px-2.5 py-1.5 rounded transition-colors hover:bg-[#111d33]"
-                style={{ color: '#647d9a', background: '#0e1828', border: '1px solid #1c2e48' }}>
+                style={{ color: '#c4d4e8', background: '#0e1828', border: '1px solid #1c2e48' }}>
                 {p.q}
               </button>
             ))}
@@ -168,7 +181,7 @@ export default function AIPanel({ zone, onClose, onLayerEvidence }: Props) {
           <input
             className="flex-1 bg-transparent text-xs outline-none"
             style={{ color: '#c4d4e8', fontFamily: 'var(--font-body)' }}
-            placeholder="Ask about suitability, evidence, or criteria…"
+            placeholder="Ask about Himachal flood suitability, AHP weights, criteria…"
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && send(input)}
@@ -181,8 +194,8 @@ export default function AIPanel({ zone, onClose, onLayerEvidence }: Props) {
         </div>
         <div className="flex items-center gap-1 mt-1.5">
           <IconInfo size={9} style={{ color: '#374f6a' }} />
-          <span className="text-[9px]" style={{ color: '#374f6a' }}>
-            Responses grounded in loaded model context and scientific datasets
+          <span className="text-[9px]" style={{ color: '#647d9a' }}>
+            Connected to Himachal Pradesh Spatial Knowledge Package
           </span>
         </div>
       </div>

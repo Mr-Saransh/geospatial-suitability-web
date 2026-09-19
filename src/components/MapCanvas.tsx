@@ -1,197 +1,237 @@
-import { useState, useCallback } from 'react';
-import { ZONES, SUIT_META } from '../data';
-import type { Zone } from '../types';
-import { IconZoomIn, IconZoomOut, IconLocate, IconMaximize, IconMeasure, IconBookmark, IconCompare, IconPrint, IconGlobe } from '../icons';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, useMap, useMapEvents, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+import type { Zone, Layer } from '../types';
+import { SUIT_META } from '../data';
+import {
+  IconZoomIn, IconZoomOut, IconLocate, IconMaximize,
+  IconMeasure, IconBookmark, IconCompare, IconPrint, IconGlobe
+} from '../icons';
 
 interface Props {
   selectedZone: Zone | null;
-  onZoneClick: (z: Zone) => void;
+  onPointClick: (lat: number, lon: number) => void;
+  activeLayer: Layer | null;
   compareMode: boolean;
   onCompare: () => void;
   basemap: string;
+  onCoordChange?: (coordStr: string) => void;
+  centerTarget?: { lat: number; lng: number } | null;
 }
 
-const BASEMAP_COLORS: Record<string, { bg: string; grid: string; water: string; terrain: string }> = {
-  dark:      { bg: '#080e1a', grid: '#0d1825', water: '#0a1628', terrain: '#0c1422' },
-  satellite: { bg: '#0d150d', grid: '#0f1a0f', water: '#061628', terrain: '#121e12' },
-  topo:      { bg: '#0e0e18', grid: '#14142a', water: '#080e28', terrain: '#121230' },
-  streets:   { bg: '#080e1a', grid: '#0d1628', water: '#070d22', terrain: '#0c1228' },
+// Custom neon pin icon for selected inspection point
+const createInspectorIcon = (color: string = '#00b4d8') => {
+  return L.divIcon({
+    className: 'custom-inspector-marker',
+    html: `
+      <div style="position: relative; width: 24px; height: 24px; transform: translate(-12px, -12px);">
+        <div style="position: absolute; inset: 0; border-radius: 50%; background: ${color}; opacity: 0.35; animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+        <div style="position: absolute; inset: 4px; border-radius: 50%; background: #0c1424; border: 2px solid ${color}; display: flex; items-center; justify-content: center;">
+          <div style="width: 6px; height: 6px; border-radius: 50%; background: ${color};"></div>
+        </div>
+      </div>
+    `,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  });
 };
 
-export default function MapCanvas({ selectedZone, onZoneClick, compareMode, onCompare, basemap }: Props) {
-  const [zoom, setZoom] = useState(10);
-  const [comparePos, setComparePos] = useState(50);
-  const [dragging, setDragging] = useState(false);
-  const [hoveredZone, setHoveredZone] = useState<string | null>(null);
-  const [coord, setCoord] = useState({ lat: 26.5318, lng: 88.7214 });
+const BASEMAP_URLS: Record<string, { url: string; attribution: string }> = {
+  dark: {
+    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap',
+  },
+  satellite: {
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: '&copy; Esri &copy; Maxar, Earthstar Geographics',
+  },
+  topo: {
+    url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; OpenTopoMap &copy; OpenStreetMap contributors',
+  },
+  streets: {
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; OpenStreetMap contributors',
+  },
+};
 
-  const bm = BASEMAP_COLORS[basemap] || BASEMAP_COLORS.dark;
+// Map controller component to handle map events and imperative controls
+function MapEventsHandler({
+  onMouseMove,
+  onMapClick,
+  centerTarget,
+}: {
+  onMouseMove: (lat: number, lng: number) => void;
+  onMapClick: (lat: number, lng: number) => void;
+  centerTarget?: { lat: number; lng: number } | null;
+}) {
+  const map = useMapEvents({
+    mousemove(e) {
+      onMouseMove(e.latlng.lat, e.latlng.lng);
+    },
+    click(e) {
+      onMapClick(e.latlng.lat, e.latlng.lng);
+    },
+  });
 
-  const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const px = (e.clientX - rect.left) / rect.width;
-    const py = (e.clientY - rect.top) / rect.height;
-    setCoord({
-      lat: 26.81 - py * 0.72,
-      lng: 88.31 + px * 0.94,
-    });
-    if (dragging) {
-      const newPos = Math.max(20, Math.min(80, px * 100));
-      setComparePos(newPos);
+  useEffect(() => {
+    if (centerTarget) {
+      map.flyTo([centerTarget.lat, centerTarget.lng], 10, { duration: 1.2 });
     }
-  }, [dragging]);
+  }, [centerTarget, map]);
+
+  return null;
+}
+
+// Controller for custom zoom buttons
+function MapZoomController({ action, onComplete }: { action: 'in' | 'out' | 'reset' | null; onComplete: () => void }) {
+  const map = useMap();
+  useEffect(() => {
+    if (action === 'in') {
+      map.zoomIn();
+      onComplete();
+    } else if (action === 'out') {
+      map.zoomOut();
+      onComplete();
+    } else if (action === 'reset') {
+      map.flyTo([31.8, 77.2], 8, { duration: 1 });
+      onComplete();
+    }
+  }, [action, map, onComplete]);
+  return null;
+}
+
+export default function MapCanvas({
+  selectedZone,
+  onPointClick,
+  activeLayer,
+  compareMode,
+  onCompare,
+  basemap,
+  onCoordChange,
+  centerTarget,
+}: Props) {
+  const [zoom, setZoom] = useState(8);
+  const [coord, setCoord] = useState({ lat: 31.1048, lng: 77.1734 });
+  const [zoomAction, setZoomAction] = useState<'in' | 'out' | 'reset' | null>(null);
+  const [comparePos, setComparePos] = useState(50);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+
+  const bm = BASEMAP_URLS[basemap] || BASEMAP_URLS.dark;
+
+  const handleMouseMove = useCallback((lat: number, lng: number) => {
+    setCoord({ lat, lng });
+    const formatted = `${lat.toFixed(5)}°N  ${lng.toFixed(5)}°E`;
+    if (onCoordChange) {
+      onCoordChange(formatted);
+    }
+  }, [onCoordChange]);
+
+  const handleMapClick = useCallback((lat: number, lng: number) => {
+    setCoord({ lat, lng });
+    onPointClick(lat, lng);
+  }, [onPointClick]);
+
+  // Construct tile URL for the active raster layer
+  const tileUrl = activeLayer && activeLayer.visible
+    ? `/api/v1/tiles/${encodeURIComponent(activeLayer.id)}/{z}/{x}/{y}.png`
+    : null;
+
+  const activeColor = selectedZone ? SUIT_META[selectedZone.cls]?.color || '#00b4d8' : '#00b4d8';
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      mapContainerRef.current?.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  };
 
   return (
-    <div className="relative w-full h-full overflow-hidden select-none" style={{ background: bm.bg }}>
-      {/* Main SVG map */}
-      <svg
-        className="absolute inset-0 w-full h-full"
-        viewBox="0 0 100 100"
-        preserveAspectRatio="xMidYMid slice"
-        onMouseMove={handleMouseMove}
-        onMouseUp={() => setDragging(false)}
-        onMouseLeave={() => setDragging(false)}
+    <div ref={mapContainerRef} className="relative w-full h-full overflow-hidden select-none" style={{ background: '#080d18' }}>
+      {/* Real Leaflet Map */}
+      <MapContainer
+        center={[31.8, 77.2]}
+        zoom={8}
+        minZoom={5}
+        maxZoom={14}
+        zoomControl={false}
+        attributionControl={false}
+        className="w-full h-full"
+        style={{ background: '#080d18' }}
       >
-        {/* Graticule grid */}
-        {Array.from({ length: 12 }).map((_, i) => (
-          <line key={`v${i}`} x1={i * 8.33} y1={0} x2={i * 8.33} y2={100} stroke={bm.grid} strokeWidth={0.3} />
-        ))}
-        {Array.from({ length: 12 }).map((_, i) => (
-          <line key={`h${i}`} x1={0} y1={i * 8.33} x2={100} y2={i * 8.33} stroke={bm.grid} strokeWidth={0.3} />
-        ))}
+        <MapEventsHandler
+          onMouseMove={handleMouseMove}
+          onMapClick={handleMapClick}
+          centerTarget={centerTarget}
+        />
+        <MapZoomController action={zoomAction} onComplete={() => setZoomAction(null)} />
 
-        {/* Terrain texture — subtle fill areas */}
-        <polygon points="0,0 35,0 40,15 30,30 15,35 0,20" fill={bm.terrain} opacity={0.6} />
-        <polygon points="60,0 100,0 100,25 85,30 70,20 58,10" fill={bm.terrain} opacity={0.4} />
-        <polygon points="0,60 20,55 30,68 20,82 0,85" fill={bm.terrain} opacity={0.5} />
-        <polygon points="75,60 100,55 100,80 88,85 74,75" fill={bm.terrain} opacity={0.3} />
+        {/* Base Map Tile Layer */}
+        <TileLayer
+          url={bm.url}
+          attribution={bm.attribution}
+          opacity={0.85}
+        />
 
-        {/* Contour hints */}
-        <ellipse cx={22} cy={22} rx={18} ry={12} fill="none" stroke="#0f1a28" strokeWidth={0.5} opacity={0.7} />
-        <ellipse cx={22} cy={22} rx={28} ry={18} fill="none" stroke="#0f1a28" strokeWidth={0.4} opacity={0.5} />
-        <ellipse cx={72} cy={18} rx={14} ry={9}  fill="none" stroke="#0f1a28" strokeWidth={0.5} opacity={0.6} />
-
-        {/* River network */}
-        <path d="M 18,0 Q 20,18 16,35 Q 12,55 15,75 Q 18,88 14,100"
-          stroke="#0a2040" strokeWidth={1.8} fill="none" opacity={0.9} />
-        <path d="M 50,0 Q 48,15 52,32 Q 56,52 50,72 Q 46,88 50,100"
-          stroke="#0a2040" strokeWidth={1.3} fill="none" opacity={0.8} />
-        <path d="M 78,8 Q 74,22 76,40 Q 78,60 76,82 Q 74,92 78,100"
-          stroke="#0a2040" strokeWidth={1} fill="none" opacity={0.7} />
-        <path d="M 0,48 Q 20,44 36,46 Q 52,48 68,44 Q 82,42 100,46"
-          stroke="#0a2040" strokeWidth={0.8} fill="none" opacity={0.6} />
-
-        {/* District boundaries */}
-        <path d="M 0,33 L 100,33" stroke="#162038" strokeWidth={0.6} strokeDasharray="2,3" opacity={0.8} />
-        <path d="M 0,66 L 100,66" stroke="#162038" strokeWidth={0.6} strokeDasharray="2,3" opacity={0.8} />
-        <path d="M 33,0 L 33,100" stroke="#162038" strokeWidth={0.6} strokeDasharray="2,3" opacity={0.6} />
-        <path d="M 66,0 L 66,100" stroke="#162038" strokeWidth={0.6} strokeDasharray="2,3" opacity={0.6} />
-
-        {/* Compare clip regions */}
-        {compareMode && (
-          <>
-            <defs>
-              <clipPath id="leftClip">
-                <rect x={0} y={0} width={comparePos} height={100} />
-              </clipPath>
-              <clipPath id="rightClip">
-                <rect x={comparePos} y={0} width={100 - comparePos} height={100} />
-              </clipPath>
-            </defs>
-            {/* Left side: slightly different tint */}
-            <rect x={0} y={0} width={comparePos} height={100} fill="rgba(0,180,216,0.04)" clipPath="url(#leftClip)" />
-          </>
+        {/* Real Backend Raster Layer Tiles */}
+        {tileUrl && activeLayer && (
+          <TileLayer
+            key={`${activeLayer.id}-${activeLayer.opacity}`}
+            url={tileUrl}
+            opacity={(activeLayer.opacity ?? 85) / 100}
+            zIndex={10}
+            maxNativeZoom={14}
+            tileSize={256}
+          />
         )}
 
-        {/* Suitability zones */}
-        {ZONES.map(zone => {
-          const m = SUIT_META[zone.cls];
-          const isSelected = selectedZone?.id === zone.id;
-          const isHovered = hoveredZone === zone.id;
-          const alpha = isSelected ? '50' : isHovered ? '35' : '22';
-          const strokeAlpha = isSelected ? 'cc' : isHovered ? '99' : '66';
-          return (
-            <g key={zone.id}
-              onClick={() => onZoneClick(zone)}
-              onMouseEnter={() => setHoveredZone(zone.id)}
-              onMouseLeave={() => setHoveredZone(null)}
-              style={{ cursor: 'pointer' }}>
-              <polygon
-                points={zone.points}
-                fill={`${m.color}${alpha}`}
-                stroke={`${m.color}${strokeAlpha}`}
-                strokeWidth={isSelected ? 0.8 : 0.5}
-                style={{ transition: 'all 0.15s' }}
-              />
-              {/* Zone label */}
-              <text x={zone.cx} y={zone.cy} textAnchor="middle" dominantBaseline="middle"
-                fontSize={isSelected ? 3.5 : 2.8} fill={m.color}
-                style={{ fontFamily: 'var(--font-mono)', opacity: (isSelected || isHovered) ? 1 : 0.6, pointerEvents: 'none' }}>
-                {zone.label}
-              </text>
-              {/* Score label when selected */}
-              {isSelected && (
-                <text x={zone.cx} y={zone.cy + 4.5} textAnchor="middle"
-                  fontSize={2.2} fill={m.color}
-                  style={{ fontFamily: 'var(--font-mono)', pointerEvents: 'none' }}>
-                  {zone.score.toFixed(2)}
-                </text>
-              )}
-              {/* Pulse ring on selected */}
-              {isSelected && (
-                <circle cx={zone.cx} cy={zone.cy} r={6}
-                  fill="none" stroke={m.color} strokeWidth={0.4} opacity={0.4} />
-              )}
-            </g>
-          );
-        })}
-
-        {/* Settlement markers */}
-        {[
-          { x: 50, y: 14, name: 'Siliguri' },
-          { x: 19, y: 50, name: 'Jalpaiguri' },
-          { x: 44, y: 62, name: 'Alipurduar' },
-        ].map(s => (
-          <g key={s.name}>
-            <circle cx={s.x} cy={s.y} r={1} fill="#1a3860" stroke="#2d9cdb" strokeWidth={0.4} />
-            <circle cx={s.x} cy={s.y} r={0.4} fill="#2d9cdb" />
-            <text x={s.x + 1.5} y={s.y} fontSize={2} fill="#2d9cdb" dominantBaseline="middle"
-              style={{ fontFamily: 'var(--font-mono)', opacity: 0.8 }}>{s.name}</text>
-          </g>
-        ))}
-
-        {/* Compare divider */}
-        {compareMode && (
-          <line x1={comparePos} y1={0} x2={comparePos} y2={100}
-            stroke="#00b4d8" strokeWidth={0.6}
-            onMouseDown={() => setDragging(true)}
-            style={{ cursor: 'col-resize' }} />
+        {/* Inspector Pin Marker */}
+        {selectedZone && (
+          <Marker
+            position={[selectedZone.lat, selectedZone.lng]}
+            icon={createInspectorIcon(activeColor)}
+          >
+            <Popup className="mcgse-leaflet-popup">
+              <div style={{ background: '#0c1424', color: '#c4d4e8', padding: '6px 10px', borderRadius: '6px', fontSize: '11px', border: '1px solid #1c2e48' }}>
+                <div style={{ fontWeight: 600, color: activeColor }}>
+                  {selectedZone.district || 'Inspected Point'}
+                </div>
+                <div style={{ color: '#647d9a', fontSize: '10px' }}>
+                  Score: <strong style={{ color: activeColor }}>{selectedZone.score.toFixed(3)}</strong> ({SUIT_META[selectedZone.cls]?.label})
+                </div>
+                <div style={{ color: '#374f6a', fontSize: '9px', fontFamily: 'monospace' }}>
+                  {selectedZone.lat.toFixed(4)}°N, {selectedZone.lng.toFixed(4)}°E
+                </div>
+              </div>
+            </Popup>
+          </Marker>
         )}
-      </svg>
+      </MapContainer>
 
       {/* Map controls — right side */}
-      <div className="absolute right-3 top-3 flex flex-col gap-1 z-10">
+      <div className="absolute right-3 top-3 flex flex-col gap-1 z-[1000]">
         {[
-          { Icon: IconZoomIn,   title: 'Zoom in',    onClick: () => setZoom(z => Math.min(z + 1, 22)) },
-          { Icon: IconZoomOut,  title: 'Zoom out',   onClick: () => setZoom(z => Math.max(z - 1, 1)) },
+          { Icon: IconZoomIn,   title: 'Zoom in',    onClick: () => setZoomAction('in') },
+          { Icon: IconZoomOut,  title: 'Zoom out',   onClick: () => setZoomAction('out') },
           null,
-          { Icon: IconLocate,   title: 'My location' },
-          { Icon: IconMaximize, title: 'Fullscreen' },
+          { Icon: IconLocate,   title: 'Reset to Himachal Pradesh', onClick: () => setZoomAction('reset') },
+          { Icon: IconMaximize, title: 'Fullscreen', onClick: toggleFullscreen },
           null,
-          { Icon: IconMeasure,  title: 'Measure' },
-          { Icon: IconBookmark, title: 'Bookmarks' },
-          { Icon: IconCompare,  title: 'Compare', onClick: onCompare, active: compareMode },
+          { Icon: IconMeasure,  title: 'Measure distance / area' },
+          { Icon: IconBookmark, title: 'Saved locations' },
+          { Icon: IconCompare,  title: 'Compare layers', onClick: onCompare, active: compareMode },
           null,
-          { Icon: IconPrint,    title: 'Print / Export' },
+          { Icon: IconPrint,    title: 'Print / Export raster view' },
         ].map((btn, i) =>
           btn === null
             ? <div key={i} className="h-px mx-1" style={{ background: '#1c2e48' }} />
             : (
               <button key={btn.title} onClick={btn.onClick} title={btn.title}
-                className="w-7 h-7 flex items-center justify-center rounded transition-all"
+                className="w-7 h-7 flex items-center justify-center rounded transition-all backdrop-blur-sm"
                 style={{
-                  background: btn.active ? 'rgba(0,180,216,0.15)' : '#0c1424',
-                  border: `1px solid ${btn.active ? 'rgba(0,180,216,0.4)' : '#1c2e48'}`,
+                  background: btn.active ? 'rgba(0,180,216,0.2)' : 'rgba(12,20,36,0.85)',
+                  border: `1px solid ${btn.active ? 'rgba(0,180,216,0.5)' : '#1c2e48'}`,
                   color: btn.active ? '#00b4d8' : '#647d9a',
                 }}>
                 <btn.Icon size={13} />
@@ -200,31 +240,33 @@ export default function MapCanvas({ selectedZone, onZoneClick, compareMode, onCo
         )}
       </div>
 
-      {/* Compare handle */}
-      {compareMode && (
-        <div className="absolute top-0 bottom-0 z-20 flex items-center"
-          style={{ left: `${comparePos}%`, transform: 'translateX(-50%)', pointerEvents: 'none' }}>
-          <div className="flex flex-col items-center h-full relative">
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded text-[10px] font-semibold whitespace-nowrap"
-              style={{ background: '#0c1424', border: '1px solid rgba(0,180,216,0.4)', color: '#00b4d8', fontFamily: 'var(--font-mono)' }}>
-              ◁ Slope | Elevation ▷
-            </div>
-          </div>
+      {/* Layer legend badge */}
+      <div className="absolute top-3 left-3 z-[1000]">
+        <div className="flex items-center gap-2 px-2.5 py-1.5 rounded text-[11px] backdrop-blur-md shadow-lg"
+          style={{ background: 'rgba(8,13,24,0.9)', border: '1px solid #1c2e48', fontFamily: 'var(--font-mono)', color: '#c4d4e8' }}>
+          <div className="w-2 h-2 rounded-full" style={{ background: '#00c896' }} />
+          <span className="font-semibold text-[#00b4d8]">Himachal Pradesh</span>
+          <span style={{ color: '#374f6a' }}>·</span>
+          <span className="text-[#647d9a]">
+            {activeLayer ? activeLayer.name : '11-Factor Flood Suitability'}
+          </span>
+          <span style={{ color: '#374f6a' }}>·</span>
+          <span className="text-[10px] text-[#374f6a]">30 m EPSG:4326</span>
         </div>
-      )}
+      </div>
 
       {/* Status bar */}
-      <div className="absolute bottom-0 left-0 right-0 flex items-center gap-4 px-3 py-1.5"
-        style={{ background: 'rgba(8,13,24,0.92)', borderTop: '1px solid #1c2e48' }}>
-        <span className="text-[10px]" style={{ color: '#374f6a', fontFamily: 'var(--font-mono)' }}>
+      <div className="absolute bottom-0 left-0 right-0 flex items-center gap-4 px-3 py-1.5 z-[1000]"
+        style={{ background: 'rgba(8,13,24,0.95)', borderTop: '1px solid #1c2e48' }}>
+        <span className="text-[10px]" style={{ color: '#00b4d8', fontFamily: 'var(--font-mono)' }}>
           {coord.lat.toFixed(5)}°N  {coord.lng.toFixed(5)}°E
         </span>
         <span className="text-[10px]" style={{ color: '#1c2e48' }}>|</span>
-        <span className="text-[10px]" style={{ color: '#374f6a', fontFamily: 'var(--font-mono)' }}>
-          Zoom {zoom}  ·  Scale 1:{Math.round(591657550 / Math.pow(2, zoom)).toLocaleString()}
+        <span className="text-[10px]" style={{ color: '#647d9a', fontFamily: 'var(--font-mono)' }}>
+          Zoom {zoom}  ·  11 Criteria AHP Model
         </span>
         <span className="text-[10px]" style={{ color: '#1c2e48' }}>|</span>
-        <span className="text-[10px]" style={{ color: '#374f6a', fontFamily: 'var(--font-mono)' }}>EPSG:32645 UTM 45N</span>
+        <span className="text-[10px]" style={{ color: '#374f6a', fontFamily: 'var(--font-mono)' }}>EPSG:4326 / EPSG:32643 UTM 43N</span>
         <div className="flex-1" />
         {/* Scale bar */}
         <div className="flex items-center gap-1.5">
@@ -235,20 +277,11 @@ export default function MapCanvas({ selectedZone, onZoneClick, compareMode, onCo
               <div className="w-px h-2" style={{ background: '#374f6a' }} />
             </div>
           </div>
-          <span className="text-[10px]" style={{ color: '#374f6a', fontFamily: 'var(--font-mono)' }}>5 km</span>
+          <span className="text-[10px]" style={{ color: '#647d9a', fontFamily: 'var(--font-mono)' }}>10 km</span>
         </div>
         <span className="text-[10px]" style={{ color: '#374f6a', fontFamily: 'var(--font-mono)' }}>
-          © OpenStreetMap · SRTM · ESA
+          © SRTM · CHIRPS · ESA WorldCover · HydroRIVERS
         </span>
-      </div>
-
-      {/* Layer badge (active layers) */}
-      <div className="absolute top-3 left-3 z-10">
-        <div className="flex items-center gap-1.5 px-2 py-1 rounded text-[10px]"
-          style={{ background: 'rgba(8,13,24,0.85)', border: '1px solid #1c2e48', fontFamily: 'var(--font-mono)', color: '#647d9a' }}>
-          <IconGlobe size={10} />
-          Groundwater Recharge Potential v2.1  ·  30 m  ·  West Bengal
-        </div>
       </div>
     </div>
   );

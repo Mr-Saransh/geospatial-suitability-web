@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { MODELS } from '../data';
+import { HIMACHAL_LOCATIONS } from '../data';
+import type { ModelSummary } from '../lib/api/types';
 import { IconSearch, IconCompare, IconExport, IconBot, IconHelp, IconChevronD, IconSidebar } from '../icons';
-import { Btn, Mono } from '../ui';
+import { Mono } from '../ui';
 
 interface Props {
   sidebarOpen: boolean; onSidebar: () => void;
@@ -10,11 +11,56 @@ interface Props {
   compareOpen: boolean; onCompare: () => void;
   onExport: () => void;
   model: string;        onModel: (m: string) => void;
+  modelsList?: ModelSummary[];
   coord: string;
+  onSearchLocation?: (loc: { lat: number; lng: number }) => void;
 }
 
-export default function Navbar({ sidebarOpen, onSidebar, aiOpen, onAI, compareOpen, onCompare, onExport, model, onModel, coord }: Props) {
+export default function Navbar({
+  sidebarOpen, onSidebar,
+  aiOpen, onAI,
+  compareOpen, onCompare,
+  onExport,
+  model, onModel,
+  modelsList,
+  coord,
+  onSearchLocation,
+}: Props) {
   const [modelOpen, setModelOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const availableModels = modelsList && modelsList.length > 0
+    ? modelsList.map(m => m.name)
+    : [
+        '11-Factor Flood Suitability AHP',
+        'Groundwater Recharge Potential v2.1',
+        'Urban Expansion Suitability v1.3',
+      ];
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim() || !onSearchLocation) return;
+
+    // Check if query is lat, lon format e.g. "31.1, 77.2"
+    const coordMatch = searchQuery.match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/);
+    if (coordMatch) {
+      const lat = parseFloat(coordMatch[1]);
+      const lng = parseFloat(coordMatch[2]);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        onSearchLocation({ lat, lng });
+        return;
+      }
+    }
+
+    // Check for Himachal location match
+    const loc = HIMACHAL_LOCATIONS.find(l =>
+      l.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      l.district.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    if (loc) {
+      onSearchLocation({ lat: loc.lat, lng: loc.lng });
+    }
+  };
 
   return (
     <header className="flex-shrink-0 z-40 relative" style={{ background: '#080d18', borderBottom: '1px solid #1c2e48', height: 44 }}>
@@ -22,7 +68,7 @@ export default function Navbar({ sidebarOpen, onSidebar, aiOpen, onAI, compareOp
 
         {/* Logo */}
         <button onClick={onSidebar} className="flex items-center gap-2.5 flex-shrink-0 group" title="Toggle sidebar">
-          <div className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0"
+          <div className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0 shadow-md"
             style={{ background: 'linear-gradient(145deg,#00b4d8 0%,#0096c7 40%,#023e8a 100%)' }}>
             <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
               <polygon points="10,1 19,6 19,14 10,19 1,14 1,6" stroke="white" strokeWidth="1.4" fill="none"/>
@@ -33,8 +79,8 @@ export default function Navbar({ sidebarOpen, onSidebar, aiOpen, onAI, compareOp
           </div>
           <div className="hidden sm:block leading-none">
             <div className="text-sm font-semibold tracking-tight"
-              style={{ fontFamily: 'var(--font-display)', color: '#c4d4e8' }}>MCGSE</div>
-            <div className="text-[9px]" style={{ color: '#374f6a', fontFamily: 'var(--font-mono)' }}>GIS SUITABILITY ENGINE</div>
+              style={{ fontFamily: 'var(--font-display)', color: '#c4d4e8' }}>MCGSE Web-GIS</div>
+            <div className="text-[9px]" style={{ color: '#00b4d8', fontFamily: 'var(--font-mono)' }}>HIMACHAL SPATIAL ENGINE</div>
           </div>
           <div className="hidden lg:flex items-center gap-1 ml-1">
             <IconSidebar size={13} style={{ color: sidebarOpen ? '#00b4d8' : '#374f6a' }} />
@@ -44,14 +90,17 @@ export default function Navbar({ sidebarOpen, onSidebar, aiOpen, onAI, compareOp
         <div className="w-px h-5 mx-1 flex-shrink-0" style={{ background: '#1c2e48' }} />
 
         {/* Search */}
-        <div className="flex items-center gap-2 flex-1 max-w-72 h-7 px-2.5 rounded"
+        <form onSubmit={handleSearch} className="flex items-center gap-2 flex-1 max-w-72 h-7 px-2.5 rounded"
           style={{ background: '#0e1828', border: '1px solid #1c2e48' }}>
           <IconSearch size={12} style={{ color: '#374f6a', flexShrink: 0 }} />
-          <input placeholder="Search location, district, coordinates…"
+          <input
+            placeholder="Search Shimla, Manali, 31.1, 77.2…"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
             className="flex-1 bg-transparent text-xs outline-none placeholder:text-[#374f6a]"
             style={{ color: '#c4d4e8' }} />
-          <Mono color="#2a3f58">/</Mono>
-        </div>
+          <Mono color="#2a3f58">↵</Mono>
+        </form>
 
         {/* Model selector */}
         <div className="relative hidden md:block">
@@ -59,13 +108,13 @@ export default function Navbar({ sidebarOpen, onSidebar, aiOpen, onAI, compareOp
             className="flex items-center gap-2 h-7 px-3 rounded text-xs transition-colors"
             style={{ background: '#0e1828', border: `1px solid ${modelOpen ? '#00b4d8' : '#1c2e48'}`, color: '#c4d4e8' }}>
             <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#00c896' }} />
-            <span className="max-w-[200px] truncate" style={{ fontFamily: 'var(--font-body)' }}>{model}</span>
-            <IconChevronD size={10} style={{ color: '#374f6a', flexShrink: 0 }} />
+            <span className="max-w-[220px] truncate" style={{ fontFamily: 'var(--font-body)' }}>{model}</span>
+            <IconChevronD size={10} style={{ color: '#647d9a', flexShrink: 0 }} />
           </button>
           {modelOpen && (
-            <div className="absolute left-0 top-full mt-1 z-50 rounded-lg py-1 shadow-2xl min-w-[240px]"
+            <div className="absolute left-0 top-full mt-1 z-50 rounded-lg py-1 shadow-2xl min-w-[260px]"
               style={{ background: '#0c1424', border: '1px solid #1c2e48' }}>
-              {MODELS.map(m => (
+              {availableModels.map(m => (
                 <button key={m} onClick={() => { onModel(m); setModelOpen(false); }}
                   className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition-colors hover:bg-[#111d33]"
                   style={{ color: m === model ? '#00b4d8' : '#c4d4e8' }}>
@@ -82,10 +131,10 @@ export default function Navbar({ sidebarOpen, onSidebar, aiOpen, onAI, compareOp
 
         {/* Coordinate readout */}
         <div className="hidden xl:flex items-center gap-1.5 h-6 px-2 rounded text-[10px]"
-          style={{ background: '#0c1424', border: '1px solid #162038', fontFamily: 'var(--font-mono)', color: '#374f6a' }}>
+          style={{ background: '#0c1424', border: '1px solid #162038', fontFamily: 'var(--font-mono)', color: '#00b4d8' }}>
           <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-            <circle cx="4" cy="4" r="3" stroke="#374f6a" strokeWidth="1"/>
-            <circle cx="4" cy="4" r="1" fill="#374f6a"/>
+            <circle cx="4" cy="4" r="3" stroke="#00b4d8" strokeWidth="1"/>
+            <circle cx="4" cy="4" r="1" fill="#00b4d8"/>
           </svg>
           {coord}
         </div>
@@ -97,10 +146,10 @@ export default function Navbar({ sidebarOpen, onSidebar, aiOpen, onAI, compareOp
           <NavBtn label="Export" Icon={IconExport} onClick={onExport} />
           <NavBtn label="Help" Icon={IconHelp} />
           <div className="w-px h-5 mx-1" style={{ background: '#1c2e48' }} />
-          <button className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-            style={{ background: 'linear-gradient(135deg,#023e8a,#0096c7)', color: 'white', fontFamily: 'var(--font-display)' }}>
-            PK
-          </button>
+          <div className="px-2 py-0.5 rounded text-[10px] font-semibold"
+            style={{ background: 'rgba(0,200,150,0.15)', color: '#00c896', border: '1px solid rgba(0,200,150,0.3)', fontFamily: 'var(--font-mono)' }}>
+            ONLINE
+          </div>
         </div>
       </div>
 

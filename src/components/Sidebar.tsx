@@ -1,47 +1,77 @@
 import { useState, type ReactNode } from 'react';
-import { LAYERS, SUIT_META, SUIT_ORDER } from '../data';
+import { SUIT_META, SUIT_ORDER, HIMACHAL_LOCATIONS } from '../data';
 import type { Layer } from '../types';
 import { IconEye, IconEyeOff, IconInfo, IconChevronD, IconChevronR, IconFilter, IconSettings, IconRefresh, IconGlobe } from '../icons';
-import { SectionLabel, Btn, Pill } from '../ui';
+import { Btn, Pill } from '../ui';
 
 const LAYER_GROUPS = [
-  { id: 'composite',    label: 'Composite' },
-  { id: 'topographic',  label: 'Topographic' },
-  { id: 'hydrological', label: 'Hydrological' },
-  { id: 'environmental',label: 'Environmental' },
+  { id: 'composite',     label: 'Analysis Results' },
+  { id: 'hydrological',  label: 'Hydrological Criteria' },
+  { id: 'topographic',   label: 'Topographic Criteria' },
+  { id: 'environmental', label: 'Environmental Criteria' },
 ];
 
 const BASEMAPS = [
-  { id: 'dark',      label: 'Dark',      color: '#080d18' },
-  { id: 'satellite', label: 'Satellite', color: '#1a2e1a' },
-  { id: 'topo',      label: 'Topo',      color: '#1e1a2e' },
-  { id: 'streets',   label: 'Streets',   color: '#1a1e2e' },
+  { id: 'dark',      label: 'Dark Matter', color: '#080d18' },
+  { id: 'satellite', label: 'Satellite',   color: '#1a2e1a' },
+  { id: 'topo',      label: 'Topographic', color: '#1e1a2e' },
+  { id: 'streets',   label: 'OpenStreet',  color: '#1a1e2e' },
 ];
 
 interface Props {
   open: boolean;
   layers: Layer[];
   setLayers: (l: Layer[]) => void;
+  activeLayerId: string;
+  onSelectLayer: (id: string) => void;
   onLayerEvidence: (id: string) => void;
   basemap: string;
   onBasemap: (b: string) => void;
+  onSelectLocation?: (loc: { lat: number; lng: number }) => void;
+  modelName?: string;
 }
 
-export default function Sidebar({ open, layers, setLayers, onLayerEvidence, basemap, onBasemap }: Props) {
+export default function Sidebar({
+  open,
+  layers,
+  setLayers,
+  activeLayerId,
+  onSelectLayer,
+  onLayerEvidence,
+  basemap,
+  onBasemap,
+  onSelectLocation,
+  modelName = '11-Factor Flood Suitability AHP',
+}: Props) {
   const [section, setSection] = useState<Record<string, boolean>>({
     analysis: true, layers: true, legend: true, filters: false, basemap: false, options: false,
   });
+  const [selectedDistrict, setSelectedDistrict] = useState('Shimla');
+
   const toggle = (k: string) => setSection(s => ({ ...s, [k]: !s[k] }));
 
-  const toggleLayer = (id: string) =>
+  const toggleLayer = (id: string) => {
     setLayers(layers.map(l => l.id === id ? { ...l, visible: !l.visible } : l));
-  const setOpacity = (id: string, v: number) =>
+    onSelectLayer(id);
+  };
+
+  const setOpacity = (id: string, v: number) => {
     setLayers(layers.map(l => l.id === id ? { ...l, opacity: v } : l));
+  };
+
   const showAll = () => setLayers(layers.map(l => ({ ...l, visible: true })));
-  const hideAll = () => setLayers(layers.map(l => ({ ...l, visible: false, ...(l.id === 'suitability' ? { visible: true } : {}) })));
+  const hideAll = () => setLayers(layers.map(l => ({ ...l, visible: false })));
+
+  const handleDistrictChange = (distName: string) => {
+    setSelectedDistrict(distName);
+    const loc = HIMACHAL_LOCATIONS.find(l => l.name.toLowerCase() === distName.toLowerCase() || l.district.toLowerCase() === distName.toLowerCase());
+    if (loc && onSelectLocation) {
+      onSelectLocation({ lat: loc.lat, lng: loc.lng });
+    }
+  };
 
   return (
-    <aside className="flex-shrink-0 flex flex-col overflow-hidden transition-all duration-300"
+    <aside className="flex-shrink-0 flex flex-col overflow-hidden transition-all duration-300 z-20"
       style={{ width: open ? 300 : 0, minWidth: open ? 300 : 0, background: '#0c1424', borderRight: '1px solid #1c2e48' }}>
       {open && (
         <div className="flex flex-col h-full overflow-y-auto" style={{ minWidth: 300 }}>
@@ -49,11 +79,11 @@ export default function Sidebar({ open, layers, setLayers, onLayerEvidence, base
           {/* Panel header */}
           <div className="flex items-center justify-between px-4 py-2.5 flex-shrink-0"
             style={{ background: '#080d18', borderBottom: '1px solid #1c2e48' }}>
-            <div className="text-xs font-semibold" style={{ fontFamily: 'var(--font-mono)', color: '#647d9a', letterSpacing: '0.08em' }}>
+            <div className="text-xs font-semibold" style={{ fontFamily: 'var(--font-mono)', color: '#00b4d8', letterSpacing: '0.08em' }}>
               GIS CONTROL PANEL
             </div>
             <div className="flex items-center gap-1">
-              <Btn title="Refresh" className="w-6 h-6"><IconRefresh size={11} /></Btn>
+              <Btn title="Refresh Layer Catalog" className="w-6 h-6"><IconRefresh size={11} /></Btn>
               <Btn title="Settings" className="w-6 h-6"><IconSettings size={11} /></Btn>
             </div>
           </div>
@@ -62,33 +92,45 @@ export default function Sidebar({ open, layers, setLayers, onLayerEvidence, base
           <SideSection label="Study Area & Model" open={section.analysis} onToggle={() => toggle('analysis')}>
             <div className="px-4 pb-4 flex flex-col gap-2.5">
               <Field label="Analysis Domain">
-                <select className="w-full">
-                  <option>West Bengal, India</option>
-                  <option>Karnataka, India</option>
-                  <option>Maharashtra, India</option>
+                <select className="w-full" value="Himachal Pradesh, India" readOnly>
+                  <option>Himachal Pradesh, India</option>
                 </select>
               </Field>
               <div className="grid grid-cols-2 gap-2">
-                <Field label="District">
-                  <select className="w-full"><option>Jalpaiguri</option><option>Alipurduar</option><option>Darjeeling</option></select>
+                <Field label="District / Focus Area">
+                  <select
+                    className="w-full"
+                    value={selectedDistrict}
+                    onChange={e => handleDistrictChange(e.target.value)}
+                  >
+                    {HIMACHAL_LOCATIONS.map(loc => (
+                      <option key={loc.name} value={loc.name}>{loc.name}</option>
+                    ))}
+                  </select>
                 </Field>
-                <Field label="Sub-district">
-                  <select className="w-full"><option>Sadar</option><option>Nagrakata</option><option>Madarihat</option></select>
+                <Field label="Spatial Extent">
+                  <select className="w-full">
+                    <option>Statewide (135M px)</option>
+                    <option>Valley Focus</option>
+                    <option>River Corridors</option>
+                  </select>
                 </Field>
               </div>
               <Field label="Suitability Model">
-                <select className="w-full">
-                  <option>Groundwater Recharge Potential v2.1</option>
-                  <option>Urban Expansion Suitability v1.3</option>
-                  <option>Flood Hazard Risk Index v3.0</option>
+                <select className="w-full" value={modelName} readOnly>
+                  <option>{modelName}</option>
                 </select>
               </Field>
               <div className="flex gap-2 mt-1">
-                <button className="flex-1 h-7 rounded text-xs font-medium transition-colors"
-                  style={{ background: 'rgba(0,180,216,0.12)', color: '#00b4d8', border: '1px solid rgba(0,180,216,0.3)' }}>
-                  Apply
+                <button
+                  onClick={() => handleDistrictChange(selectedDistrict)}
+                  className="flex-1 h-7 rounded text-xs font-medium transition-colors hover:brightness-110"
+                  style={{ background: 'rgba(0,180,216,0.15)', color: '#00b4d8', border: '1px solid rgba(0,180,216,0.35)' }}>
+                  Locate Area
                 </button>
-                <button className="h-7 px-3 rounded text-xs"
+                <button
+                  onClick={() => handleDistrictChange('Shimla')}
+                  className="h-7 px-3 rounded text-xs hover:bg-[#111d33]"
                   style={{ color: '#647d9a', border: '1px solid #1c2e48' }}>
                   Reset
                 </button>
@@ -97,7 +139,7 @@ export default function Sidebar({ open, layers, setLayers, onLayerEvidence, base
           </SideSection>
 
           {/* Layers */}
-          <SideSection label="Layers" open={section.layers} onToggle={() => toggle('layers')}
+          <SideSection label="Raster Layers (24)" open={section.layers} onToggle={() => toggle('layers')}
             actions={
               <div className="flex items-center gap-1">
                 <button onClick={showAll} className="text-[10px] px-1.5 py-0.5 rounded" style={{ color: '#00b4d8', border: '1px solid rgba(0,180,216,0.25)' }}>All</button>
@@ -111,7 +153,15 @@ export default function Sidebar({ open, layers, setLayers, onLayerEvidence, base
                 return (
                   <LayerGroup key={g.id} label={g.label}>
                     {gl.map(l => (
-                      <LayerRow key={l.id} layer={l} onToggle={toggleLayer} onOpacity={setOpacity} onInfo={onLayerEvidence} />
+                      <LayerRow
+                        key={l.id}
+                        layer={l}
+                        isActive={activeLayerId === l.id}
+                        onToggle={toggleLayer}
+                        onSelect={onSelectLayer}
+                        onOpacity={setOpacity}
+                        onInfo={onLayerEvidence}
+                      />
                     ))}
                   </LayerGroup>
                 );
@@ -120,19 +170,19 @@ export default function Sidebar({ open, layers, setLayers, onLayerEvidence, base
           </SideSection>
 
           {/* Legend */}
-          <SideSection label="Legend" open={section.legend} onToggle={() => toggle('legend')}>
+          <SideSection label="Suitability Legend" open={section.legend} onToggle={() => toggle('legend')}>
             <div className="px-4 pb-4">
-              <div className="text-[10px] mb-2" style={{ color: '#374f6a', fontFamily: 'var(--font-mono)' }}>
-                Composite Suitability Index · AHP weighted
+              <div className="text-[10px] mb-2" style={{ color: '#647d9a', fontFamily: 'var(--font-mono)' }}>
+                11-Factor AHP Flood Suitability (Class 1–5)
               </div>
               <div className="flex flex-col gap-1.5 mb-3">
                 {SUIT_ORDER.map(cls => {
                   const m = SUIT_META[cls];
                   return (
                     <div key={cls} className="flex items-center gap-2.5">
-                      <div className="w-8 h-3 rounded-sm flex-shrink-0" style={{ background: m.color, opacity: 0.85 }} />
+                      <div className="w-7 h-3 rounded-sm flex-shrink-0" style={{ background: m.color, opacity: 0.9 }} />
                       <div className="flex-1 text-xs" style={{ color: '#c4d4e8' }}>{m.label}</div>
-                      <div className="text-[10px]" style={{ color: '#374f6a', fontFamily: 'var(--font-mono)' }}>{m.range}</div>
+                      <div className="text-[10px]" style={{ color: '#647d9a', fontFamily: 'var(--font-mono)' }}>{m.range}</div>
                     </div>
                   );
                 })}
@@ -140,93 +190,38 @@ export default function Sidebar({ open, layers, setLayers, onLayerEvidence, base
               {/* Gradient bar */}
               <div className="h-2.5 rounded-sm mb-1" style={{ background: 'linear-gradient(to right, #ef4444, #f97316, #fbbf24, #4ade80, #00c896)' }} />
               <div className="flex justify-between text-[9px]" style={{ color: '#374f6a', fontFamily: 'var(--font-mono)' }}>
-                <span>0.0</span><span>0.25</span><span>0.5</span><span>0.75</span><span>1.0</span>
+                <span>1 (Very Low)</span><span>2</span><span>3</span><span>4</span><span>5 (Very High)</span>
               </div>
             </div>
           </SideSection>
 
-          {/* Filters */}
-          <SideSection label="Filters" open={section.filters} onToggle={() => toggle('filters')}>
-            <div className="px-4 pb-4 flex flex-col gap-3">
-              <Field label="Score range">
-                <div className="flex items-center gap-2">
-                  <input type="range" min={0} max={100} defaultValue={0} className="flex-1" />
-                  <span className="text-[10px] w-8 text-right" style={{ color: '#647d9a', fontFamily: 'var(--font-mono)' }}>0.0</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input type="range" min={0} max={100} defaultValue={100} className="flex-1" />
-                  <span className="text-[10px] w-8 text-right" style={{ color: '#647d9a', fontFamily: 'var(--font-mono)' }}>1.0</span>
-                </div>
-              </Field>
-              <Field label="Suitability class">
-                <div className="flex flex-wrap gap-1.5">
-                  {SUIT_ORDER.map(cls => (
-                    <label key={cls} className="flex items-center gap-1 text-[10px] cursor-pointer" style={{ color: SUIT_META[cls].color }}>
-                      <input type="checkbox" defaultChecked className="w-3 h-3" />
-                      {SUIT_META[cls].label}
-                    </label>
-                  ))}
-                </div>
-              </Field>
-              <Field label="Minimum area">
-                <div className="flex items-center gap-2">
-                  <input type="number" defaultValue={50} min={0} className="flex-1 h-7 px-2 text-xs rounded"
-                    style={{ background: '#111d33', border: '1px solid #1c2e48', color: '#c4d4e8', outline: 'none' }} />
-                  <span className="text-xs" style={{ color: '#374f6a' }}>km²</span>
-                </div>
-              </Field>
-              <button className="h-7 w-full rounded text-xs flex items-center justify-center gap-1.5"
-                style={{ background: 'rgba(0,180,216,0.1)', color: '#00b4d8', border: '1px solid rgba(0,180,216,0.25)' }}>
-                <IconFilter size={11} /> Apply Filters
-              </button>
-            </div>
-          </SideSection>
-
-          {/* Basemap */}
+          {/* Basemap Selector */}
           <SideSection label="Basemap" open={section.basemap} onToggle={() => toggle('basemap')}>
             <div className="px-4 pb-4 grid grid-cols-2 gap-2">
               {BASEMAPS.map(b => (
                 <button key={b.id} onClick={() => onBasemap(b.id)}
-                  className="h-14 rounded text-xs font-medium transition-all"
+                  className="h-14 rounded text-xs font-medium transition-all flex flex-col items-center justify-center gap-1"
                   style={{
                     background: b.color, color: '#c4d4e8',
                     border: basemap === b.id ? '2px solid #00b4d8' : '1px solid #1c2e48',
                     boxShadow: basemap === b.id ? '0 0 0 1px rgba(0,180,216,0.3)' : 'none',
                   }}>
-                  <IconGlobe size={14} style={{ display: 'block', margin: '0 auto 4px' }} />
+                  <IconGlobe size={14} style={{ color: basemap === b.id ? '#00b4d8' : '#647d9a' }} />
                   {b.label}
                 </button>
               ))}
             </div>
           </SideSection>
 
-          {/* Map options */}
-          <SideSection label="Map Options" open={section.options} onToggle={() => toggle('options')}>
-            <div className="px-4 pb-4 flex flex-col gap-2">
-              {[
-                { label: 'Show graticule', checked: true },
-                { label: 'Show district labels', checked: true },
-                { label: 'Show settlement markers', checked: true },
-                { label: 'Show scale bar', checked: true },
-                { label: 'Show coordinates', checked: true },
-                { label: 'Terrain hillshade', checked: false },
-              ].map(opt => (
-                <label key={opt.label} className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" defaultChecked={opt.checked} className="w-3.5 h-3.5" />
-                  <span className="text-xs" style={{ color: '#c4d4e8' }}>{opt.label}</span>
-                </label>
-              ))}
-            </div>
-          </SideSection>
-
-          {/* Footer */}
-          <div className="mt-auto px-4 py-3 flex-shrink-0" style={{ borderTop: '1px solid #1c2e48' }}>
-            <div className="flex items-center gap-1.5 mb-1">
-              <Pill color="#00b4d8">Run ID: GRP-2024-WB-0042</Pill>
-              <Pill color="#00c896">ROC-AUC 0.87</Pill>
+          {/* Footer Metadata */}
+          <div className="mt-auto px-4 py-3 flex-shrink-0" style={{ borderTop: '1px solid #1c2e48', background: '#080d18' }}>
+            <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+              <Pill color="#00b4d8">Run ID: 51</Pill>
+              <Pill color="#00c896">CR: 0.0158 ✓</Pill>
+              <Pill color="#374f6a">11 Criteria</Pill>
             </div>
             <div className="text-[10px]" style={{ color: '#374f6a', fontFamily: 'var(--font-mono)' }}>
-              Processed 2024-11-08 03:47 UTC · v2.1
+              Himachal Pradesh Spatial Knowledge · v1.0
             </div>
           </div>
         </div>
@@ -273,24 +268,32 @@ function LayerGroup({ label, children }: { label: string; children: ReactNode })
   );
 }
 
-function LayerRow({ layer, onToggle, onOpacity, onInfo }: {
+function LayerRow({ layer, isActive, onToggle, onSelect, onOpacity, onInfo }: {
   layer: Layer;
+  isActive: boolean;
   onToggle: (id: string) => void;
+  onSelect: (id: string) => void;
   onOpacity: (id: string, v: number) => void;
   onInfo: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   return (
     <div className="px-2 rounded mx-2 mb-0.5 transition-colors"
-      style={{ background: expanded ? '#111d33' : 'transparent' }}>
+      style={{
+        background: isActive ? 'rgba(0,180,216,0.1)' : expanded ? '#111d33' : 'transparent',
+        border: isActive ? '1px solid rgba(0,180,216,0.3)' : '1px solid transparent',
+      }}>
       <div className="flex items-center gap-1 py-1.5">
-        <button onClick={() => onToggle(layer.id)} className="flex-shrink-0 transition-opacity w-5 h-5 flex items-center justify-center"
+        <button
+          onClick={() => onToggle(layer.id)}
+          className="flex-shrink-0 transition-opacity w-5 h-5 flex items-center justify-center"
           style={{ color: layer.visible ? '#00b4d8' : '#374f6a' }}>
           {layer.visible ? <IconEye size={12} /> : <IconEyeOff size={12} />}
         </button>
-        <span className="flex-1 text-xs truncate cursor-pointer select-none"
-          style={{ color: layer.visible ? '#c4d4e8' : '#374f6a' }}
-          onClick={() => setExpanded(v => !v)}>
+        <span
+          className="flex-1 text-xs truncate cursor-pointer select-none"
+          style={{ color: layer.visible ? '#c4d4e8' : '#647d9a', fontWeight: isActive ? 600 : 400 }}
+          onClick={() => { onSelect(layer.id); onToggle(layer.id); }}>
           {layer.name}
           {layer.unit && <span className="ml-1 text-[10px]" style={{ color: '#374f6a' }}>({layer.unit})</span>}
         </span>
@@ -300,7 +303,7 @@ function LayerRow({ layer, onToggle, onOpacity, onInfo }: {
         </button>
         <button onClick={() => setExpanded(v => !v)}
           className="w-5 h-5 flex items-center justify-center" style={{ color: '#374f6a' }}>
-          <IconChevronR size={10} />
+          <IconChevronR size={10} style={{ transform: expanded ? 'rotate(90deg)' : 'none' }} />
         </button>
       </div>
       {expanded && (
@@ -313,14 +316,14 @@ function LayerRow({ layer, onToggle, onOpacity, onInfo }: {
               {layer.opacity}%
             </span>
           </div>
-          <div className="text-[10px] leading-relaxed" style={{ color: '#374f6a' }}>
+          <div className="text-[10px] leading-relaxed" style={{ color: '#647d9a' }}>
             {layer.source}
             {layer.resolution && <span> · {layer.resolution}</span>}
           </div>
           <button onClick={() => onInfo(layer.id)}
             className="text-[10px] h-5 px-2 rounded flex items-center gap-1 self-start"
             style={{ color: '#00b4d8', border: '1px solid rgba(0,180,216,0.25)', background: 'rgba(0,180,216,0.06)' }}>
-            Show Evidence on Map
+            Render Layer on Map
           </button>
         </div>
       )}
@@ -331,7 +334,7 @@ function LayerRow({ layer, onToggle, onOpacity, onInfo }: {
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
-      <div className="text-[10px]" style={{ color: '#374f6a' }}>{label}</div>
+      <div className="text-[10px]" style={{ color: '#647d9a' }}>{label}</div>
       {children}
     </div>
   );

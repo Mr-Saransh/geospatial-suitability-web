@@ -1,193 +1,330 @@
 import type { Layer, Zone, CriterionRow, SuitMeta, SuitClass } from './types';
 
 export const SUIT_META: Record<SuitClass, SuitMeta> = {
-  'very-high': { label: 'Very High',  color: '#00c896', bg: 'rgba(0,200,150,0.18)',  range: '0.75–1.00', textColor: '#00c896' },
-  'high':      { label: 'High',       color: '#4ade80', bg: 'rgba(74,222,128,0.15)', range: '0.50–0.75', textColor: '#4ade80' },
-  'moderate':  { label: 'Moderate',   color: '#fbbf24', bg: 'rgba(251,191,36,0.15)', range: '0.25–0.50', textColor: '#fbbf24' },
-  'low':       { label: 'Low',        color: '#f97316', bg: 'rgba(249,115,22,0.15)', range: '0.10–0.25', textColor: '#f97316' },
-  'very-low':  { label: 'Very Low',   color: '#ef4444', bg: 'rgba(239,68,68,0.14)',  range: '0.00–0.10', textColor: '#ef4444' },
+  'very-high': { label: 'Very High',  color: '#00c896', bg: 'rgba(0,200,150,0.18)',  range: '4.00–5.00', textColor: '#00c896' },
+  'high':      { label: 'High',       color: '#4ade80', bg: 'rgba(74,222,128,0.15)', range: '3.00–4.00', textColor: '#4ade80' },
+  'moderate':  { label: 'Moderate',   color: '#fbbf24', bg: 'rgba(251,191,36,0.15)', range: '2.00–3.00', textColor: '#fbbf24' },
+  'low':       { label: 'Low',        color: '#f97316', bg: 'rgba(249,115,22,0.15)', range: '1.50–2.00', textColor: '#f97316' },
+  'very-low':  { label: 'Very Low',   color: '#ef4444', bg: 'rgba(239,68,68,0.14)',  range: '1.00–1.50', textColor: '#ef4444' },
 };
 
-export const SUIT_ORDER: SuitClass[] = ['very-high','high','moderate','low','very-low'];
+export const SUIT_ORDER: SuitClass[] = ['very-high', 'high', 'moderate', 'low', 'very-low'];
 
-export const LAYERS: Layer[] = [
-  {
-    id: 'suitability', name: 'Overall Suitability', group: 'composite', groupLabel: 'Composite',
-    visible: true, opacity: 82,
-    source: 'AHP-weighted composite', resolution: '30 m', date: '2024-11',
-    description: 'Multi-criteria composite suitability index derived using Analytic Hierarchy Process weighting across 11 biophysical criteria.',
-  },
-  {
-    id: 'slope', name: 'Slope', group: 'topographic', groupLabel: 'Topographic',
-    visible: false, opacity: 70, unit: '°',
-    source: 'SRTM 30 m DEM (NASA, 2000)', resolution: '30 m', date: '2000',
-    description: 'Terrain slope derived from SRTM DEM. Gentle slopes (0–5°) score highest for groundwater infiltration.',
-  },
-  {
-    id: 'elevation', name: 'Elevation', group: 'topographic', groupLabel: 'Topographic',
-    visible: false, opacity: 70, unit: 'm asl',
-    source: 'SRTM 30 m DEM (NASA, 2000)', resolution: '30 m', date: '2000',
-    description: 'Digital elevation model. Mid-elevation zones (150–400 m) typically favour recharge potential.',
-  },
-  {
-    id: 'curvature', name: 'Curvature', group: 'topographic', groupLabel: 'Topographic',
-    visible: false, opacity: 70, unit: '1/m',
-    source: 'SRTM 30 m DEM (NASA, 2000)', resolution: '30 m', date: '2000',
-    description: 'Plan and profile curvature from DEM second derivatives. Concave surfaces increase recharge.',
-  },
-  {
-    id: 'rivers', name: 'Distance to Rivers', group: 'hydrological', groupLabel: 'Hydrological',
-    visible: false, opacity: 70, unit: 'km',
-    source: 'OpenStreetMap Hydrology + SRTM', resolution: '30 m', date: '2024',
-    description: 'Euclidean distance to perennial river network. Proximity <2 km is classified as highly suitable.',
-  },
-  {
-    id: 'twi', name: 'TWI', group: 'hydrological', groupLabel: 'Hydrological',
-    visible: false, opacity: 70,
-    source: 'SRTM 30 m DEM (NASA, 2000)', resolution: '30 m', date: '2000',
-    description: 'Topographic Wetness Index (ln(As/tanβ)). Higher TWI indicates greater potential for moisture accumulation.',
-  },
-  {
-    id: 'flow', name: 'Flow Accumulation', group: 'hydrological', groupLabel: 'Hydrological',
-    visible: false, opacity: 70,
-    source: 'SRTM 30 m DEM (NASA, 2000)', resolution: '30 m', date: '2000',
-    description: 'D8 flow accumulation. High values indicate natural drainage corridors and recharge zones.',
-  },
-  {
-    id: 'drainage', name: 'Drainage Density', group: 'hydrological', groupLabel: 'Hydrological',
-    visible: false, opacity: 70, unit: 'km/km²',
-    source: 'SRTM + OSM Hydrology', resolution: '250 m', date: '2024',
-    description: 'Total stream length per unit area. Low density favours infiltration over surface runoff.',
-  },
-  {
-    id: 'rainfall', name: 'Rainfall', group: 'hydrological', groupLabel: 'Hydrological',
-    visible: false, opacity: 70, unit: 'mm/yr',
-    source: 'CHIRPS v2.0 (UCSB, 2000–2023)', resolution: '5 km', date: '2000–2023',
-    description: '24-year mean annual precipitation from CHIRPS. 1,400–2,200 mm/yr is optimal for recharge.',
-  },
-  {
-    id: 'lulc', name: 'LULC', group: 'environmental', groupLabel: 'Environmental',
-    visible: false, opacity: 70,
-    source: 'ESA WorldCover 10 m (2021)', resolution: '10 m', date: '2021',
-    description: 'Land use / land cover classification. Forest and shrubland score highest for infiltration.',
-  },
-  {
-    id: 'soil', name: 'Soil Type', group: 'environmental', groupLabel: 'Environmental',
-    visible: false, opacity: 70,
-    source: 'SoilGrids v2.0 (ISRIC, 2020)', resolution: '250 m', date: '2020',
-    description: 'Soil hydraulic conductivity and texture class. Sandy loam and gravelly soils score highest.',
-  },
-  {
-    id: 'ndvi', name: 'NDVI', group: 'environmental', groupLabel: 'Environmental',
-    visible: false, opacity: 70,
-    source: 'Sentinel-2 L2A annual composite (2024)', resolution: '10 m', date: '2024',
-    description: 'Normalised Difference Vegetation Index. Dense vegetation indicates deep-rooted infiltration potential.',
-  },
+export function scoreToClass(score: number | null): SuitClass {
+  if (score === null || isNaN(score)) return 'low';
+  if (score >= 4.0) return 'very-high';
+  if (score >= 3.0) return 'high';
+  if (score >= 2.0) return 'moderate';
+  if (score >= 1.5) return 'low';
+  return 'very-low';
+}
+
+export function classValueToSuitClass(val: number | null): SuitClass {
+  switch (val) {
+    case 5: return 'very-high';
+    case 4: return 'high';
+    case 3: return 'moderate';
+    case 2: return 'low';
+    case 1:
+    default: return 'very-low';
+  }
+}
+
+export const HIMACHAL_LOCATIONS = [
+  { name: 'Shimla', lat: 31.1048, lng: 77.1734, district: 'Shimla' },
+  { name: 'Kullu', lat: 31.9579, lng: 77.1095, district: 'Kullu' },
+  { name: 'Manali', lat: 32.2432, lng: 77.1892, district: 'Kullu' },
+  { name: 'Dharamshala', lat: 32.2190, lng: 76.3234, district: 'Kangra' },
+  { name: 'Mandi', lat: 31.7087, lng: 76.9320, district: 'Mandi' },
+  { name: 'Solan', lat: 30.9045, lng: 77.0967, district: 'Solan' },
+  { name: 'Bilaspur', lat: 31.3260, lng: 76.7570, district: 'Bilaspur' },
+  { name: 'Hamirpur', lat: 31.6862, lng: 76.5213, district: 'Hamirpur' },
+  { name: 'Una', lat: 31.4685, lng: 76.2708, district: 'Una' },
+  { name: 'Chamba', lat: 32.5534, lng: 76.1258, district: 'Chamba' },
 ];
 
-export const ZONES: Zone[] = [
-  { id: 'z1',  label: 'A',  cls: 'very-high', score: 0.88, district: 'Jalpaiguri Sadar', region: 'Jalpaiguri', area: 142.3, cx: 19, cy: 17,
-    points: '8,8 20,5 28,8 30,18 24,26 14,28 6,22 5,14' },
-  { id: 'z2',  label: 'B',  cls: 'high',      score: 0.67, district: 'Matigara',        region: 'Darjeeling',  area: 98.7,  cx: 46, cy: 14,
-    points: '34,6 48,4 56,8 56,20 48,26 36,24 30,16' },
-  { id: 'z3',  label: 'C',  cls: 'moderate',  score: 0.44, district: 'Siliguri',        region: 'Darjeeling',  area: 76.2,  cx: 71, cy: 15,
-    points: '60,8 74,6 80,14 78,24 66,28 58,20 56,12' },
-  { id: 'z4',  label: 'D',  cls: 'very-high', score: 0.91, district: 'Nagrakata',       region: 'Jalpaiguri',  area: 189.4, cx: 15, cy: 40,
-    points: '4,30 16,28 24,32 26,46 20,52 8,50 2,42' },
-  { id: 'z5',  label: 'E',  cls: 'high',      score: 0.72, district: 'Gorubathan',      region: 'Jalpaiguri',  area: 163.1, cx: 43, cy: 38,
-    points: '28,28 48,26 56,32 56,46 46,52 30,50 22,42' },
-  { id: 'z6',  label: 'F',  cls: 'low',       score: 0.19, district: 'Kalimpong',       region: 'Kalimpong',   area: 54.8,  cx: 70, cy: 38,
-    points: '60,28 76,26 82,34 80,48 68,52 60,44 56,36' },
-  { id: 'z7',  label: 'G',  cls: 'moderate',  score: 0.41, district: 'Alipurduar',      region: 'Alipurduar',  area: 112.6, cx: 16, cy: 62,
-    points: '6,54 20,52 28,58 26,70 18,76 6,72 2,62' },
-  { id: 'z8',  label: 'H',  cls: 'very-high', score: 0.83, district: 'Madarihat',       region: 'Alipurduar',  area: 201.8, cx: 44, cy: 62,
-    points: '30,52 52,50 58,58 56,72 44,78 28,74 22,64' },
-  { id: 'z9',  label: 'I',  cls: 'high',      score: 0.61, district: 'Birpara',         region: 'Alipurduar',  area: 134.5, cx: 72, cy: 62,
-    points: '62,52 78,50 86,58 84,72 72,76 60,68 58,58' },
-  { id: 'z10', label: 'J',  cls: 'very-low',  score: 0.07, district: 'Dhupguri',        region: 'Jalpaiguri',  area: 42.3,  cx: 17, cy: 84,
-    points: '8,78 24,76 28,84 22,92 10,92 4,84' },
-  { id: 'z11', label: 'K',  cls: 'low',       score: 0.22, district: 'Malbazar',        region: 'Jalpaiguri',  area: 88.1,  cx: 46, cy: 84,
-    points: '34,78 54,76 60,84 58,92 40,94 30,88' },
-  { id: 'z12', label: 'L',  cls: 'moderate',  score: 0.39, district: 'Metelli',         region: 'Alipurduar',  area: 71.4,  cx: 74, cy: 84,
-    points: '64,78 82,76 88,84 84,92 68,92 60,86' },
+export const CRITERIA_INFO: Record<string, { label: string; group: Layer['group']; groupLabel: string; unit: string; source: string; description: string; evidence: string }> = {
+  rainfall: {
+    label: 'Annual Rainfall',
+    group: 'hydrological',
+    groupLabel: 'Hydrological',
+    unit: 'mm/yr',
+    source: 'CHIRPS v2.0 (UCSB / IMD)',
+    description: 'Mean annual precipitation across Himachal Pradesh. Heavy monsoonal precipitation elevates flood risk.',
+    evidence: 'High precipitation intensity directly increases peak overland flow and catchment discharge.',
+  },
+  slope: {
+    label: 'Terrain Slope',
+    group: 'topographic',
+    groupLabel: 'Topographic',
+    unit: '°',
+    source: 'SRTM 30 m DEM',
+    description: 'Surface slope gradient. Flat and low-slope valley bottoms accumulate runoff, creating severe flood inundation.',
+    evidence: 'Low slopes (0–5°) impede runoff egress, concentrating water in vulnerable valley floors.',
+  },
+  distance_to_rivers: {
+    label: 'Distance to Rivers',
+    group: 'hydrological',
+    groupLabel: 'Hydrological',
+    unit: 'm',
+    source: 'HydroRIVERS / OpenStreetMap',
+    description: 'Euclidean distance to perennial river channels (Beas, Satluj, Ravi, Chenab, Yamuna basins).',
+    evidence: 'Proximity to river corridors (<500 m) exhibits the highest susceptibility to overbank spilling and flash floods.',
+  },
+  flow_accumulation: {
+    label: 'Flow Accumulation',
+    group: 'hydrological',
+    groupLabel: 'Hydrological',
+    unit: 'cells',
+    source: 'SRTM D8 Flow Routing',
+    description: 'Cumulative upstream contributing area for each 30 m cell across Himalayan drainage basins.',
+    evidence: 'High flow accumulation delineates primary drainage paths where floodwaters rapidly converge.',
+  },
+  twi: {
+    label: 'Topographic Wetness Index (TWI)',
+    group: 'hydrological',
+    groupLabel: 'Hydrological',
+    unit: 'index',
+    source: 'DEM Second Derivatives (ln(a/tanβ))',
+    description: 'Topographic Wetness Index quantifying topographic control on hydrological processes.',
+    evidence: 'High TWI identifies zones of persistent soil saturation and surface ponding potential.',
+  },
+  drainage_density: {
+    label: 'Drainage Density',
+    group: 'hydrological',
+    groupLabel: 'Hydrological',
+    unit: 'km/km²',
+    source: 'Stream Network Analysis',
+    description: 'Total stream length per unit basin area, reflecting catchment dissection and runoff efficiency.',
+    evidence: 'High drainage density correlates with rapid catchment response times during extreme weather events.',
+  },
+  elevation: {
+    label: 'Elevation',
+    group: 'topographic',
+    groupLabel: 'Topographic',
+    unit: 'm asl',
+    source: 'SRTM 30 m DEM',
+    description: 'Digital elevation model representing terrain height from 300 m (plains) to >6,000 m (Himalayan peaks).',
+    evidence: 'Low-elevation valley bottoms and floodplain terraces represent prime flood inundation zones.',
+  },
+  lulc: {
+    label: 'Land Use / Land Cover (LULC)',
+    group: 'environmental',
+    groupLabel: 'Environmental',
+    unit: 'class',
+    source: 'ESA WorldCover 10 m / Sentinel-2',
+    description: 'Land use and land cover classes including built-up, agriculture, dense forest, water bodies, and snow.',
+    evidence: 'Impervious urban surfaces and bare soil generate rapid surface runoff compared to forested catchments.',
+  },
+  curvature: {
+    label: 'Profile/Plan Curvature',
+    group: 'topographic',
+    groupLabel: 'Topographic',
+    unit: '1/m',
+    source: 'SRTM DEM Derivatives',
+    description: 'Surface curvature indicating flow convergence (concave) or flow divergence (convex).',
+    evidence: 'Concave terrain shapes channel runoff inward, heightening localized flood depth.',
+  },
+  soil: {
+    label: 'Soil Hydraulic Conductivity',
+    group: 'environmental',
+    groupLabel: 'Environmental',
+    unit: 'class',
+    source: 'SoilGrids v2.0 (ISRIC 250 m)',
+    description: 'Soil textural classes and hydraulic conductivity controlling infiltration capacity.',
+    evidence: 'Clayey and compacted soils reduce infiltration rates, transforming rainfall directly into surface runoff.',
+  },
+  ndvi: {
+    label: 'NDVI (Vegetation Density)',
+    group: 'environmental',
+    groupLabel: 'Environmental',
+    unit: 'index',
+    source: 'Sentinel-2 L2A Annual Composite',
+    description: 'Normalised Difference Vegetation Index measuring live green vegetation canopy.',
+    evidence: 'Dense vegetation canopy mitigates raindrop impact and promotes rainfall interception.',
+  },
+};
+
+export const INITIAL_LAYERS: Layer[] = [
+  {
+    id: 'result_raster:flood_11_factor_v1_full_suitability_classified',
+    name: 'Flood Suitability (Classified 1–5)',
+    group: 'composite',
+    groupLabel: 'Composite Results',
+    visible: true,
+    opacity: 85,
+    source: 'MCGSE AHP Multi-Criteria Composite',
+    resolution: '30 m',
+    date: '2026-09',
+    description: 'Classified flood susceptibility map (1: Very Low to 5: Very High) derived via AHP weighted linear combination.',
+  },
+  {
+    id: 'result_raster:flood_11_factor_v1_full_suitability',
+    name: 'Flood Suitability (Continuous 1.0–5.0)',
+    group: 'composite',
+    groupLabel: 'Composite Results',
+    visible: false,
+    opacity: 80,
+    source: 'MCGSE AHP Multi-Criteria Composite',
+    resolution: '30 m',
+    date: '2026-09',
+    description: 'Continuous multi-criteria flood suitability index calculated across all 11 criteria.',
+  },
+  ...Object.entries(CRITERIA_INFO).map(([key, info]) => ({
+    id: `factor_raster:${key}`,
+    name: info.label,
+    group: info.group,
+    groupLabel: info.groupLabel,
+    visible: false,
+    opacity: 75,
+    unit: info.unit,
+    source: info.source,
+    resolution: '30 m',
+    date: '2026',
+    description: info.description,
+  })),
 ];
 
-export const CRITERIA: CriterionRow[] = [
-  { name: 'Slope',              weight: 0.22, rawScore: 0.91, contribution: 0.200, cls: 'positive', layerId: 'slope',    source: 'SRTM 30 m DEM',      evidence: 'Slope ≤5° — optimal for infiltration and recharge. Classified as "Very Suitable".' },
-  { name: 'Elevation',          weight: 0.18, rawScore: 0.84, contribution: 0.151, cls: 'positive', layerId: 'elevation', source: 'SRTM 30 m DEM',      evidence: 'Elevation 312 m asl — within 150–400 m optimal range, above flood-prone lowlands.' },
-  { name: 'TWI',                weight: 0.15, rawScore: 0.78, contribution: 0.117, cls: 'positive', layerId: 'twi',      source: 'SRTM D8 flow',       evidence: 'TWI value 4.2 — low-to-moderate waterlogging risk with sufficient moisture retention.' },
-  { name: 'Distance to Rivers', weight: 0.13, rawScore: 0.42, contribution: 0.055, cls: 'limiting', layerId: 'rivers',   source: 'OSM + SRTM',         evidence: 'Nearest river 4.7 km away — exceeds 2 km optimal threshold. Primary constraint.' },
-  { name: 'Rainfall',           weight: 0.11, rawScore: 0.87, contribution: 0.096, cls: 'positive', layerId: 'rainfall', source: 'CHIRPS v2.0',        evidence: 'Annual mean 1,840 mm (2000–2023). Monsoon Jun–Sep provides peak recharge window.' },
-  { name: 'Curvature',          weight: 0.08, rawScore: 0.61, contribution: 0.049, cls: 'positive', layerId: 'curvature',source: 'SRTM 30 m DEM',      evidence: 'Slightly concave plan curvature — promotes convergent flow and infiltration.' },
-  { name: 'LULC',               weight: 0.07, rawScore: 0.55, contribution: 0.039, cls: 'limiting', layerId: 'lulc',     source: 'ESA WorldCover 10 m',evidence: 'Mixed forest–agricultural transition zone. Land-use conflict risk identified.' },
-  { name: 'Soil Type',          weight: 0.04, rawScore: 0.73, contribution: 0.029, cls: 'positive', layerId: 'soil',     source: 'SoilGrids v2.0',     evidence: 'Sandy loam — hydraulic conductivity 18–25 mm/hr. High infiltration capacity.' },
-  { name: 'NDVI',               weight: 0.02, rawScore: 0.80, contribution: 0.016, cls: 'positive', layerId: 'ndvi',     source: 'Sentinel-2 2024',    evidence: 'NDVI 0.71 — dense canopy cover supports deep-root infiltration network.' },
+export const INITIAL_ZONE: Zone = {
+  id: 'point-himachal-sample',
+  label: 'Shimla Valley',
+  cls: 'low',
+  score: 1.84,
+  classifiedValue: 2,
+  lat: 31.1048,
+  lng: 77.1734,
+  district: 'Shimla',
+  region: 'Himachal Pradesh',
+  area: 44.3,
+  finalStatus: 'VALID',
+};
+
+export const INITIAL_CRITERIA: CriterionRow[] = [
+  { name: 'Terrain Slope', criterionId: 'slope', weight: 0.2306, rawScore: 89.99, rating: 1.0, contribution: 0.2306, unit: '°', cls: 'positive', layerId: 'factor_raster:slope', source: 'SRTM 30 m DEM', evidence: 'Steep hill slopes promote rapid surface drainage into valleys.' },
+  { name: 'Distance to Rivers', criterionId: 'distance_to_rivers', weight: 0.1480, rawScore: 2594.9, rating: 1.0, contribution: 0.1480, unit: 'm', cls: 'positive', layerId: 'factor_raster:distance_to_rivers', source: 'HydroRIVERS', evidence: 'Located 2.6 km from primary channel, above normal floodline.' },
+  { name: 'Topographic Wetness Index', criterionId: 'twi', weight: 0.1422, rawScore: -15.66, rating: 1.0, contribution: 0.1422, unit: 'index', cls: 'positive', layerId: 'factor_raster:twi', source: 'SRTM D8', evidence: 'Low TWI indicates low moisture retention risk.' },
+  { name: 'Annual Rainfall', criterionId: 'rainfall', weight: 0.1326, rawScore: 1587.6, rating: 5.0, contribution: 0.6630, unit: 'mm/yr', cls: 'limiting', layerId: 'factor_raster:rainfall', source: 'CHIRPS v2.0', evidence: 'Monsoon precipitation of 1,587 mm/yr creates elevated flood hazard.' },
+  { name: 'Flow Accumulation', criterionId: 'flow_accumulation', weight: 0.1115, rawScore: 28.0, rating: 1.0, contribution: 0.1115, unit: 'cells', cls: 'positive', layerId: 'factor_raster:flow_accumulation', source: 'SRTM Flow Routing', evidence: 'Minimal upstream catchment area directly draining to ridge.' },
+  { name: 'Drainage Density', criterionId: 'drainage_density', weight: 0.0668, rawScore: 0.0, rating: 1.0, contribution: 0.0668, unit: 'km/km²', cls: 'positive', layerId: 'factor_raster:drainage_density', source: 'Stream Network', evidence: 'Low stream density in immediate watershed.' },
+  { name: 'Land Cover (LULC)', criterionId: 'lulc', weight: 0.0573, rawScore: 10.0, rating: 1.0, contribution: 0.0573, unit: 'class', cls: 'positive', layerId: 'factor_raster:lulc', source: 'ESA WorldCover', evidence: 'Dense tree canopy moderates runoff generation.' },
+  { name: 'Elevation', criterionId: 'elevation', weight: 0.0345, rawScore: 2062.0, rating: 4.0, contribution: 0.1381, unit: 'm asl', cls: 'limiting', layerId: 'factor_raster:elevation', source: 'SRTM DEM', evidence: 'High mountain elevation subject to cloudburst runoff.' },
+  { name: 'Soil Texture', criterionId: 'soil', weight: 0.0317, rawScore: 2.0, rating: 2.0, contribution: 0.0635, unit: 'class', cls: 'positive', layerId: 'factor_raster:soil', source: 'SoilGrids v2.0', evidence: 'Coarse mountain soils provide moderate infiltration.' },
+  { name: 'Curvature', criterionId: 'curvature', weight: 0.0282, rawScore: 1712.6, rating: 3.0, contribution: 0.0845, unit: '1/m', cls: 'positive', layerId: 'factor_raster:curvature', source: 'SRTM DEM Derivatives', evidence: 'Convex ridge profile disperses runoff divergence.' },
+  { name: 'NDVI Vegetation', criterionId: 'ndvi', weight: 0.0166, rawScore: 0.40, rating: 1.0, contribution: 0.0166, unit: 'index', cls: 'positive', layerId: 'factor_raster:ndvi', source: 'Sentinel-2 L2A', evidence: 'Vegetation cover provides canopy interception.' },
 ];
 
-export const CLASS_DIST = [
-  { name: 'Very High', value: 38, color: '#00c896', area: 541.2 },
-  { name: 'High',      value: 31, color: '#4ade80', area: 441.0 },
-  { name: 'Moderate',  value: 18, color: '#fbbf24', area: 256.2 },
-  { name: 'Low',       value: 9,  color: '#f97316', area: 128.1 },
-  { name: 'Very Low',  value: 4,  color: '#ef4444', area: 56.9  },
-];
-
-export const SCORE_HIST = [
-  { bin: '0.0',  count: 124  },
-  { bin: '0.1',  count: 312  },
-  { bin: '0.2',  count: 628  },
-  { bin: '0.3',  count: 1040 },
-  { bin: '0.4',  count: 1580 },
-  { bin: '0.5',  count: 2210 },
-  { bin: '0.6',  count: 2840 },
-  { bin: '0.7',  count: 3120 },
-  { bin: '0.8',  count: 2760 },
-  { bin: '0.9',  count: 1640 },
-  { bin: '1.0',  count: 412  },
-];
-
-export const MODELS = [
-  'Groundwater Recharge Potential v2.1',
-  'Urban Expansion Suitability v1.3',
-  'Flood Hazard Risk Index v3.0',
-  'Solar Farm Site Selection v2.0',
-  'Agricultural Land Suitability v1.8',
-  'Eco-Sensitive Zone Assessment v1.1',
-];
+export const INITIAL_STATS = {
+  model_id: 'flood_11_factor_v1',
+  crs: 'EPSG:4326',
+  resolution_m: 30.0,
+  total_pixels: 135148020,
+  valid_pixels: 49294306,
+  nodata_pixels: 85853714,
+  valid_coverage_pct: 36.47,
+  nodata_coverage_pct: 63.53,
+  score_min: 1.104711,
+  score_max: 3.447548,
+  score_mean: 1.796454,
+  score_std: 0.349259,
+  class_distribution: [
+    { class_value: 1, label: 'Very Low',  pixel_count: 28250602, percentage: 57.31, area_km2: 25425.54 },
+    { class_value: 2, label: 'Low',       pixel_count: 19781852, percentage: 40.13, area_km2: 17803.67 },
+    { class_value: 3, label: 'Moderate',  pixel_count: 1261840,  percentage: 2.56,  area_km2: 1135.66 },
+    { class_value: 4, label: 'High',      pixel_count: 12,       percentage: 0.00,  area_km2: 0.01 },
+  ],
+};
 
 export const AI_PRESETS: Array<{ q: string; context?: string }> = [
-  { q: 'Why is this area highly suitable?',             context: 'zone' },
-  { q: 'What are the main limiting factors?',           context: 'zone' },
-  { q: 'Which criterion has the highest AHP weight?',   context: 'model' },
-  { q: 'Compare Sector D and Sector H',                 context: 'zone' },
-  { q: 'What evidence supports the slope assessment?',  context: 'layer' },
-  { q: 'Show areas where rainfall is a constraint',     context: 'layer' },
-  { q: 'Explain the AHP methodology used',              context: 'model' },
+  { q: 'Why is this location classified as Low flood suitability?', context: 'zone' },
+  { q: 'What are the dominant flood risk factors in Himachal Pradesh?', context: 'model' },
+  { q: 'Which criterion has the highest AHP weight?', context: 'model' },
+  { q: 'What is the Consistency Ratio (CR) of this model?', context: 'model' },
+  { q: 'How does terrain slope affect flood susceptibility?', context: 'layer' },
+  { q: 'Explain the 11-factor AHP flood methodology', context: 'model' },
 ];
 
 export const AI_ANSWERS: Record<string, { text: string; actions?: Array<{ label: string; type: 'layer' | 'evidence' | 'stats'; target: string }> }> = {
-  'Why is this area highly suitable?': {
-    text: `This zone scores 0.88/1.00 primarily because three top-weighted criteria perform at near-maximum levels:\n\n• **Slope (w=0.22):** At 2.4°, slope falls within the optimal 0–5° class, contributing 0.200 to the composite — the largest single contribution.\n• **Elevation (w=0.18):** At 312 m asl, the area sits above flood-prone lowlands while remaining within the 150–400 m recharge-optimal range, contributing 0.151.\n• **TWI (w=0.15):** A wetness index of 4.2 indicates moderate moisture retention without waterlogging risk, contributing 0.117.\n\nTogether these three criteria account for 55% of the composite score.`,
+  'Why is this location classified as Low flood suitability?': {
+    text: `This location in Himachal Pradesh scores **1.84/5.00** (Class 2: Low Flood Susceptibility) because:\n\n• **Slope (w=0.2306, score=89.99°):** Steep Himalayan terrain facilitates rapid downslope drainage rather than surface ponding.\n• **Distance to Rivers (w=0.1480, dist=2,595 m):** The site sits well away from active overbank floodplains.\n• **Rainfall (w=0.1326, 1,588 mm/yr):** High monsoonal rainfall is the main risk factor (Rating 5), contributing 0.663 to the total score.\n\nThe steep gradient and elevated topography keep overall flood accumulation risk low at this specific pixel.`,
     actions: [
-      { label: 'Show Slope Layer', type: 'layer', target: 'slope' },
+      { label: 'Show Slope Layer', type: 'layer', target: 'factor_raster:slope' },
+      { label: 'Show Rainfall Layer', type: 'layer', target: 'factor_raster:rainfall' },
       { label: 'View Criteria Tab', type: 'stats', target: 'criteria' },
     ],
   },
-  'What are the main limiting factors?': {
-    text: `Two criteria are classified as limiting for this zone:\n\n1. **Distance to Rivers (w=0.13, score=0.42):** The nearest perennial stream is 4.7 km away — exceeding the 2 km optimal threshold. This is the primary constraint, reducing the composite score by approximately 0.058 compared to an optimal configuration.\n\n2. **LULC (w=0.07, score=0.55):** Mixed forest–agricultural transition land cover introduces land-use conflict risk and reduces infiltration pathway continuity.\n\nThese two criteria together cap the theoretical maximum achievable score at approximately 0.93 under current land-use conditions.`,
+  'What are the dominant flood risk factors in Himachal Pradesh?': {
+    text: `In the **11-Factor Flood Suitability AHP Model**, the top risk determinants are:\n\n1. **Slope (23.06%):** Flat river valleys and gorges experience rapid inundation.\n2. **Distance to Rivers (14.80%):** Proximity to Beas, Satluj, and Ravi river channels.\n3. **Topographic Wetness Index (14.22%):** Concave terrain and valley basins collect saturation runoff.\n4. **Annual Rainfall (13.26%):** Extreme monsoonal downpours drive flash flooding.\n5. **Flow Accumulation (11.15%):** Large upstream drainage catchments converge in narrow valley exits.`,
     actions: [
-      { label: 'Show River Distance Layer', type: 'layer', target: 'rivers' },
-      { label: 'Show LULC Layer', type: 'layer', target: 'lulc' },
-      { label: 'View Evidence', type: 'evidence', target: 'evidence' },
-    ],
-  },
-  'Which criterion has the highest AHP weight?': {
-    text: `**Slope** carries the highest AHP weight (w=0.22) in this model configuration. This reflects the expert panel consensus that terrain gradient is the primary determinant of infiltration opportunity and surface runoff velocity.\n\nThe AHP pairwise comparison matrix produced a Consistency Ratio (CR) of 0.043 — well within the acceptable threshold of 0.10 — confirming the weight vector is logically consistent.\n\nWeight hierarchy: Slope (0.22) > Elevation (0.18) > TWI (0.15) > River Distance (0.13) > Rainfall (0.11) > Curvature (0.08) > LULC (0.07) > Soil (0.04) > NDVI (0.02).`,
-    actions: [
+      { label: 'Show Flow Accumulation', type: 'layer', target: 'factor_raster:flow_accumulation' },
       { label: 'View AHP Configuration', type: 'stats', target: 'metadata' },
     ],
   },
+  'Which criterion has the highest AHP weight?': {
+    text: `**Slope** carries the highest AHP weight at **0.2306 (23.06%)**, followed by **Distance to Rivers (0.1480)**, **TWI (0.1422)**, and **Rainfall (0.1326)**.\n\nTogether, these four criteria account for over **65%** of the composite flood suitability decision score.`,
+    actions: [
+      { label: 'View Criteria Tab', type: 'stats', target: 'criteria' },
+    ],
+  },
+  'What is the Consistency Ratio (CR) of this model?': {
+    text: `The AHP pairwise comparison matrix achieved a **Consistency Ratio (CR) of 0.0158 (1.58%)**.\n\nBecause **0.0158 << 0.10** (Saaty's threshold for logical consistency), the weighting matrix is mathematically rigorous, valid, and free of cyclical bias.`,
+    actions: [
+      { label: 'View Metadata', type: 'stats', target: 'metadata' },
+    ],
+  },
   default: {
-    text: `I have loaded scientific context for the active Groundwater Recharge Potential model (West Bengal — Jalpaiguri region, run GRP-2024-WB-0042).\n\nI can analyse:\n• Suitability factors for specific zones\n• Criterion contributions and AHP weights\n• Evidence behind layer classifications\n• Comparisons between study areas\n• Methodology and validation metrics\n\nPlease select a zone on the map or ask a specific analytical question.`,
+    text: `I am connected to the **Himachal Pradesh 11-Factor Flood Suitability Spatial Knowledge Package** (Run ID 51, published 2026-09-18).\n\nI can analyze:\n• Point-specific multi-factor flood susceptibility\n• AHP criterion weights and consistency metrics (CR = 0.0158)\n• Real-time raster sampling across all 24 spatial layers\n• Basin-wide class distributions and flood risk areas\n\nClick any point on the map to sample the real raster layers.`,
   },
 };
+
+export const LAYERS: Layer[] = INITIAL_LAYERS;
+export const CRITERIA: CriterionRow[] = INITIAL_CRITERIA;
+
+export const ZONES: Zone[] = [
+  INITIAL_ZONE,
+  {
+    id: 'point-kullu',
+    label: 'Kullu Valley',
+    cls: 'moderate',
+    score: 2.45,
+    classifiedValue: 3,
+    lat: 31.9579,
+    lng: 77.1095,
+    district: 'Kullu',
+    region: 'Himachal Pradesh',
+    area: 38.6,
+    finalStatus: 'VALID',
+    criteria: INITIAL_CRITERIA,
+  },
+  {
+    id: 'point-kangra',
+    label: 'Kangra Basin',
+    cls: 'high',
+    score: 3.12,
+    classifiedValue: 4,
+    lat: 32.2190,
+    lng: 76.3234,
+    district: 'Kangra',
+    region: 'Himachal Pradesh',
+    area: 52.1,
+    finalStatus: 'VALID',
+    criteria: INITIAL_CRITERIA,
+  },
+];
+
+export const CLASS_DIST = [
+  { name: 'Very Low',  value: 57.3, color: '#ef4444', area: 25425.5 },
+  { name: 'Low',       value: 40.1, color: '#f97316', area: 17803.7 },
+  { name: 'Moderate',  value: 2.6,  color: '#fbbf24', area: 1135.7  },
+  { name: 'High',      value: 0.0,  color: '#4ade80', area: 0.01    },
+  { name: 'Very High', value: 0.0,  color: '#00c896', area: 0.0     },
+];
+
+export const SCORE_HIST = [
+  { bin: '1.0', count: 120 },
+  { bin: '1.4', count: 2840 },
+  { bin: '1.8', count: 19800 },
+  { bin: '2.2', count: 8640 },
+  { bin: '2.6', count: 1260 },
+  { bin: '3.0', count: 320 },
+  { bin: '3.4', count: 12 },
+];
