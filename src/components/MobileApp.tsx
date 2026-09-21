@@ -69,11 +69,11 @@ export default function MobileApp() {
             const isSel = zone?.id === z.id;
             return (
               <g key={z.id} onClick={() => handleZone(z)} style={{ cursor: 'pointer' }}>
-                <polygon points={z.points}
+                <polygon points={(z as any).points}
                   fill={`${m.color}${isSel ? '45' : '20'}`}
                   stroke={`${m.color}${isSel ? 'cc' : '55'}`}
                   strokeWidth={isSel ? 1 : 0.5} />
-                <text x={z.cx} y={z.cy} textAnchor="middle" dominantBaseline="middle"
+                <text x={(z as any).cx} y={(z as any).cy} textAnchor="middle" dominantBaseline="middle"
                   fontSize={3} fill={m.color} style={{ fontFamily: 'var(--font-mono)', opacity: 0.8 }}>
                   {z.label}
                 </text>
@@ -210,9 +210,9 @@ export default function MobileApp() {
                 <div key={c.name} className="mb-3">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs" style={{ color: '#c4d4e8' }}>{c.name}</span>
-                    <Mono color={c.cls === 'positive' ? '#00c896' : '#f97316'}>{c.rawScore.toFixed(2)}</Mono>
+                    <Mono color={c.cls === 'positive' ? '#00c896' : '#f97316'}>{(c.rawScore ?? 0).toFixed(2)}</Mono>
                   </div>
-                  <ScoreBar value={c.rawScore} color={c.cls === 'positive' ? '#00b4d8' : '#f97316'} height={3} />
+                  <ScoreBar value={c.rawScore ?? 0} color={c.cls === 'positive' ? '#00b4d8' : '#f97316'} height={3} />
                 </div>
               ))}
             </div>

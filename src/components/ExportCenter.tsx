@@ -65,10 +65,10 @@ export default function ExportCenter({ onClose }: Props) {
               style={{ background: 'rgba(0,200,150,0.12)', border: '1px solid rgba(0,200,150,0.3)', color: '#00c896' }}>
               <IconCheck size={22} />
             </div>
-            <div className="text-sm font-semibold" style={{ color: '#c4d4e8', fontFamily: 'var(--font-display)' }}>
+            <div className="text-sm font-semibold" style={{ color: 'var(--c-text)', fontFamily: 'var(--font-display)' }}>
               Export Complete
             </div>
-            <div className="text-xs" style={{ color: '#374f6a' }}>
+            <div className="text-xs" style={{ color: 'var(--c-text3)' }}>
               {selected.size} file{selected.size > 1 ? 's' : ''} prepared for download
             </div>
             <button onClick={onClose}
@@ -90,22 +90,22 @@ export default function ExportCenter({ onClose }: Props) {
                     <button key={f.id} onClick={() => toggle(f.id)}
                       className="flex items-start gap-3 p-3 rounded text-left transition-all"
                       style={{
-                        background: sel ? 'rgba(0,180,216,0.08)' : '#0e1828',
-                        border: `1px solid ${sel ? 'rgba(0,180,216,0.35)' : '#1c2e48'}`,
+                        background: sel ? 'rgba(0,180,216,0.08)' : 'var(--c-panel)',
+                        border: `1px solid ${sel ? 'rgba(0,180,216,0.35)' : 'var(--c-border)'}`,
                       }}>
                       <div className="w-8 h-8 rounded flex items-center justify-center flex-shrink-0 mt-0.5"
-                        style={{ background: sel ? 'rgba(0,180,216,0.12)' : '#111d33', color: sel ? '#00b4d8' : '#647d9a', border: `1px solid ${sel ? 'rgba(0,180,216,0.25)' : '#1c2e48'}` }}>
+                        style={{ background: sel ? 'rgba(0,180,216,0.12)' : 'var(--c-surface)', color: sel ? '#00b4d8' : 'var(--c-text2)', border: `1px solid ${sel ? 'rgba(0,180,216,0.25)' : 'var(--c-border)'}` }}>
                         <Icon size={14} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-1">
-                          <span className="text-xs font-medium" style={{ color: sel ? '#c4d4e8' : '#647d9a' }}>{f.label}</span>
+                          <span className="text-xs font-medium" style={{ color: sel ? 'var(--c-text)' : 'var(--c-text2)' }}>{f.label}</span>
                           {sel && <IconCheck size={11} style={{ color: '#00b4d8', flexShrink: 0 }} />}
                         </div>
-                        <div className="text-[10px] mt-0.5 leading-tight" style={{ color: '#374f6a' }}>{f.desc}</div>
+                        <div className="text-[10px] mt-0.5 leading-tight" style={{ color: 'var(--c-text3)' }}>{f.desc}</div>
                         <div className="flex items-center gap-1.5 mt-1">
-                          <Mono color="#1c2e48">{f.ext}</Mono>
-                          <Mono color="#374f6a">{f.size}</Mono>
+                          <Mono color="var(--c-text3)">{f.ext}</Mono>
+                          <Mono color="var(--c-text2)">{f.size}</Mono>
                         </div>
                       </div>
                     </button>
@@ -123,7 +123,7 @@ export default function ExportCenter({ onClose }: Props) {
                     <label key={r.id} className="flex items-center gap-2 cursor-pointer">
                       <input type="radio" name="resolution" value={r.id} checked={resolution === r.id}
                         onChange={() => setResolution(r.id)} className="w-3.5 h-3.5" style={{ accentColor: '#00b4d8' }} />
-                      <span className="text-xs" style={{ color: resolution === r.id ? '#c4d4e8' : '#647d9a' }}>{r.label}</span>
+                      <span className="text-xs" style={{ color: resolution === r.id ? 'var(--c-text)' : 'var(--c-text2)' }}>{r.label}</span>
                     </label>
                   ))}
                 </div>
@@ -139,7 +139,7 @@ export default function ExportCenter({ onClose }: Props) {
                     <label key={a.id} className="flex items-center gap-2 cursor-pointer">
                       <input type="radio" name="area" value={a.id} checked={area === a.id}
                         onChange={() => setArea(a.id)} className="w-3.5 h-3.5" style={{ accentColor: '#00b4d8' }} />
-                      <span className="text-xs" style={{ color: area === a.id ? '#c4d4e8' : '#647d9a' }}>{a.label}</span>
+                      <span className="text-xs" style={{ color: area === a.id ? 'var(--c-text)' : 'var(--c-text2)' }}>{a.label}</span>
                     </label>
                   ))}
                 </div>
@@ -155,8 +155,8 @@ export default function ExportCenter({ onClose }: Props) {
 
             {/* Summary + action */}
             <div className="flex items-center justify-between pt-3"
-              style={{ borderTop: '1px solid #1c2e48' }}>
-              <div className="text-[11px]" style={{ color: '#374f6a' }}>
+              style={{ borderTop: '1px solid var(--c-border)' }}>
+              <div className="text-[11px]" style={{ color: 'var(--c-text3)' }}>
                 Model: GRP v2.1 · {RESOLUTIONS.find(r => r.id === resolution)?.label} · {area === 'study' ? 'Full area' : area}
               </div>
               <button onClick={handleDownload}

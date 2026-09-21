@@ -15,40 +15,53 @@ interface Props {
   statistics?: AnalysisStatistics | null;
   modelDetail?: ModelDetail | null;
   onTabChange?: (t: RightTab) => void;
+  onClose?: () => void;
 }
 
 const TABS = [
-  { id: 'overview',   label: 'Overview' },
-  { id: 'criteria',   label: 'Criteria' },
   { id: 'statistics', label: 'Statistics' },
+  { id: 'criteria',   label: 'Criteria' },
+  { id: 'overview',   label: 'Overview' },
   { id: 'evidence',   label: 'Evidence' },
   { id: 'metadata',   label: 'Metadata' },
 ];
 
-export default function RightPanel({ zone, onLayerEvidence, statistics, modelDetail }: Props) {
-  const [tab, setTab] = useState<RightTab>('overview');
+export default function RightPanel({ zone, onLayerEvidence, statistics, modelDetail, onClose }: Props) {
+  const [tab, setTab] = useState<RightTab>('statistics');
   const stats = statistics || (INITIAL_STATS as any);
 
   return (
-    <div className="flex flex-col overflow-hidden z-20" style={{ width: 320, background: '#0c1424', borderLeft: '1px solid #1c2e48' }}>
+    <div className="flex flex-col overflow-hidden z-20 w-full sm:w-80 md:w-[320px] shrink-0" style={{ background: 'var(--c-surface)', borderLeft: '1px solid var(--c-border)' }}>
       {/* Panel header */}
-      <div className="px-4 py-3 flex-shrink-0" style={{ background: '#080d18', borderBottom: '1px solid #1c2e48' }}>
-        <div className="flex items-center gap-2 mb-0.5">
-          <IconAnalyze size={13} style={{ color: '#00b4d8' }} />
-          <span className="text-[10px] font-semibold tracking-[0.08em] uppercase"
-            style={{ fontFamily: 'var(--font-mono)', color: '#00b4d8' }}>Point Inspection Panel</span>
+      <div className="px-4 py-3 flex-shrink-0" style={{ background: 'var(--c-panel)', borderBottom: '1px solid var(--c-border)' }}>
+        <div className="flex items-center justify-between mb-0.5">
+          <div className="flex items-center gap-2">
+            <IconAnalyze size={13} style={{ color: '#00b4d8' }} />
+            <span className="text-[10px] font-semibold tracking-[0.08em] uppercase"
+              style={{ fontFamily: 'var(--font-mono)', color: '#00b4d8' }}>Point Inspection & Analytics</span>
+          </div>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="w-5 h-5 flex items-center justify-center rounded hover:opacity-75 transition-opacity text-xs"
+              style={{ color: 'var(--c-text2)' }}
+              title="Close panel"
+            >
+              ✕
+            </button>
+          )}
         </div>
         {zone ? (
           <>
             <div className="flex items-start justify-between mt-1">
               <div>
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-sm font-semibold" style={{ fontFamily: 'var(--font-display)', color: '#c4d4e8' }}>
+                  <span className="text-sm font-semibold" style={{ fontFamily: 'var(--font-display)', color: 'var(--c-text)' }}>
                     {zone.label || `${zone.lat.toFixed(3)}°N, ${zone.lng.toFixed(3)}°E`}
                   </span>
                   <SuitBadge cls={zone.cls} />
                 </div>
-                <div className="text-[11px]" style={{ color: '#647d9a' }}>
+                <div className="text-[11px]" style={{ color: 'var(--c-text2)' }}>
                   {zone.district} · {zone.region}
                 </div>
               </div>
@@ -56,7 +69,7 @@ export default function RightPanel({ zone, onLayerEvidence, statistics, modelDet
                 <div className="text-2xl font-semibold text-right" style={{ fontFamily: 'var(--font-mono)', color: SUIT_META[zone.cls]?.color || '#00b4d8' }}>
                   {zone.score.toFixed(2)}
                 </div>
-                <div className="text-[9px] text-right" style={{ color: '#374f6a', fontFamily: 'var(--font-mono)' }}>Class {zone.classifiedValue || 1} / 5</div>
+                <div className="text-[9px] text-right" style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>Class {zone.classifiedValue || 1} / 5</div>
               </div>
             </div>
             <div className="mt-2">
@@ -73,7 +86,9 @@ export default function RightPanel({ zone, onLayerEvidence, statistics, modelDet
             </div>
           </>
         ) : (
-          <div className="text-xs mt-1" style={{ color: '#647d9a' }}>Click any point on the map to sample rasters</div>
+          <div className="text-xs mt-1" style={{ color: 'var(--c-text2)' }}>
+            Viewing statewide statistics. Click any map point to inspect pixel ratings.
+          </div>
         )}
       </div>
 
@@ -82,17 +97,17 @@ export default function RightPanel({ zone, onLayerEvidence, statistics, modelDet
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        {!zone ? (
+        {tab === 'statistics' && <StatisticsTab zone={zone} stats={stats} />}
+        {tab === 'metadata'   && <MetadataTab modelDetail={modelDetail} />}
+        {!zone && tab !== 'statistics' && tab !== 'metadata' ? (
           <EmptyState icon={<IconAnalyze size={18} />}
             title="No coordinates selected"
             body="Click anywhere on the Himachal Pradesh map to inspect real-time pixel values across all 11 criteria and suitability models." />
         ) : (
           <>
-            {tab === 'overview'   && <OverviewTab zone={zone} />}
-            {tab === 'criteria'   && <CriteriaTab zone={zone} onEvidence={onLayerEvidence} />}
-            {tab === 'statistics' && <StatisticsTab zone={zone} stats={stats} />}
-            {tab === 'evidence'   && <EvidenceTab zone={zone} onEvidence={onLayerEvidence} />}
-            {tab === 'metadata'   && <MetadataTab modelDetail={modelDetail} />}
+            {tab === 'overview'   && zone && <OverviewTab zone={zone} />}
+            {tab === 'criteria'   && zone && <CriteriaTab zone={zone} onEvidence={onLayerEvidence} />}
+            {tab === 'evidence'   && zone && <EvidenceTab zone={zone} onEvidence={onLayerEvidence} />}
           </>
         )}
       </div>
@@ -111,7 +126,8 @@ function OverviewTab({ zone }: { zone: Zone }) {
     .sort((a, b) => (b.contribution ?? 0) - (a.contribution ?? 0))
     .slice(0, 5)
     .map(c => ({
-      name: c.name.replace('Terrain ', '').replace('Distance to ', 'Dist. ').split(' ')[0],
+      name: c.name.replace('Terrain ', '').replace('Distance to ', 'Dist. ').replace('Topographic ', '').replace('Annual ', ''),
+      fullName: c.name,
       v: +((c.contribution ?? 0) * 100).toFixed(1),
       cls: c.cls,
     }));
@@ -120,7 +136,7 @@ function OverviewTab({ zone }: { zone: Zone }) {
     <div className="p-4 flex flex-col gap-4">
       {/* Summary */}
       <div className="p-3 rounded" style={{ background: `${m.color}0d`, border: `1px solid ${m.color}25` }}>
-        <div className="text-xs leading-relaxed" style={{ color: '#c4d4e8' }}>
+        <div className="text-xs leading-relaxed" style={{ color: 'var(--c-text)' }}>
           This coordinate ({zone.lat.toFixed(4)}°N, {zone.lng.toFixed(4)}°E) is evaluated with <strong style={{ color: m.color }}>{m.label.toLowerCase()} flood suitability</strong> (Continuous Score: {zone.score.toFixed(3)}/5.00). Inundation vulnerability is driven by local slope gradient, rainfall intensity, and distance to primary river channels.
         </div>
       </div>
@@ -129,11 +145,17 @@ function OverviewTab({ zone }: { zone: Zone }) {
       {topContributors.length > 0 && (
         <div>
           <SectionLabel>Top Criterion Contributions</SectionLabel>
-          <ResponsiveContainer width="100%" height={120}>
-            <BarChart data={topContributors} layout="vertical" margin={{ top: 0, right: 4, left: 0, bottom: 0 }}>
-              <XAxis type="number" tick={{ fontSize: 9, fill: '#374f6a', fontFamily: 'var(--font-mono)' }} axisLine={false} tickLine={false} />
-              <YAxis type="category" dataKey="name" width={48} tick={{ fontSize: 10, fill: '#647d9a' }} axisLine={false} tickLine={false} />
-              <Bar dataKey="v" radius={[0, 2, 2, 0]}>
+          <ResponsiveContainer width="100%" height={145}>
+            <BarChart data={topContributors} layout="vertical" margin={{ top: 4, right: 28, left: 8, bottom: 0 }}>
+              <XAxis type="number" tick={{ fontSize: 9, fill: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }} axisLine={false} tickLine={false} unit="%" />
+              <YAxis type="category" dataKey="name" width={95} tick={{ fontSize: 10, fill: 'var(--c-text2)' }} axisLine={false} tickLine={false} />
+              <Tooltip
+                contentStyle={{ background: 'var(--c-surface)', border: '1px solid var(--c-border)', borderRadius: 6, fontSize: 11 }}
+                labelStyle={{ color: 'var(--c-text)', fontWeight: 600 }}
+                itemStyle={{ color: 'var(--c-text2)' }}
+                formatter={(val: any) => [`${val}%`, 'Contribution']}
+              />
+              <Bar dataKey="v" radius={[0, 3, 3, 0]}>
                 {topContributors.map((c, i) => (
                   <Cell key={i} fill={c.cls === 'positive' ? '#00b4d8' : '#f97316'} />
                 ))}
@@ -150,8 +172,8 @@ function OverviewTab({ zone }: { zone: Zone }) {
           {positive.slice(0, 5).map(c => (
             <div key={c.name} className="flex items-start gap-2 mb-1.5">
               <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: '#00c896' }} />
-              <div className="text-xs" style={{ color: '#647d9a' }}>
-                <span style={{ color: '#c4d4e8' }}>{c.name}</span> — raw {c.rawScore !== null ? c.rawScore.toFixed(1) : 'N/A'}{c.unit ? ` ${c.unit}` : ''} (Rating {c.rating ?? 1}, w={c.weight.toFixed(3)})
+              <div className="text-xs" style={{ color: 'var(--c-text2)' }}>
+                <span style={{ color: 'var(--c-text)' }}>{c.name}</span> — raw {c.rawScore !== null ? c.rawScore.toFixed(1) : 'N/A'}{c.unit ? ` ${c.unit}` : ''} (Rating {c.rating ?? 1}, w={c.weight.toFixed(3)})
               </div>
             </div>
           ))}
@@ -165,8 +187,8 @@ function OverviewTab({ zone }: { zone: Zone }) {
           {limiting.map(c => (
             <div key={c.name} className="flex items-start gap-2 mb-1.5">
               <div className="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0" style={{ background: '#f97316' }} />
-              <div className="text-xs" style={{ color: '#647d9a' }}>
-                <span style={{ color: '#c4d4e8' }}>{c.name}</span> — raw {c.rawScore !== null ? c.rawScore.toFixed(1) : 'N/A'}{c.unit ? ` ${c.unit}` : ''} (Rating {c.rating ?? 5}, w={c.weight.toFixed(3)})
+              <div className="text-xs" style={{ color: 'var(--c-text2)' }}>
+                <span style={{ color: 'var(--c-text)' }}>{c.name}</span> — raw {c.rawScore !== null ? c.rawScore.toFixed(1) : 'N/A'}{c.unit ? ` ${c.unit}` : ''} (Rating {c.rating ?? 5}, w={c.weight.toFixed(3)})
               </div>
             </div>
           ))}
@@ -180,7 +202,12 @@ function OverviewTab({ zone }: { zone: Zone }) {
 function CriteriaTab({ zone, onEvidence }: { zone: Zone; onEvidence: (id: string) => void }) {
   const criteria = zone.criteria || [];
   const chartData = criteria.map(c => ({
-    name: c.name.replace('Terrain ', '').replace('Distance to ', 'Dist. ').replace('Topographic ', '').split(' ')[0],
+    name: c.name
+      .replace('Terrain ', '')
+      .replace('Distance to ', 'Dist. ')
+      .replace('Topographic ', '')
+      .replace('Annual ', ''),
+    fullName: c.name,
     weight: +(c.weight * 100).toFixed(1),
     rating: +((c.rating ?? 1) * 20).toFixed(0),
     contrib: +((c.contribution ?? 0) * 100).toFixed(1),
@@ -190,24 +217,37 @@ function CriteriaTab({ zone, onEvidence }: { zone: Zone; onEvidence: (id: string
     <div className="p-4 flex flex-col gap-4">
       <div>
         <SectionLabel>AHP Weight (%) vs Normalised Rating (%)</SectionLabel>
-        <ResponsiveContainer width="100%" height={180}>
-          <BarChart data={chartData} margin={{ top: 0, right: 4, left: -8, bottom: 40 }}>
-            <CartesianGrid strokeDasharray="2,3" stroke="#111d33" vertical={false} />
-            <XAxis dataKey="name" tick={{ fontSize: 8, fill: '#647d9a' }} angle={-45} textAnchor="end" interval={0} />
-            <YAxis tick={{ fontSize: 9, fill: '#374f6a', fontFamily: 'var(--font-mono)' }} />
-            <Tooltip contentStyle={{ background: '#0c1424', border: '1px solid #1c2e48', borderRadius: 4, fontSize: 10 }}
-              labelStyle={{ color: '#c4d4e8' }} itemStyle={{ color: '#647d9a' }} />
-            <Bar dataKey="weight" fill="#2d9cdb" opacity={0.8} radius={[2, 2, 0, 0]} name="AHP Weight %" />
-            <Bar dataKey="rating"  fill="#00b4d8" opacity={0.9} radius={[2, 2, 0, 0]} name="Rating (norm %)" />
+        <ResponsiveContainer width="100%" height={235}>
+          <BarChart data={chartData} margin={{ top: 8, right: 8, left: -14, bottom: 65 }}>
+            <CartesianGrid strokeDasharray="2,3" stroke="var(--c-border)" vertical={false} />
+            <XAxis
+              dataKey="name"
+              height={60}
+              tick={{ fontSize: 9, fill: 'var(--c-text2)' }}
+              angle={-40}
+              textAnchor="end"
+              interval={0}
+              dx={-3}
+              dy={6}
+            />
+            <YAxis tick={{ fontSize: 9, fill: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }} />
+            <Tooltip
+              contentStyle={{ background: 'var(--c-surface)', border: '1px solid var(--c-border)', borderRadius: 6, fontSize: 11 }}
+              labelStyle={{ color: 'var(--c-text)', fontWeight: 600 }}
+              itemStyle={{ color: 'var(--c-text2)' }}
+              formatter={(val: any, name: any) => [`${val}%`, name]}
+            />
+            <Bar dataKey="weight" fill="#2d9cdb" opacity={0.85} radius={[3, 3, 0, 0]} name="AHP Weight %" />
+            <Bar dataKey="rating"  fill="#00b4d8" opacity={0.95} radius={[3, 3, 0, 0]} name="Rating (norm %)" />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
       <SectionLabel>Criterion Sample Values ({criteria.length})</SectionLabel>
       {criteria.map(c => (
-        <div key={c.name} className="mb-3 p-2.5 rounded" style={{ background: '#0e1828', border: '1px solid #1c2e48' }}>
+        <div key={c.name} className="mb-3 p-2.5 rounded transition-colors" style={{ background: 'var(--c-panel)', border: '1px solid var(--c-border)' }}>
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs font-medium" style={{ color: '#c4d4e8' }}>{c.name}</span>
+            <span className="text-xs font-medium" style={{ color: 'var(--c-text)' }}>{c.name}</span>
             <div className="flex items-center gap-2">
               <Mono color={c.cls === 'positive' ? '#00c896' : '#f97316'}>
                 {c.rawScore !== null ? `${c.rawScore.toFixed(1)}${c.unit ? ` ${c.unit}` : ''}` : 'NoData'}
@@ -223,11 +263,11 @@ function CriteriaTab({ zone, onEvidence }: { zone: Zone; onEvidence: (id: string
             <div className="flex-1">
               <ScoreBar value={(c.rating ?? 1) / 5.0} color={c.cls === 'positive' ? '#00b4d8' : '#f97316'} height={3} />
             </div>
-            <span className="text-[10px] w-12 text-right" style={{ color: '#647d9a', fontFamily: 'var(--font-mono)' }}>
+            <span className="text-[10px] w-12 text-right" style={{ color: 'var(--c-text2)', fontFamily: 'var(--font-mono)' }}>
               w={(c.weight * 100).toFixed(1)}%
             </span>
           </div>
-          <div className="text-[10px] mt-1 flex justify-between" style={{ color: '#374f6a' }}>
+          <div className="text-[10px] mt-1 flex justify-between" style={{ color: 'var(--c-text3)' }}>
             <span>Rating: {c.rating ?? 1}/5 · Contrib: {((c.contribution ?? 0) * 100).toFixed(1)}%</span>
             <span>{c.source}</span>
           </div>
@@ -238,7 +278,7 @@ function CriteriaTab({ zone, onEvidence }: { zone: Zone; onEvidence: (id: string
 }
 
 /* ── Statistics ─────────────────────────────────────────────── */
-function StatisticsTab({ zone, stats }: { zone: Zone; stats: AnalysisStatistics }) {
+function StatisticsTab({ zone, stats }: { zone: Zone | null; stats: AnalysisStatistics }) {
   const classDist = stats.class_distribution || [];
   const distChartData = classDist.map(d => ({
     name: d.label,
@@ -281,8 +321,8 @@ function StatisticsTab({ zone, stats }: { zone: Zone; stats: AnalysisStatistics 
             {distChartData.map(d => (
               <div key={d.name} className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: d.color }} />
-                <span className="text-[10px] flex-1" style={{ color: '#647d9a' }}>{d.name}</span>
-                <Mono color="#c4d4e8">{d.value.toFixed(1)}%</Mono>
+                <span className="text-[10px] flex-1" style={{ color: 'var(--c-text2)' }}>{d.name}</span>
+                <Mono color="var(--c-text)">{d.value.toFixed(1)}%</Mono>
               </div>
             ))}
           </div>
@@ -294,11 +334,11 @@ function StatisticsTab({ zone, stats }: { zone: Zone; stats: AnalysisStatistics 
         <SectionLabel>Area by Suitability Class (km²)</SectionLabel>
         {distChartData.map(d => (
           <div key={d.name} className="flex items-center gap-2 mb-1.5">
-            <span className="text-[10px] w-16 flex-shrink-0" style={{ color: '#647d9a' }}>{d.name}</span>
-            <div className="flex-1 h-3 rounded-sm overflow-hidden" style={{ background: '#111d33' }}>
+            <span className="text-[10px] w-16 flex-shrink-0" style={{ color: 'var(--c-text2)' }}>{d.name}</span>
+            <div className="flex-1 h-3 rounded-sm overflow-hidden" style={{ background: 'var(--c-track)' }}>
               <div className="h-full rounded-sm" style={{ width: `${(d.area / maxArea) * 100}%`, background: d.color, opacity: 0.85 }} />
             </div>
-            <Mono color="#647d9a">{d.area.toFixed(0)}</Mono>
+            <Mono color="var(--c-text2)">{d.area.toFixed(0)}</Mono>
           </div>
         ))}
       </div>
@@ -318,9 +358,9 @@ function EvidenceTab({ zone, onEvidence }: { zone: Zone; onEvidence: (id: string
         <div className="text-xs font-semibold mb-1.5" style={{ color: m.color }}>
           Why is this coordinate evaluated as {m.label} suitability?
         </div>
-        <div className="text-xs leading-relaxed" style={{ color: '#647d9a' }}>
+        <div className="text-xs leading-relaxed" style={{ color: 'var(--c-text2)' }}>
           Evaluated under the 11-Factor AHP Flood Model. Multi-criteria aggregation formula:
-          <div className="my-1.5 font-mono text-[10px] px-2 py-1 rounded bg-[#080d18] text-[#00b4d8]">
+          <div className="my-1.5 font-mono text-[10px] px-2 py-1 rounded" style={{ background: 'var(--c-panel)', color: '#00b4d8', border: '1px solid var(--c-border)' }}>
             S = Σ (wᵢ × rᵢ) = {zone.score.toFixed(3)}
           </div>
           The combination of high terrain slopes and distance from river banks reduces flood accumulation risk, despite high regional monsoon rainfall.
@@ -330,25 +370,25 @@ function EvidenceTab({ zone, onEvidence }: { zone: Zone; onEvidence: (id: string
       {/* Per-criterion evidence */}
       <SectionLabel>Criterion Evidence & Sources</SectionLabel>
       {criteria.map(c => (
-        <div key={c.name} className="mb-3 p-3 rounded" style={{ background: '#0e1828', border: '1px solid #1c2e48' }}>
+        <div key={c.name} className="mb-3 p-3 rounded" style={{ background: 'var(--c-panel)', border: '1px solid var(--c-border)' }}>
           <div className="flex items-start justify-between gap-2 mb-1.5">
-            <span className="text-xs font-medium" style={{ color: '#c4d4e8' }}>{c.name}</span>
+            <span className="text-xs font-medium" style={{ color: 'var(--c-text)' }}>{c.name}</span>
             <div className="flex items-center gap-1.5 flex-shrink-0">
               <Mono color={c.cls === 'positive' ? '#00c896' : '#f97316'}>
                 {c.rawScore !== null ? c.rawScore.toFixed(1) : 'N/A'}{c.unit ? ` ${c.unit}` : ''}
               </Mono>
-              <span className="text-[9px]" style={{ color: '#374f6a' }}>w={c.weight.toFixed(3)}</span>
+              <span className="text-[9px]" style={{ color: 'var(--c-text3)' }}>w={c.weight.toFixed(3)}</span>
             </div>
           </div>
-          <div className="text-[11px] leading-relaxed mb-2" style={{ color: '#647d9a' }}>{c.evidence}</div>
+          <div className="text-[11px] leading-relaxed mb-2" style={{ color: 'var(--c-text2)' }}>{c.evidence}</div>
           <div className="flex items-center gap-1.5 flex-wrap">
             <button onClick={() => onEvidence(c.layerId)}
               className="text-[10px] px-2 py-0.5 rounded flex items-center gap-1 hover:bg-[#00b4d822]"
               style={{ color: '#00b4d8', border: '1px solid rgba(0,180,216,0.25)', background: 'rgba(0,180,216,0.06)' }}>
               <IconChart size={9} /> Show Layer on Map
             </button>
-            <span className="text-[10px]" style={{ color: '#1c2e48' }}>·</span>
-            <span className="text-[10px]" style={{ color: '#374f6a', fontFamily: 'var(--font-mono)' }}>{c.source}</span>
+            <span className="text-[10px]" style={{ color: 'var(--c-border)' }}>·</span>
+            <span className="text-[10px]" style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>{c.source}</span>
           </div>
         </div>
       ))}
@@ -397,9 +437,9 @@ function MetadataTab({ modelDetail }: { modelDetail?: ModelDetail | null }) {
       <div>
         <SectionLabel>Spatial Knowledge Package Metadata</SectionLabel>
         {rows.map(([k, v]) => (
-          <div key={k} className="flex items-start gap-2 py-1.5" style={{ borderBottom: '1px solid #111d33' }}>
-            <span className="text-[10px] flex-shrink-0 w-28" style={{ color: '#374f6a' }}>{k}</span>
-            <span className="text-[10px] text-right flex-1" style={{ color: '#647d9a', fontFamily: 'var(--font-mono)' }}>{v}</span>
+          <div key={k} className="flex items-start gap-2 py-1.5" style={{ borderBottom: '1px solid var(--c-border)' }}>
+            <span className="text-[10px] flex-shrink-0 w-28" style={{ color: 'var(--c-text3)' }}>{k}</span>
+            <span className="text-[10px] text-right flex-1" style={{ color: 'var(--c-text2)', fontFamily: 'var(--font-mono)' }}>{v}</span>
           </div>
         ))}
       </div>
@@ -408,23 +448,23 @@ function MetadataTab({ modelDetail }: { modelDetail?: ModelDetail | null }) {
         <SectionLabel>AHP Weight Configuration (11 Criteria)</SectionLabel>
         {weights.map(r => (
           <div key={r.criterion_id} className="flex items-center gap-2 mb-1.5">
-            <span className="text-[10px] flex-1 truncate" style={{ color: '#647d9a' }}>
+            <span className="text-[10px] flex-1 truncate" style={{ color: 'var(--c-text)' }}>
               {r.criterion_id.replace(/_/g, ' ')}
             </span>
-            <div className="w-20 h-1.5 rounded-full overflow-hidden" style={{ background: '#111d33' }}>
+            <div className="w-20 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--c-track)' }}>
               <div className="h-full rounded-full" style={{ width: `${(r.weight / maxW) * 100}%`, background: '#2d9cdb' }} />
             </div>
-            <Mono color="#c4d4e8">{(r.weight * 100).toFixed(2)}%</Mono>
+            <Mono color="var(--c-text)">{(r.weight * 100).toFixed(2)}%</Mono>
           </div>
         ))}
-        <div className="mt-2 p-2 rounded text-[10px]" style={{ background: '#111d33', color: '#00c896', fontFamily: 'var(--font-mono)' }}>
+        <div className="mt-2 p-2 rounded text-[10px]" style={{ background: 'var(--c-panel)', color: '#00c896', border: '1px solid var(--c-border)', fontFamily: 'var(--font-mono)' }}>
           Σ weights = 1.0000  ·  CR = 0.0158 (Passes Saaty consistency &lt; 0.10)
         </div>
       </div>
 
       <div>
         <SectionLabel>AHP Mathematical Methodology</SectionLabel>
-        <div className="text-[11px] leading-relaxed" style={{ color: '#647d9a' }}>
+        <div className="text-[11px] leading-relaxed" style={{ color: 'var(--c-text2)' }}>
           Multi-Criteria Decision Analysis (MCDA) based on the Analytic Hierarchy Process (Saaty, 1980). A pairwise comparison matrix (11×11) was evaluated to compute priority eigenvalue weights. Pairwise consistency validated with Principal Eigenvalue (λmax = 11.238), Consistency Index (CI = 0.0238), and Random Index (RI = 1.51), yielding a Consistency Ratio (CR) of 0.0158.
         </div>
       </div>

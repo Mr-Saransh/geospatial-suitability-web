@@ -41,3 +41,6 @@ export const IconRefresh    = (p: P) => <I {...p} d={<><polyline points="23 4 23
 export const IconAnalyze    = (p: P) => <I {...p} d={<><path d="M3 3v18h18"/><polyline points="18 9 12 15 8 11 3 16"/></>}/>;
 export const IconWarning    = (p: P) => <I {...p} d={<><path d="m10.29 3.86-8.57 14.86a2 2 0 0 0 1.71 3h17.14a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></>}/>;
 export const IconGlobe      = (p: P) => <I {...p} d={<><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></>}/>;
+export const IconSun        = (p: P) => <I {...p} d={<><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></>}/>;
+export const IconMoon       = (p: P) => <I {...p} d={<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>}/>;
+

@@ -59,3 +59,75 @@ def get_analysis_metadata(analysis_id: str):
         package_type=package_service.manifest.get("package_type", ""),
         reproducibility=package_service.reproducibility,
     )
+
+
+_boundary_cache: dict[str, dict] = {}
+
+
+@router.get("/boundary")
+def get_state_boundary():
+    """Return the GeoJSON FeatureCollection boundary for the current state."""
+    import json
+    import logging
+    from app.config import settings
+    import rasterio
+
+    logger = logging.getLogger(__name__)
+    state_name = package_service.state_name
+    if state_name in _boundary_cache:
+        return _boundary_cache[state_name]
+
+    candidates = [
+        package_service.root / "boundary.geojson",
+        package_service.root / "boundary.gpkg",
+        settings.spatial_knowledge_root.parent / "hp_boundary.gpkg",
+        settings.spatial_knowledge_root.parent / f"{state_name.lower().replace(' ', '_')}_boundary.gpkg",
+    ]
+
+    for p in candidates:
+        if p.exists():
+            try:
+                import geopandas as gpd
+                gdf = gpd.read_file(p)
+                if str(gdf.crs) != "EPSG:4326":
+                    gdf = gdf.to_crs(epsg=4326)
+                gdf["geometry"] = gdf.geometry.simplify(0.002, preserve_topology=True)
+                data = json.loads(gdf.to_json())
+                _boundary_cache[state_name] = data
+                return data
+            except Exception as e:
+                logger.warning("Failed to load boundary from %s: %s", p, e)
+
+    result_layers = package_service.result_layers()
+    if result_layers:
+        try:
+            path = package_service.get_raster_path(result_layers[0]["relative_path"])
+            with rasterio.open(path) as ds:
+                from rasterio.warp import transform_bounds
+                b = transform_bounds(ds.crs, "EPSG:4326", *ds.bounds)
+                data = {
+                    "type": "FeatureCollection",
+                    "features": [
+                        {
+                            "type": "Feature",
+                            "properties": {"name": state_name},
+                            "geometry": {
+                                "type": "Polygon",
+                                "coordinates": [[
+                                    [b[0], b[1]],
+                                    [b[2], b[1]],
+                                    [b[2], b[3]],
+                                    [b[0], b[3]],
+                                    [b[0], b[1]],
+                                ]],
+                            },
+                        }
+                    ],
+                }
+                _boundary_cache[state_name] = data
+                return data
+        except Exception:
+            pass
+
+    return {"type": "FeatureCollection", "features": []}
+

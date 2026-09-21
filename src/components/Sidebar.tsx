@@ -12,7 +12,7 @@ const LAYER_GROUPS = [
 ];
 
 const BASEMAPS = [
-  { id: 'dark',      label: 'Dark Matter', color: '#080d18' },
+  { id: 'dark',      label: 'Dark Canvas', color: '#080d18' },
   { id: 'satellite', label: 'Satellite',   color: '#1a2e1a' },
   { id: 'topo',      label: 'Topographic', color: '#1e1a2e' },
   { id: 'streets',   label: 'OpenStreet',  color: '#1a1e2e' },
@@ -72,13 +72,13 @@ export default function Sidebar({
 
   return (
     <aside className="flex-shrink-0 flex flex-col overflow-hidden transition-all duration-300 z-20"
-      style={{ width: open ? 300 : 0, minWidth: open ? 300 : 0, background: '#0c1424', borderRight: '1px solid #1c2e48' }}>
+      style={{ width: open ? 300 : 0, minWidth: open ? 300 : 0, background: 'var(--c-surface)', borderRight: '1px solid var(--c-border)' }}>
       {open && (
         <div className="flex flex-col h-full overflow-y-auto" style={{ minWidth: 300 }}>
 
           {/* Panel header */}
           <div className="flex items-center justify-between px-4 py-2.5 flex-shrink-0"
-            style={{ background: '#080d18', borderBottom: '1px solid #1c2e48' }}>
+            style={{ background: 'var(--c-panel)', borderBottom: '1px solid var(--c-border)' }}>
             <div className="text-xs font-semibold" style={{ fontFamily: 'var(--font-mono)', color: '#00b4d8', letterSpacing: '0.08em' }}>
               GIS CONTROL PANEL
             </div>
@@ -92,7 +92,7 @@ export default function Sidebar({
           <SideSection label="Study Area & Model" open={section.analysis} onToggle={() => toggle('analysis')}>
             <div className="px-4 pb-4 flex flex-col gap-2.5">
               <Field label="Analysis Domain">
-                <select className="w-full" value="Himachal Pradesh, India" readOnly>
+                <select className="w-full" value="Himachal Pradesh, India" disabled>
                   <option>Himachal Pradesh, India</option>
                 </select>
               </Field>
@@ -117,7 +117,7 @@ export default function Sidebar({
                 </Field>
               </div>
               <Field label="Suitability Model">
-                <select className="w-full" value={modelName} readOnly>
+                <select className="w-full" value={modelName} disabled>
                   <option>{modelName}</option>
                 </select>
               </Field>
@@ -130,8 +130,8 @@ export default function Sidebar({
                 </button>
                 <button
                   onClick={() => handleDistrictChange('Shimla')}
-                  className="h-7 px-3 rounded text-xs hover:bg-[#111d33]"
-                  style={{ color: '#647d9a', border: '1px solid #1c2e48' }}>
+                  className="h-7 px-3 rounded text-xs transition-colors hover:opacity-80"
+                  style={{ color: 'var(--c-text2)', border: '1px solid var(--c-border)', background: 'var(--c-panel)' }}>
                   Reset
                 </button>
               </div>
@@ -143,7 +143,7 @@ export default function Sidebar({
             actions={
               <div className="flex items-center gap-1">
                 <button onClick={showAll} className="text-[10px] px-1.5 py-0.5 rounded" style={{ color: '#00b4d8', border: '1px solid rgba(0,180,216,0.25)' }}>All</button>
-                <button onClick={hideAll} className="text-[10px] px-1.5 py-0.5 rounded" style={{ color: '#647d9a', border: '1px solid #1c2e48' }}>None</button>
+                <button onClick={hideAll} className="text-[10px] px-1.5 py-0.5 rounded" style={{ color: 'var(--c-text2)', border: '1px solid var(--c-border)' }}>None</button>
               </div>
             }>
             <div className="pb-3">
@@ -172,7 +172,7 @@ export default function Sidebar({
           {/* Legend */}
           <SideSection label="Suitability Legend" open={section.legend} onToggle={() => toggle('legend')}>
             <div className="px-4 pb-4">
-              <div className="text-[10px] mb-2" style={{ color: '#647d9a', fontFamily: 'var(--font-mono)' }}>
+              <div className="text-[10px] mb-2" style={{ color: 'var(--c-text2)', fontFamily: 'var(--font-mono)' }}>
                 11-Factor AHP Flood Suitability (Class 1–5)
               </div>
               <div className="flex flex-col gap-1.5 mb-3">
@@ -181,15 +181,15 @@ export default function Sidebar({
                   return (
                     <div key={cls} className="flex items-center gap-2.5">
                       <div className="w-7 h-3 rounded-sm flex-shrink-0" style={{ background: m.color, opacity: 0.9 }} />
-                      <div className="flex-1 text-xs" style={{ color: '#c4d4e8' }}>{m.label}</div>
-                      <div className="text-[10px]" style={{ color: '#647d9a', fontFamily: 'var(--font-mono)' }}>{m.range}</div>
+                      <div className="flex-1 text-xs" style={{ color: 'var(--c-text)' }}>{m.label}</div>
+                      <div className="text-[10px]" style={{ color: 'var(--c-text2)', fontFamily: 'var(--font-mono)' }}>{m.range}</div>
                     </div>
                   );
                 })}
               </div>
               {/* Gradient bar */}
               <div className="h-2.5 rounded-sm mb-1" style={{ background: 'linear-gradient(to right, #ef4444, #f97316, #fbbf24, #4ade80, #00c896)' }} />
-              <div className="flex justify-between text-[9px]" style={{ color: '#374f6a', fontFamily: 'var(--font-mono)' }}>
+              <div className="flex justify-between text-[9px]" style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>
                 <span>1 (Very Low)</span><span>2</span><span>3</span><span>4</span><span>5 (Very High)</span>
               </div>
             </div>
@@ -202,11 +202,11 @@ export default function Sidebar({
                 <button key={b.id} onClick={() => onBasemap(b.id)}
                   className="h-14 rounded text-xs font-medium transition-all flex flex-col items-center justify-center gap-1"
                   style={{
-                    background: b.color, color: '#c4d4e8',
-                    border: basemap === b.id ? '2px solid #00b4d8' : '1px solid #1c2e48',
+                    background: 'var(--c-panel)', color: 'var(--c-text)',
+                    border: basemap === b.id ? '2px solid #00b4d8' : '1px solid var(--c-border)',
                     boxShadow: basemap === b.id ? '0 0 0 1px rgba(0,180,216,0.3)' : 'none',
                   }}>
-                  <IconGlobe size={14} style={{ color: basemap === b.id ? '#00b4d8' : '#647d9a' }} />
+                  <IconGlobe size={14} style={{ color: basemap === b.id ? '#00b4d8' : 'var(--c-text2)' }} />
                   {b.label}
                 </button>
               ))}
@@ -214,13 +214,13 @@ export default function Sidebar({
           </SideSection>
 
           {/* Footer Metadata */}
-          <div className="mt-auto px-4 py-3 flex-shrink-0" style={{ borderTop: '1px solid #1c2e48', background: '#080d18' }}>
+          <div className="mt-auto px-4 py-3 flex-shrink-0" style={{ borderTop: '1px solid var(--c-border)', background: 'var(--c-panel)' }}>
             <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
               <Pill color="#00b4d8">Run ID: 51</Pill>
               <Pill color="#00c896">CR: 0.0158 ✓</Pill>
               <Pill color="#374f6a">11 Criteria</Pill>
             </div>
-            <div className="text-[10px]" style={{ color: '#374f6a', fontFamily: 'var(--font-mono)' }}>
+            <div className="text-[10px]" style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>
               Himachal Pradesh Spatial Knowledge · v1.0
             </div>
           </div>
@@ -235,10 +235,10 @@ function SideSection({ label, open, onToggle, children, actions }: {
   label: string; open: boolean; onToggle: () => void; children: ReactNode; actions?: ReactNode;
 }) {
   return (
-    <div style={{ borderBottom: '1px solid #111d33' }}>
+    <div style={{ borderBottom: '1px solid var(--c-border)' }}>
       <button onClick={onToggle}
-        className="flex items-center w-full px-4 py-2.5 transition-colors hover:bg-[#0e1828]"
-        style={{ color: '#647d9a' }}>
+        className="flex items-center w-full px-4 py-2.5 transition-colors hover:opacity-80"
+        style={{ color: 'var(--c-text2)' }}>
         <span className="flex-1 text-left text-[10px] font-semibold tracking-[0.08em] uppercase"
           style={{ fontFamily: 'var(--font-mono)' }}>{label}</span>
         {actions && <span onClick={e => e.stopPropagation()}>{actions}</span>}
@@ -257,7 +257,7 @@ function LayerGroup({ label, children }: { label: string; children: ReactNode })
     <div>
       <button onClick={() => setOpen(v => !v)}
         className="w-full flex items-center gap-1.5 px-4 py-1 text-[10px] font-medium"
-        style={{ color: '#374f6a', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em' }}>
+        style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em' }}>
         <span className="flex-shrink-0" style={{ transform: open ? 'rotate(90deg)' : 'rotate(0)' }}>
           <IconChevronR size={9} />
         </span>
@@ -280,43 +280,54 @@ function LayerRow({ layer, isActive, onToggle, onSelect, onOpacity, onInfo }: {
   return (
     <div className="px-2 rounded mx-2 mb-0.5 transition-colors"
       style={{
-        background: isActive ? 'rgba(0,180,216,0.1)' : expanded ? '#111d33' : 'transparent',
+        background: isActive ? 'rgba(0,180,216,0.1)' : expanded ? 'var(--c-panel)' : 'transparent',
         border: isActive ? '1px solid rgba(0,180,216,0.3)' : '1px solid transparent',
       }}>
       <div className="flex items-center gap-1 py-1.5">
         <button
           onClick={() => onToggle(layer.id)}
           className="flex-shrink-0 transition-opacity w-5 h-5 flex items-center justify-center"
-          style={{ color: layer.visible ? '#00b4d8' : '#374f6a' }}>
+          style={{ color: layer.visible ? '#00b4d8' : 'var(--c-text3)' }}>
           {layer.visible ? <IconEye size={12} /> : <IconEyeOff size={12} />}
         </button>
         <span
           className="flex-1 text-xs truncate cursor-pointer select-none"
-          style={{ color: layer.visible ? '#c4d4e8' : '#647d9a', fontWeight: isActive ? 600 : 400 }}
+          style={{ color: layer.visible ? 'var(--c-text)' : 'var(--c-text2)', fontWeight: isActive ? 600 : 400 }}
           onClick={() => { onSelect(layer.id); onToggle(layer.id); }}>
           {layer.name}
-          {layer.unit && <span className="ml-1 text-[10px]" style={{ color: '#374f6a' }}>({layer.unit})</span>}
+          {layer.unit && <span className="ml-1 text-[10px]" style={{ color: 'var(--c-text3)' }}>({layer.unit})</span>}
         </span>
         <button onClick={() => onInfo(layer.id)} title="Layer info"
-          className="w-5 h-5 flex items-center justify-center" style={{ color: '#374f6a' }}>
+          className="w-5 h-5 flex items-center justify-center" style={{ color: 'var(--c-text3)' }}>
           <IconInfo size={11} />
         </button>
         <button onClick={() => setExpanded(v => !v)}
-          className="w-5 h-5 flex items-center justify-center" style={{ color: '#374f6a' }}>
+          className="w-5 h-5 flex items-center justify-center" style={{ color: 'var(--c-text3)' }}>
           <IconChevronR size={10} style={{ transform: expanded ? 'rotate(90deg)' : 'none' }} />
         </button>
       </div>
       {expanded && (
         <div className="pb-2.5 pl-5 pr-2 flex flex-col gap-2">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] w-12 flex-shrink-0" style={{ color: '#374f6a' }}>Opacity</span>
-            <input type="range" min={10} max={100} value={layer.opacity}
-              onChange={e => onOpacity(layer.id, +e.target.value)} className="flex-1" />
-            <span className="text-[10px] w-7 text-right" style={{ color: '#647d9a', fontFamily: 'var(--font-mono)' }}>
+            <span className="text-[10px] w-12 flex-shrink-0 font-medium" style={{ color: 'var(--c-text2)' }}>Opacity</span>
+            <div className="relative flex-1 flex items-center h-4">
+              <input
+                type="range"
+                min={10}
+                max={100}
+                value={layer.opacity}
+                onChange={e => onOpacity(layer.id, +e.target.value)}
+                className="w-full opacity-slider cursor-pointer"
+                style={{
+                  background: `linear-gradient(to right, #00b4d8 0%, #00b4d8 ${layer.opacity}%, rgba(100,125,154,0.3) ${layer.opacity}%, rgba(100,125,154,0.3) 100%)`,
+                }}
+              />
+            </div>
+            <span className="text-[10px] w-8 text-right font-semibold" style={{ color: '#00b4d8', fontFamily: 'var(--font-mono)' }}>
               {layer.opacity}%
             </span>
           </div>
-          <div className="text-[10px] leading-relaxed" style={{ color: '#647d9a' }}>
+          <div className="text-[10px] leading-relaxed" style={{ color: 'var(--c-text2)' }}>
             {layer.source}
             {layer.resolution && <span> · {layer.resolution}</span>}
           </div>
@@ -334,7 +345,7 @@ function LayerRow({ layer, isActive, onToggle, onSelect, onOpacity, onInfo }: {
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
-      <div className="text-[10px]" style={{ color: '#647d9a' }}>{label}</div>
+      <div className="text-[10px]" style={{ color: 'var(--c-text2)' }}>{label}</div>
       {children}
     </div>
   );

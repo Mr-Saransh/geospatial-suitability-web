@@ -17,7 +17,7 @@ export function SuitBadge({ cls, size = 'sm' }: { cls: SuitClass; size?: 'xs' | 
 /* ── Score bar ─────────────────────────────────────────────────── */
 export function ScoreBar({ value, color, height = 3 }: { value: number; color: string; height?: number }) {
   return (
-    <div className="relative rounded-full overflow-hidden" style={{ background: '#1c2e48', height }}>
+    <div className="relative rounded-full overflow-hidden" style={{ background: 'var(--c-track)', height }}>
       <div className="h-full rounded-full transition-all duration-500" style={{ width: `${value * 100}%`, background: color }} />
     </div>
   );
@@ -27,7 +27,7 @@ export function ScoreBar({ value, color, height = 3 }: { value: number; color: s
 export function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div className="text-[10px] font-medium tracking-[0.1em] uppercase mb-2 mt-1"
-      style={{ color: '#374f6a', fontFamily: 'var(--font-mono)' }}>
+      style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>
       {children}
     </div>
   );
@@ -54,10 +54,10 @@ export function Btn({ children, onClick, active, title, variant = 'ghost', class
 }) {
   const base = 'flex items-center justify-center rounded transition-all focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed';
   const styles: Record<string, React.CSSProperties> = {
-    ghost:   { color: active ? '#00b4d8' : '#647d9a', background: active ? 'rgba(0,180,216,0.1)' : 'transparent' },
+    ghost:   { color: active ? '#00b4d8' : 'var(--c-text2)', background: active ? 'rgba(0,180,216,0.1)' : 'transparent' },
     primary: { color: '#fff', background: active ? '#0090b8' : '#00b4d8' },
     danger:  { color: '#ef4444', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)' },
-    outline: { color: '#c4d4e8', background: 'transparent', border: '1px solid #1c2e48' },
+    outline: { color: 'var(--c-text)', background: 'transparent', border: '1px solid var(--c-border)' },
   };
   return (
     <button title={title} onClick={onClick} disabled={disabled}
@@ -74,12 +74,12 @@ export function TabBar({ tabs, active, onChange }: {
   onChange: (id: string) => void;
 }) {
   return (
-    <div className="flex" style={{ borderBottom: '1px solid #1c2e48' }}>
+    <div className="flex" style={{ borderBottom: '1px solid var(--c-border)' }}>
       {tabs.map(t => (
         <button key={t.id} onClick={() => onChange(t.id)}
           className="flex-1 py-2 text-[11px] font-medium capitalize transition-colors"
           style={{
-            color: active === t.id ? '#00b4d8' : '#374f6a',
+            color: active === t.id ? '#00b4d8' : 'var(--c-text3)',
             borderBottom: active === t.id ? '2px solid #00b4d8' : '2px solid transparent',
             fontFamily: 'var(--font-body)',
           }}>
@@ -93,7 +93,7 @@ export function TabBar({ tabs, active, onChange }: {
 /* ── Mono value ────────────────────────────────────────────────── */
 export function Mono({ children, color }: { children: React.ReactNode; color?: string }) {
   return (
-    <span style={{ fontFamily: 'var(--font-mono)', color: color || '#c4d4e8', fontSize: 12 }}>
+    <span style={{ fontFamily: 'var(--font-mono)', color: color || 'var(--c-text)', fontSize: 12 }}>
       {children}
     </span>
   );
@@ -104,10 +104,10 @@ export function StatTile({ label, value, sub, accent }: {
   label: string; value: string; sub?: string; accent?: string;
 }) {
   return (
-    <div className="p-3 rounded" style={{ background: '#111d33', border: '1px solid #1c2e48' }}>
-      <div className="text-[10px] mb-1" style={{ color: '#374f6a', fontFamily: 'var(--font-mono)' }}>{label}</div>
-      <div className="text-base font-semibold" style={{ fontFamily: 'var(--font-mono)', color: accent || '#c4d4e8' }}>{value}</div>
-      {sub && <div className="text-[10px] mt-0.5" style={{ color: '#374f6a' }}>{sub}</div>}
+    <div className="p-3 rounded" style={{ background: 'var(--c-panel)', border: '1px solid var(--c-border)' }}>
+      <div className="text-[10px] mb-1" style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>{label}</div>
+      <div className="text-base font-semibold" style={{ fontFamily: 'var(--font-mono)', color: accent || 'var(--c-text)' }}>{value}</div>
+      {sub && <div className="text-[10px] mt-0.5" style={{ color: 'var(--c-text3)' }}>{sub}</div>}
     </div>
   );
 }
@@ -126,7 +126,7 @@ export function Pill({ children, color = '#00b4d8' }: { children: React.ReactNod
 export function Kbd({ children }: { children: React.ReactNode }) {
   return (
     <kbd className="inline-flex items-center px-1.5 py-px text-[10px] rounded"
-      style={{ background: '#111d33', color: '#374f6a', border: '1px solid #1c2e48', fontFamily: 'var(--font-mono)' }}>
+      style={{ background: 'var(--c-panel)', color: 'var(--c-text3)', border: '1px solid var(--c-border)', fontFamily: 'var(--font-mono)' }}>
       {children}
     </kbd>
   );
@@ -140,10 +140,10 @@ export function Modal({ children, onClose, title, width = 560 }: {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
       <div className="relative rounded-xl shadow-2xl flex flex-col overflow-hidden"
-        style={{ width, maxHeight: '90vh', background: '#0c1424', border: '1px solid #1c2e48' }}>
+        style={{ width, maxHeight: '90vh', background: 'var(--c-surface)', border: '1px solid var(--c-border)' }}>
         <div className="flex items-center justify-between px-5 py-3.5 flex-shrink-0"
-          style={{ borderBottom: '1px solid #1c2e48' }}>
-          <span className="text-sm font-semibold" style={{ fontFamily: 'var(--font-display)', color: '#c4d4e8' }}>{title}</span>
+          style={{ borderBottom: '1px solid var(--c-border)' }}>
+          <span className="text-sm font-semibold" style={{ fontFamily: 'var(--font-display)', color: 'var(--c-text)' }}>{title}</span>
           <Btn onClick={onClose} title="Close" className="w-7 h-7">{
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -161,12 +161,12 @@ export function EmptyState({ icon, title, body }: { icon: React.ReactNode; title
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-12 px-6 text-center">
       <div className="w-10 h-10 rounded-full flex items-center justify-center"
-        style={{ background: '#111d33', border: '1px solid #1c2e48', color: '#374f6a' }}>
+        style={{ background: 'var(--c-panel)', border: '1px solid var(--c-border)', color: 'var(--c-text3)' }}>
         {icon}
       </div>
       <div>
-        <div className="text-sm font-medium mb-1" style={{ color: '#647d9a' }}>{title}</div>
-        <div className="text-xs leading-relaxed" style={{ color: '#374f6a' }}>{body}</div>
+        <div className="text-sm font-medium mb-1" style={{ color: 'var(--c-text)' }}>{title}</div>
+        <div className="text-xs leading-relaxed" style={{ color: 'var(--c-text2)' }}>{body}</div>
       </div>
     </div>
   );

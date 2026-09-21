@@ -15,6 +15,8 @@ from typing import Optional, Tuple
 import numpy as np
 import rasterio
 from rasterio.windows import Window
+from rasterio.warp import reproject, Resampling, transform_bounds
+from rasterio.transform import from_bounds
 from pyproj import Transformer
 from PIL import Image
 
@@ -171,6 +173,13 @@ def point_inspection(model_id: str, lat: float, lon: float) -> dict:
 
 # ── Tile rendering ─────────────────────────────────────────
 
+ORIGIN_SHIFT = 20037508.342789244
+
+_layer_bounds_3857: dict[str, tuple[float, float, float, float]] = {}
+_layer_range_cache: dict[str, tuple[float, float]] = {}
+_tile_cache: dict[str, bytes] = {}
+_MAX_TILE_CACHE = 4096
+
 # Color maps for different layer types
 SUITABILITY_CMAP = {
     1: (239, 68, 68),     # Very Low  — red
@@ -189,30 +198,62 @@ CONTINUOUS_CMAP = [
 ]
 
 
-def _value_to_continuous_color(value: float, vmin: float, vmax: float) -> Tuple[int, int, int, int]:
-    """Map a continuous value to an RGBA color using a gradient."""
-    if vmax == vmin:
-        t = 0.5
-    else:
-        t = max(0.0, min(1.0, (value - vmin) / (vmax - vmin)))
+def get_tile_bounds_3857(z: int, x: int, y: int) -> tuple[float, float, float, float]:
+    """Calculate the bounding box for a Web Mercator slippy tile in EPSG:3857."""
+    tile_span = 2.0 * ORIGIN_SHIFT / (1 << z)
+    min_x = -ORIGIN_SHIFT + x * tile_span
+    max_x = -ORIGIN_SHIFT + (x + 1) * tile_span
+    max_y = ORIGIN_SHIFT - y * tile_span
+    min_y = ORIGIN_SHIFT - (y + 1) * tile_span
+    return min_x, min_y, max_x, max_y
 
-    n = len(CONTINUOUS_CMAP) - 1
-    idx = t * n
-    lower = int(idx)
-    upper = min(lower + 1, n)
-    frac = idx - lower
 
-    r = int(CONTINUOUS_CMAP[lower][0] * (1 - frac) + CONTINUOUS_CMAP[upper][0] * frac)
-    g = int(CONTINUOUS_CMAP[lower][1] * (1 - frac) + CONTINUOUS_CMAP[upper][1] * frac)
-    b = int(CONTINUOUS_CMAP[lower][2] * (1 - frac) + CONTINUOUS_CMAP[upper][2] * frac)
-    return r, g, b, 200
+def _get_layer_value_range(layer_id: str, ds: rasterio.DatasetReader) -> tuple[float, float]:
+    """Return cached min and max for continuous coloring across all tiles."""
+    if layer_id in _layer_range_cache:
+        return _layer_range_cache[layer_id]
+
+    if "rating" in layer_id or "suitability" in layer_id:
+        _layer_range_cache[layer_id] = (1.0, 5.0)
+        return 1.0, 5.0
+
+    try:
+        # Fast downsampled overview read (up to 256x256) to determine stable min/max
+        out_h = min(ds.height, 256)
+        out_w = min(ds.width, 256)
+        sub = ds.read(1, out_shape=(1, out_h, out_w))
+        nodata = ds.nodata
+        valid = ~np.isnan(sub)
+        if nodata is not None and not np.isnan(nodata):
+            valid = valid & (sub != nodata)
+        if np.any(valid):
+            vmin = float(np.percentile(sub[valid], 1))
+            vmax = float(np.percentile(sub[valid], 99))
+            if vmax <= vmin:
+                vmin = float(np.min(sub[valid]))
+                vmax = float(np.max(sub[valid]))
+            if vmax == vmin:
+                vmax = vmin + 1.0
+            _layer_range_cache[layer_id] = (vmin, vmax)
+            return vmin, vmax
+    except Exception:
+        pass
+
+    _layer_range_cache[layer_id] = (0.0, 1.0)
+    return 0.0, 1.0
 
 
 def render_tile(layer_id: str, z: int, x: int, y: int, tile_size: int = 256) -> Optional[bytes]:
     """
     Render a single map tile as a PNG image.
-    Uses slippy-map tile coordinates (z/x/y).
+    Uses slippy-map Web Mercator coordinates (EPSG:3857).
+    Guarantees raster stays strictly on the geographic boundary of the state
+    and is invariant across all zoom levels.
     """
+    cache_key = f"{layer_id}:{z}:{x}:{y}:{tile_size}"
+    if cache_key in _tile_cache:
+        return _tile_cache[cache_key]
+
     layer = package_service.get_layer(layer_id)
     if not layer:
         return None
@@ -222,94 +263,80 @@ def render_tile(layer_id: str, z: int, x: int, y: int, tile_size: int = 256) -> 
         return None
 
     try:
+        min_x, min_y, max_x, max_y = get_tile_bounds_3857(z, x, y)
+
         with rasterio.open(raster_path) as ds:
-            # Compute tile bounds in EPSG:4326 (Web Mercator tile scheme)
-            n = 2 ** z
-            lon_min = x / n * 360.0 - 180.0
-            lon_max = (x + 1) / n * 360.0 - 180.0
-            lat_max = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * y / n))))
-            lat_min = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * (y + 1) / n))))
+            # Check bounding box intersection in EPSG:3857
+            if layer_id not in _layer_bounds_3857:
+                try:
+                    b_3857 = transform_bounds(ds.crs, "EPSG:3857", *ds.bounds)
+                    _layer_bounds_3857[layer_id] = b_3857
+                except Exception:
+                    _layer_bounds_3857[layer_id] = (-ORIGIN_SHIFT, -ORIGIN_SHIFT, ORIGIN_SHIFT, ORIGIN_SHIFT)
 
-            # Transform tile bounds to raster CRS
-            crs_str = str(ds.crs)
-            if crs_str != "EPSG:4326":
-                transformer = _get_transformer("EPSG:4326", crs_str)
-                x_min, y_min = transformer.transform(lon_min, lat_min)
-                x_max, y_max = transformer.transform(lon_max, lat_max)
-            else:
-                x_min, y_min = lon_min, lat_min
-                x_max, y_max = lon_max, lat_max
+            ds_left, ds_bottom, ds_right, ds_top = _layer_bounds_3857[layer_id]
+            if min_x > ds_right or max_x < ds_left or min_y > ds_top or max_y < ds_bottom:
+                trans = _transparent_tile(tile_size)
+                _tile_cache[cache_key] = trans
+                return trans
 
-            # Compute the raster window
-            col_min, row_max = ~ds.transform * (x_min, y_min)
-            col_max, row_min = ~ds.transform * (x_max, y_max)
+            dst_transform = from_bounds(min_x, min_y, max_x, max_y, tile_size, tile_size)
+            dst_array = np.full((tile_size, tile_size), fill_value=np.nan, dtype=np.float32)
 
-            # Clip to raster bounds
-            col_min = max(0, int(col_min))
-            col_max = min(ds.width, int(col_max) + 1)
-            row_min = max(0, int(row_min))
-            row_max = min(ds.height, int(row_max) + 1)
-
-            if col_min >= col_max or row_min >= row_max:
-                # Tile is outside raster extent — return transparent
-                return _transparent_tile(tile_size)
-
-            window = Window(col_min, row_min, col_max - col_min, row_max - row_min)
-            data = ds.read(1, window=window)
-            nodata = ds.nodata
-
-            # Determine if classified or continuous
             is_classified = "classified" in layer.get("layer_name", "")
 
-            # Create RGBA image
-            img = Image.new("RGBA", (tile_size, tile_size), (0, 0, 0, 0))
-            pixels = img.load()
+            reproject(
+                source=rasterio.band(ds, 1),
+                destination=dst_array,
+                src_transform=ds.transform,
+                src_crs=ds.crs,
+                src_nodata=ds.nodata,
+                dst_transform=dst_transform,
+                dst_crs="EPSG:3857",
+                dst_nodata=np.nan,
+                resampling=Resampling.nearest if is_classified else Resampling.bilinear,
+            )
 
-            h, w = data.shape
-            if h == 0 or w == 0:
-                return _transparent_tile(tile_size)
-
-            # Compute value range for continuous coloring
-            valid_mask = np.ones_like(data, dtype=bool)
-            if nodata is not None:
-                if np.isnan(nodata):
-                    valid_mask = ~np.isnan(data)
-                else:
-                    valid_mask = data != nodata
-            valid_mask = valid_mask & ~np.isnan(data)
-
+            valid_mask = ~np.isnan(dst_array)
             if not np.any(valid_mask):
-                return _transparent_tile(tile_size)
+                trans = _transparent_tile(tile_size)
+                _tile_cache[cache_key] = trans
+                return trans
 
-            valid_data = data[valid_mask]
-            vmin = float(np.nanmin(valid_data))
-            vmax = float(np.nanmax(valid_data))
+            rgba = np.zeros((tile_size, tile_size, 4), dtype=np.uint8)
 
-            for ty in range(tile_size):
-                for tx in range(tile_size):
-                    # Map tile pixel to data pixel
-                    dy = int(ty * h / tile_size)
-                    dx = int(tx * w / tile_size)
-                    dy = min(dy, h - 1)
-                    dx = min(dx, w - 1)
+            if is_classified:
+                for cls_val, rgb in SUITABILITY_CMAP.items():
+                    c_mask = (dst_array == cls_val)
+                    if np.any(c_mask):
+                        rgba[c_mask, 0] = rgb[0]
+                        rgba[c_mask, 1] = rgb[1]
+                        rgba[c_mask, 2] = rgb[2]
+                        rgba[c_mask, 3] = 190
+            else:
+                vmin, vmax = _get_layer_value_range(layer_id, ds)
+                diff = vmax - vmin if vmax > vmin else 1.0
+                val_v = dst_array[valid_mask]
+                t = np.clip((val_v - vmin) / diff, 0.0, 1.0)
+                colors = np.array(CONTINUOUS_CMAP, dtype=np.float32)
+                n = len(colors) - 1
+                scaled = t * n
+                lower = np.floor(scaled).astype(np.int32)
+                upper = np.clip(lower + 1, 0, n)
+                frac = (scaled - lower)[:, np.newaxis]
+                rgb = (colors[lower] * (1.0 - frac) + colors[upper] * frac).astype(np.uint8)
+                rgba[valid_mask, :3] = rgb
+                rgba[valid_mask, 3] = 190
 
-                    val = data[dy, dx]
-
-                    # NoData check
-                    if np.isnan(val):
-                        continue
-                    if nodata is not None and not np.isnan(nodata) and val == nodata:
-                        continue
-
-                    if is_classified:
-                        color = SUITABILITY_CMAP.get(int(val), (128, 128, 128))
-                        pixels[tx, ty] = (*color, 180)
-                    else:
-                        pixels[tx, ty] = _value_to_continuous_color(val, vmin, vmax)
-
+            img = Image.fromarray(rgba, "RGBA")
             buf = io.BytesIO()
             img.save(buf, format="PNG")
-            return buf.getvalue()
+            result_png = buf.getvalue()
+
+            if len(_tile_cache) >= _MAX_TILE_CACHE:
+                _tile_cache.pop(next(iter(_tile_cache)))
+            _tile_cache[cache_key] = result_png
+            return result_png
 
     except Exception as e:
         logger.warning("Failed to render tile %s/%d/%d/%d: %s", layer_id, z, x, y, e)

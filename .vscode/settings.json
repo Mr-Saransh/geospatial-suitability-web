@@ -1,0 +1,6 @@
+{
+  "python.defaultInterpreterPath": "C:\\gee_env\\python.exe",
+  "python.analysis.extraPaths": [
+    "./backend"
+  ]
+}

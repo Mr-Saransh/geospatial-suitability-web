@@ -18,7 +18,7 @@ const SYSTEM_INIT: AIMessage = {
 
 function formatText(text: string): string {
   return text
-    .replace(/\*\*(.*?)\*\*/g, '<strong style="color:#c4d4e8">$1</strong>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--c-text)">$1</strong>')
     .replace(/\n\n/g, '</p><p style="margin-top:6px">')
     .replace(/\n/g, '<br/>');
 }
@@ -62,17 +62,17 @@ export default function AIPanel({ zone, onClose, onLayerEvidence }: Props) {
   const contextPresets = AI_PRESETS.filter(p => !p.context || p.context === 'model' || (p.context === 'zone' && zone));
 
   return (
-    <div className="flex flex-col z-20" style={{ width: 340, background: '#0c1424', borderLeft: '1px solid #1c2e48' }}>
+    <div className="flex flex-col z-20" style={{ width: 340, background: 'var(--c-surface)', borderLeft: '1px solid var(--c-border)' }}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 flex-shrink-0"
-        style={{ background: '#080d18', borderBottom: '1px solid #1c2e48' }}>
+        style={{ background: 'var(--c-panel)', borderBottom: '1px solid var(--c-border)' }}>
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded flex items-center justify-center"
             style={{ background: 'rgba(0,180,216,0.12)', border: '1px solid rgba(0,180,216,0.3)', color: '#00b4d8' }}>
             <IconBot size={12} />
           </div>
           <div>
-            <div className="text-xs font-semibold" style={{ fontFamily: 'var(--font-display)', color: '#c4d4e8' }}>MCGSE AI Assistant</div>
+            <div className="text-xs font-semibold" style={{ fontFamily: 'var(--font-display)', color: 'var(--c-text)' }}>MCGSE AI Assistant</div>
             <div className="text-[10px]" style={{ color: '#00b4d8', fontFamily: 'var(--font-mono)' }}>
               Himachal Spatial Context · AHP Flood Engine
             </div>
@@ -83,14 +83,14 @@ export default function AIPanel({ zone, onClose, onLayerEvidence }: Props) {
 
       {/* Context bar */}
       <div className="px-4 py-2 flex-shrink-0 flex items-center gap-2 flex-wrap"
-        style={{ background: '#090f1e', borderBottom: '1px solid #1c2e48' }}>
+        style={{ background: 'var(--c-panel)', borderBottom: '1px solid var(--c-border)' }}>
         <div className="flex items-center gap-1">
           <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#00c896' }} />
           <Mono color="#00b4d8">Flood AHP v1.0</Mono>
         </div>
         {zone
-          ? <><span style={{ color: '#1c2e48' }}>·</span><Pill color="#00b4d8">{zone.district || `${zone.lat.toFixed(2)}°N`} · Score {zone.score.toFixed(2)}</Pill></>
-          : <><span style={{ color: '#1c2e48' }}>·</span><Mono color="#647d9a">Statewide Coverage</Mono></>
+          ? <><span style={{ color: 'var(--c-border)' }}>·</span><Pill color="#00b4d8">{zone.district || `${zone.lat.toFixed(2)}°N`} · Score {zone.score.toFixed(2)}</Pill></>
+          : <><span style={{ color: 'var(--c-border)' }}>·</span><Mono color="var(--c-text2)">Statewide Coverage</Mono></>
         }
       </div>
 
@@ -107,9 +107,9 @@ export default function AIPanel({ zone, onClose, onLayerEvidence }: Props) {
             <div className="flex flex-col gap-1.5 max-w-[88%]">
               <div className="px-3 py-2.5 rounded-lg text-[11px] leading-relaxed"
                 style={{
-                  background: msg.role === 'user' ? 'rgba(0,180,216,0.1)' : '#0e1828',
-                  color: msg.role === 'user' ? '#00b4d8' : '#c4d4e8',
-                  border: `1px solid ${msg.role === 'user' ? 'rgba(0,180,216,0.25)' : '#1c2e48'}`,
+                  background: msg.role === 'user' ? 'rgba(0,180,216,0.1)' : 'var(--c-panel)',
+                  color: msg.role === 'user' ? '#00b4d8' : 'var(--c-text)',
+                  border: `1px solid ${msg.role === 'user' ? 'rgba(0,180,216,0.25)' : 'var(--c-border)'}`,
                 }}>
                 <p dangerouslySetInnerHTML={{ __html: `<p>${formatText(msg.text)}</p>` }}
                   style={{ margin: 0 }} />
@@ -140,7 +140,7 @@ export default function AIPanel({ zone, onClose, onLayerEvidence }: Props) {
               <IconBot size={11} />
             </div>
             <div className="flex items-center gap-1 px-3 py-2 rounded-lg"
-              style={{ background: '#0e1828', border: '1px solid #1c2e48' }}>
+              style={{ background: 'var(--c-panel)', border: '1px solid var(--c-border)' }}>
               {[0, 1, 2].map(i => (
                 <div key={i} className="w-1.5 h-1.5 rounded-full"
                   style={{
@@ -158,15 +158,15 @@ export default function AIPanel({ zone, onClose, onLayerEvidence }: Props) {
 
       {/* Suggested questions */}
       {messages.length <= 1 && (
-        <div className="px-4 py-2 flex-shrink-0" style={{ borderTop: '1px solid #1c2e48' }}>
-          <div className="text-[10px] mb-1.5" style={{ color: '#647d9a', fontFamily: 'var(--font-mono)' }}>
+        <div className="px-4 py-2 flex-shrink-0" style={{ borderTop: '1px solid var(--c-border)' }}>
+          <div className="text-[10px] mb-1.5" style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>
             SUGGESTED QUESTIONS
           </div>
           <div className="flex flex-col gap-1">
             {contextPresets.slice(0, 4).map(p => (
               <button key={p.q} onClick={() => send(p.q)}
-                className="text-left text-[11px] px-2.5 py-1.5 rounded transition-colors hover:bg-[#111d33]"
-                style={{ color: '#c4d4e8', background: '#0e1828', border: '1px solid #1c2e48' }}>
+                className="text-left text-[11px] px-2.5 py-1.5 rounded transition-colors hover:opacity-80"
+                style={{ color: 'var(--c-text)', background: 'var(--c-panel)', border: '1px solid var(--c-border)' }}>
                 {p.q}
               </button>
             ))}
@@ -175,12 +175,12 @@ export default function AIPanel({ zone, onClose, onLayerEvidence }: Props) {
       )}
 
       {/* Input */}
-      <div className="px-4 py-3 flex-shrink-0" style={{ borderTop: '1px solid #1c2e48' }}>
+      <div className="px-4 py-3 flex-shrink-0" style={{ borderTop: '1px solid var(--c-border)' }}>
         <div className="flex items-center gap-2 px-3 rounded-lg"
-          style={{ background: '#0e1828', border: '1px solid #1c2e48', height: 36 }}>
+          style={{ background: 'var(--c-panel)', border: '1px solid var(--c-border)', height: 36 }}>
           <input
             className="flex-1 bg-transparent text-xs outline-none"
-            style={{ color: '#c4d4e8', fontFamily: 'var(--font-body)' }}
+            style={{ color: 'var(--c-text)', fontFamily: 'var(--font-body)' }}
             placeholder="Ask about Himachal flood suitability, AHP weights, criteria…"
             value={input}
             onChange={e => setInput(e.target.value)}
@@ -193,8 +193,8 @@ export default function AIPanel({ zone, onClose, onLayerEvidence }: Props) {
           </button>
         </div>
         <div className="flex items-center gap-1 mt-1.5">
-          <IconInfo size={9} style={{ color: '#374f6a' }} />
-          <span className="text-[9px]" style={{ color: '#647d9a' }}>
+          <IconInfo size={9} style={{ color: 'var(--c-text3)' }} />
+          <span className="text-[9px]" style={{ color: 'var(--c-text2)' }}>
             Connected to Himachal Pradesh Spatial Knowledge Package
           </span>
         </div>

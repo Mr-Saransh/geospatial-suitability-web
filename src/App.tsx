@@ -20,9 +20,9 @@ import { api } from './lib/api/client';
 import type { ModelSummary, ModelDetail, AnalysisStatistics, LayerInfo, PointInspectionResponse } from './lib/api/types';
 
 function useIsMobile() {
-  const [mobile, setMobile] = useState(window.innerWidth < 900);
+  const [mobile, setMobile] = useState(window.innerWidth < 640);
   useEffect(() => {
-    const h = () => setMobile(window.innerWidth < 900);
+    const h = () => setMobile(window.innerWidth < 640);
     window.addEventListener('resize', h);
     return () => window.removeEventListener('resize', h);
   }, []);
@@ -57,6 +57,13 @@ export default function App() {
   const [basemap, setBasemap]           = useState('dark');
   const [coord, setCoord]               = useState('31.10480°N  77.17340°E');
   const [centerTarget, setCenterTarget] = useState<{ lat: number; lng: number } | null>(null);
+
+  // Theme state
+  const [theme, setTheme]               = useState<'dark' | 'light'>('dark');
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   // ── 1. Fetch backend models, layers, stats, and metadata on load ─────────────────
   useEffect(() => {
@@ -254,7 +261,7 @@ export default function App() {
   if (isMobile) return <MobileApp />;
 
   return (
-    <div className="flex flex-col h-full overflow-hidden" style={{ background: '#080d18' }}>
+    <div className="flex flex-col h-full overflow-hidden" style={{ background: 'var(--c-base)' }}>
       {/* Navbar */}
       <Navbar
         sidebarOpen={sidebarOpen}  onSidebar={() => setSidebarOpen(v => !v)}
@@ -266,6 +273,8 @@ export default function App() {
         modelsList={models}
         coord={coord}
         onSearchLocation={handleLocationFly}
+        theme={theme}
+        onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
       />
 
       {/* Body */}
@@ -295,6 +304,7 @@ export default function App() {
             basemap={basemap}
             onCoordChange={setCoord}
             centerTarget={centerTarget}
+            theme={theme}
           />
 
           {/* Result popup (shown when point selected but right panel not open) */}
@@ -311,7 +321,7 @@ export default function App() {
           {/* Loading Inspection Indicator */}
           {loadingInspection && (
             <div className="absolute top-14 left-1/2 -translate-x-1/2 z-[1000] px-3 py-1.5 rounded-full backdrop-blur-md shadow-lg flex items-center gap-2"
-              style={{ background: 'rgba(8,13,24,0.9)', border: '1px solid #00b4d8', color: '#00b4d8', fontSize: '11px', fontFamily: 'var(--font-mono)' }}>
+              style={{ background: 'var(--c-surface)', border: '1px solid #00b4d8', color: '#00b4d8', fontSize: '11px', fontFamily: 'var(--font-mono)' }}>
               <div className="w-2 h-2 rounded-full bg-[#00b4d8] animate-ping" />
               Sampling 24 Spatial Rasters…
             </div>
@@ -320,8 +330,8 @@ export default function App() {
           {/* Compare controls overlay */}
           {compareOpen && (
             <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2 px-3 py-2 rounded-lg backdrop-blur-md"
-              style={{ background: 'rgba(12,20,36,0.92)', border: '1px solid rgba(0,180,216,0.4)' }}>
-              <span className="text-xs" style={{ color: '#647d9a' }}>Layer A:</span>
+              style={{ background: 'var(--c-surface)', border: '1px solid var(--c-border)' }}>
+              <span className="text-xs" style={{ color: 'var(--c-text3)' }}>Layer A:</span>
               <select
                 className="text-xs"
                 style={{ width: 120 }}
@@ -332,7 +342,7 @@ export default function App() {
                 <option value="factor_raster:twi">TWI</option>
                 <option value="factor_raster:elevation">Elevation</option>
               </select>
-              <span className="text-xs" style={{ color: '#374f6a' }}>vs.</span>
+              <span className="text-xs" style={{ color: 'var(--c-text3)' }}>vs.</span>
               <select
                 className="text-xs"
                 style={{ width: 140 }}
@@ -361,6 +371,7 @@ export default function App() {
             onLayerEvidence={handleLayerEvidence}
             statistics={statistics}
             modelDetail={modelDetail}
+            onClose={() => setRightOpen(false)}
           />
         )}
 
