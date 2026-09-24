@@ -14,7 +14,7 @@ const FORMATS = [
     size: '~12.4 MB', ext: '.csv',
   },
   {
-    id: 'geotiff', label: 'GeoTIFF Raster', icon: IconDatabase, desc: 'Single-band suitability index raster in GeoTIFF format',
+    id: 'geotiff', label: 'GeoTIFF Raster', icon: IconDatabase, desc: 'Single-band susceptibility index raster in GeoTIFF format',
     size: '~38 MB', ext: '.tif',
   },
   {
@@ -22,7 +22,7 @@ const FORMATS = [
     size: '~4.2 MB', ext: '.png',
   },
   {
-    id: 'report', label: 'Suitability Report', icon: IconChart, desc: 'Full scientific PDF report with methodology, AHP weights and validation',
+    id: 'report', label: 'Susceptibility Report', icon: IconChart, desc: 'Full scientific PDF report with methodology, AHP weights and validation',
     size: '~2.1 MB', ext: '.pdf',
   },
   {

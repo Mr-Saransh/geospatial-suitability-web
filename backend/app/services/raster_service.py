@@ -345,13 +345,13 @@ _layer_range_cache: dict[str, tuple[float, float]] = {}
 _tile_cache: dict[str, bytes] = {}
 _MAX_TILE_CACHE = 4096
 
-# Suitability classified discrete colors
+# Susceptibility classified discrete hazard colors: Green (1) to Red (5)
 SUITABILITY_CMAP = {
-    1: (239, 68, 68),     # Class 1: Very Low  — Red
-    2: (249, 115, 22),    # Class 2: Low       — Orange
-    3: (251, 191, 36),    # Class 3: Moderate  — Yellow
-    4: (74, 222, 128),    # Class 4: High      — Light Green
-    5: (0, 200, 150),     # Class 5: Very High — Emerald / Teal
+    1: (0, 200, 150),     # Class 1: Very Low Susceptibility  — Green
+    2: (74, 222, 128),    # Class 2: Low Susceptibility       — Light Green
+    3: (251, 191, 36),    # Class 3: Moderate Susceptibility  — Yellow
+    4: (249, 115, 22),    # Class 4: High Susceptibility      — Orange
+    5: (239, 68, 68),     # Class 5: Very High Susceptibility — Red
 }
 
 # Quality valid_criteria_count discrete colors
@@ -365,13 +365,13 @@ VALID_CRITERIA_CMAP = {
     5:  (239, 68, 68),
 }
 
-# Continuous multi-color gradient
+# Continuous multi-color hazard gradient: Green (1.0) to Red (5.0)
 CONTINUOUS_CMAP = [
-    (239, 68, 68),
-    (249, 115, 22),
-    (251, 191, 36),
-    (74, 222, 128),
-    (0, 200, 150),
+    (0, 200, 150),     # 1.0: Green (Very Low)
+    (74, 222, 128),    # 2.0: Light Green (Low)
+    (251, 191, 36),    # 3.0: Yellow (Moderate)
+    (249, 115, 22),    # 4.0: Orange (High)
+    (239, 68, 68),     # 5.0: Red (Very High)
 ]
 
 
@@ -584,35 +584,35 @@ def compute_statistics(model_id: str) -> dict:
     class_dist = [
         {
             "class_value": 1,
-            "label": "Very Low",
+            "label": "Very Low Susceptibility",
             "pixel_count": 46676143,
             "percentage": 63.94,
             "area_km2": 42008.53,
         },
         {
             "class_value": 2,
-            "label": "Low",
+            "label": "Low Susceptibility",
             "pixel_count": 24513495,
             "percentage": 33.58,
             "area_km2": 22062.15,
         },
         {
             "class_value": 3,
-            "label": "Moderate",
+            "label": "Moderate Susceptibility",
             "pixel_count": 1450815,
             "percentage": 1.99,
             "area_km2": 1305.73,
         },
         {
             "class_value": 4,
-            "label": "High",
+            "label": "High Susceptibility",
             "pixel_count": 317406,
             "percentage": 0.43,
             "area_km2": 285.67,
         },
         {
             "class_value": 5,
-            "label": "Very High",
+            "label": "Very High Susceptibility",
             "pixel_count": 42434,
             "percentage": 0.06,
             "area_km2": 38.19,

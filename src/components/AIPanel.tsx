@@ -12,7 +12,7 @@ interface Props {
 
 const SYSTEM_INIT: AIMessage = {
   role: 'assistant',
-  text: 'I have loaded scientific context for the **11-Factor Flood Suitability AHP Model** (Himachal Pradesh, run ID 51). I can analyze multi-criteria flood susceptibility, AHP weights, pairwise consistency (CR = 0.0158), and point inspections. Click any location on the map or ask an analytical question below.',
+  text: 'I have loaded scientific context for the **11-Factor Flood Susceptibility AHP Model** (Himachal Pradesh, run ID 56). I can analyze multi-criteria flood susceptibility, AHP weights, pairwise consistency (CR = 0.0158), and point inspections. Click any location on the map or ask an analytical question below.',
   actions: [],
 };
 
@@ -49,7 +49,7 @@ export default function AIPanel({ zone, onClose, onLayerEvidence }: Props) {
         } else if (q.toLowerCase().includes('weight') || q.toLowerCase().includes('highest')) {
           ans = AI_ANSWERS['Which criterion has the highest AHP weight?'];
         } else if (zone) {
-          ans = AI_ANSWERS['Why is this location classified as Low flood suitability?'];
+          ans = AI_ANSWERS['Why is this location classified with its current flood susceptibility?'];
         } else {
           ans = AI_ANSWERS['default'];
         }
@@ -181,7 +181,7 @@ export default function AIPanel({ zone, onClose, onLayerEvidence }: Props) {
           <input
             className="flex-1 bg-transparent text-xs outline-none"
             style={{ color: 'var(--c-text)', fontFamily: 'var(--font-body)' }}
-            placeholder="Ask about Himachal flood suitability, AHP weights, criteria…"
+            placeholder="Ask about Himachal flood susceptibility, AHP weights, criteria…"
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && send(input)}

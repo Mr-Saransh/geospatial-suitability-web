@@ -177,7 +177,7 @@ export default function MobileApp() {
       <Sheet open={sheet === 'analyze'} title={zone ? `Sector ${zone.label} — Analysis` : 'Analysis'} onClose={closeSheet}>
         {!zone ? (
           <EmptyState icon={<IconAnalyze size={18} />}
-            title="No zone selected" body="Tap a suitability zone on the map to view analysis." />
+            title="No zone selected" body="Tap a susceptibility zone on the map to view analysis." />
         ) : (
           <div className="flex flex-col gap-5">
             {/* Score summary */}
@@ -284,7 +284,7 @@ export default function MobileApp() {
             { label: 'Summary CSV', sub: '~48 KB · .csv' },
             { label: 'GeoTIFF Raster', sub: '~38 MB · .tif' },
             { label: 'Map Image', sub: '~4.2 MB · .png' },
-            { label: 'Suitability Report', sub: '~2.1 MB · .pdf' },
+            { label: 'Susceptibility Report', sub: '~2.1 MB · .pdf' },
             { label: 'Metadata Bundle', sub: '~120 KB · .xml' },
           ].map(f => (
             <button key={f.label}

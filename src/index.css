@@ -29,12 +29,12 @@
   --c-cyan:    #00b4d8;
   --c-teal:    #00c896;
 
-  /* Suitability scale */
-  --c-vh: #00c896;
-  --c-h:  #4ade80;
+  /* Susceptibility hazard scale: Green (low) to Red (high) */
+  --c-vh: #ef4444;
+  --c-h:  #f97316;
   --c-m:  #fbbf24;
-  --c-l:  #f97316;
-  --c-vl: #ef4444;
+  --c-l:  #4ade80;
+  --c-vl: #00c896;
 
   /* Status */
   --c-success: #10b981;

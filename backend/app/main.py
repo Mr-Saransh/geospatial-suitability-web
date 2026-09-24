@@ -53,7 +53,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="MCGSE Web-GIS API",
-    description="Geospatial suitability analysis backend for the Himachal Pradesh Flood Model",
+    description="Geospatial susceptibility analysis backend for the Himachal Pradesh Flood Model",
     version="1.0.0",
     lifespan=lifespan,
 )

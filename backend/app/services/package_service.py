@@ -203,40 +203,40 @@ PRODUCT_METADATA: dict[str, dict[str, Any]] = {
 
     # ── Analysis Results (Ordered for UI) ──
     "flood_11_factor_v1_available_evidence_suitability_classified": {
-        "display_name": "Flood Suitability — Classified",
+        "display_name": "Flood Susceptibility — Classified",
         "category": "Analysis Results",
         "type": "RESULT",
         "unit": "class (1–5)",
         "criterion_id": "",
         "scoring_mode": "AVAILABLE_EVIDENCE_RENORMALIZED",
-        "description": "Canonical user-facing classified 5-class flood suitability (Available-Evidence Renormalized)",
+        "description": "Canonical user-facing classified 5-class flood susceptibility (Available-Evidence Renormalized)",
     },
     "flood_11_factor_v1_available_evidence_suitability": {
-        "display_name": "Flood Suitability — Continuous",
+        "display_name": "Flood Susceptibility — Continuous",
         "category": "Analysis Results",
         "type": "RESULT",
         "unit": "score (1.0–5.0)",
         "criterion_id": "",
         "scoring_mode": "AVAILABLE_EVIDENCE_RENORMALIZED",
-        "description": "Canonical user-facing continuous flood suitability index (Available-Evidence Renormalized)",
+        "description": "Canonical user-facing continuous flood susceptibility index (Available-Evidence Renormalized)",
     },
     "flood_11_factor_v1_strict_suitability_classified": {
-        "display_name": "Strict Suitability — Classified",
+        "display_name": "Strict Susceptibility — Classified",
         "category": "Analysis Results",
         "type": "RESULT",
         "unit": "class (1–5)",
         "criterion_id": "",
         "scoring_mode": "STRICT_11_OF_11",
-        "description": "Strict 11-of-11 audit classified flood suitability (requires all 11 factors)",
+        "description": "Strict 11-of-11 audit classified flood susceptibility (requires all 11 factors)",
     },
     "flood_11_factor_v1_strict_suitability": {
-        "display_name": "Strict Suitability — Continuous",
+        "display_name": "Strict Susceptibility — Continuous",
         "category": "Analysis Results",
         "type": "RESULT",
         "unit": "score (1.0–5.0)",
         "criterion_id": "",
         "scoring_mode": "STRICT_11_OF_11",
-        "description": "Strict 11-of-11 audit continuous flood suitability (requires all 11 factors)",
+        "description": "Strict 11-of-11 audit continuous flood susceptibility (requires all 11 factors)",
     },
 
     # ── Quality & Coverage ──

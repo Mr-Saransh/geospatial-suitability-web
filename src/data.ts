@@ -1,14 +1,14 @@
 import type { Layer, Zone, CriterionRow, SuitMeta, SuitClass } from './types';
 
 export const SUIT_META: Record<SuitClass, SuitMeta> = {
-  'very-high': { label: 'Very High',  color: '#00c896', bg: 'rgba(0,200,150,0.18)',  range: '4.20–5.00', textColor: '#00c896' },
-  'high':      { label: 'High',       color: '#4ade80', bg: 'rgba(74,222,128,0.15)', range: '3.40–4.20', textColor: '#4ade80' },
-  'moderate':  { label: 'Moderate',   color: '#fbbf24', bg: 'rgba(251,191,36,0.15)', range: '2.60–3.40', textColor: '#fbbf24' },
-  'low':       { label: 'Low',        color: '#f97316', bg: 'rgba(249,115,22,0.15)', range: '1.80–2.60', textColor: '#f97316' },
-  'very-low':  { label: 'Very Low',   color: '#ef4444', bg: 'rgba(239,68,68,0.14)',  range: '1.00–1.80', textColor: '#ef4444' },
+  'very-low':  { label: 'Very Low Susceptibility',  color: '#00c896', bg: 'rgba(0,200,150,0.18)',  range: '1.00–1.80 (Class 1)', textColor: '#00c896' },
+  'low':       { label: 'Low Susceptibility',       color: '#4ade80', bg: 'rgba(74,222,128,0.15)', range: '1.80–2.60 (Class 2)', textColor: '#4ade80' },
+  'moderate':  { label: 'Moderate Susceptibility',  color: '#fbbf24', bg: 'rgba(251,191,36,0.15)', range: '2.60–3.40 (Class 3)', textColor: '#fbbf24' },
+  'high':      { label: 'High Susceptibility',      color: '#f97316', bg: 'rgba(249,115,22,0.15)', range: '3.40–4.20 (Class 4)', textColor: '#f97316' },
+  'very-high': { label: 'Very High Susceptibility', color: '#ef4444', bg: 'rgba(239,68,68,0.18)',  range: '4.20–5.00 (Class 5)', textColor: '#ef4444' },
 };
 
-export const SUIT_ORDER: SuitClass[] = ['very-high', 'high', 'moderate', 'low', 'very-low'];
+export const SUIT_ORDER: SuitClass[] = ['very-low', 'low', 'moderate', 'high', 'very-high'];
 
 export function scoreToClass(score: number | null): SuitClass {
   if (score === null || isNaN(score)) return 'very-low';
@@ -150,7 +150,7 @@ export const INITIAL_LAYERS: Layer[] = [
   // ── Results ──
   {
     id: 'flood_11_factor_v1_available_evidence_suitability_classified',
-    name: 'Flood Suitability — Classified',
+    name: 'Flood Susceptibility — Classified',
     group: 'composite',
     groupLabel: 'Analysis Results',
     subgroup: 'Analysis Results',
@@ -161,11 +161,11 @@ export const INITIAL_LAYERS: Layer[] = [
     source: 'AHP Multi-Criteria Composite (Run #56)',
     resolution: '30 m',
     date: '2026-09',
-    description: 'Canonical user-facing classified flood susceptibility (1: Very Low to 5: Very High) with Available-Evidence Renormalization.',
+    description: 'Canonical user-facing classified flood susceptibility (1: Very Low Susceptibility to 5: Very High Susceptibility) with Available-Evidence Renormalization.',
   },
   {
     id: 'flood_11_factor_v1_available_evidence_suitability',
-    name: 'Flood Suitability — Continuous',
+    name: 'Flood Susceptibility — Continuous',
     group: 'composite',
     groupLabel: 'Analysis Results',
     subgroup: 'Analysis Results',
@@ -176,11 +176,11 @@ export const INITIAL_LAYERS: Layer[] = [
     source: 'AHP Multi-Criteria Composite (Run #56)',
     resolution: '30 m',
     date: '2026-09',
-    description: 'Canonical continuous flood suitability score (1.0 to 5.0) under Available-Evidence mode.',
+    description: 'Canonical continuous flood susceptibility score (1.0 to 5.0) under Available-Evidence mode.',
   },
   {
     id: 'flood_11_factor_v1_strict_suitability_classified',
-    name: 'Strict Suitability — Classified',
+    name: 'Strict Susceptibility — Classified',
     group: 'composite',
     groupLabel: 'Analysis Results',
     subgroup: 'Analysis Results',
@@ -195,7 +195,7 @@ export const INITIAL_LAYERS: Layer[] = [
   },
   {
     id: 'flood_11_factor_v1_strict_suitability',
-    name: 'Strict Suitability — Continuous',
+    name: 'Strict Susceptibility — Continuous',
     group: 'composite',
     groupLabel: 'Analysis Results',
     subgroup: 'Analysis Results',
@@ -206,7 +206,7 @@ export const INITIAL_LAYERS: Layer[] = [
     source: 'AHP Strict 11-of-11 Audit',
     resolution: '30 m',
     date: '2026-09',
-    description: 'Strict continuous flood index (NoData wherever any criterion is missing).',
+    description: 'Strict continuous flood susceptibility index (NoData wherever any criterion is missing).',
   },
 
   // ── Hydrological Criteria (Raw) ──
@@ -634,11 +634,11 @@ export const INITIAL_STATS = {
   score_mean: 1.735700,
   score_std: 0.352100,
   class_distribution: [
-    { class_value: 1, label: 'Very Low',  pixel_count: 46676143, percentage: 63.94, area_km2: 42008.53 },
-    { class_value: 2, label: 'Low',       pixel_count: 24513495, percentage: 33.58, area_km2: 22062.15 },
-    { class_value: 3, label: 'Moderate',  pixel_count: 1450815,  percentage: 1.99,  area_km2: 1305.73 },
-    { class_value: 4, label: 'High',      pixel_count: 317406,   percentage: 0.43,  area_km2: 285.67 },
-    { class_value: 5, label: 'Very High', pixel_count: 42434,    percentage: 0.06,  area_km2: 38.19 },
+    { class_value: 1, label: 'Very Low Susceptibility',  pixel_count: 46676143, percentage: 63.94, area_km2: 42008.53 },
+    { class_value: 2, label: 'Low Susceptibility',       pixel_count: 24513495, percentage: 33.58, area_km2: 22062.15 },
+    { class_value: 3, label: 'Moderate Susceptibility',  pixel_count: 1450815,  percentage: 1.99,  area_km2: 1305.73 },
+    { class_value: 4, label: 'High Susceptibility',      pixel_count: 317406,   percentage: 0.43,  area_km2: 285.67 },
+    { class_value: 5, label: 'Very High Susceptibility', pixel_count: 42434,    percentage: 0.06,  area_km2: 38.19 },
   ],
   evidence_distribution: [
     { criteria_count: 11, label: '11 / 11 Criteria (Full)', pixel_count: 49291505, percentage: 67.52 },

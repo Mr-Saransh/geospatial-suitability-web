@@ -40,7 +40,7 @@ export default function App() {
   // Backend state
   const [models, setModels]             = useState<ModelSummary[]>([]);
   const [activeModelId, setActiveModelId] = useState('flood_11_factor_v1');
-  const [activeModelName, setActiveModelName] = useState('11-Factor Flood Suitability AHP');
+  const [activeModelName, setActiveModelName] = useState('11-Factor Flood Susceptibility AHP');
   const [modelDetail, setModelDetail]   = useState<ModelDetail | null>(null);
   const [statistics, setStatistics]     = useState<AnalysisStatistics | null>(null);
 

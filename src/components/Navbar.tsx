@@ -37,7 +37,7 @@ export default function Navbar({
   const availableModels = modelsList && modelsList.length > 0
     ? modelsList.map(m => m.name)
     : [
-        '11-Factor Flood Suitability AHP',
+        '11-Factor Flood Susceptibility AHP',
         'Groundwater Recharge Potential v2.1',
         'Urban Expansion Suitability v1.3',
       ];

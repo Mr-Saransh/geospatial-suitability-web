@@ -43,7 +43,7 @@ class AHPModelConfig:
 
 FLOOD_AHP = AHPModelConfig(
     model_id="flood_11_factor_v1",
-    name="11-Factor Flood Suitability AHP",
+    name="11-Factor Flood Susceptibility AHP",
     version="1.0",
 
     criteria=(
@@ -88,11 +88,11 @@ FLOOD_AHP = AHPModelConfig(
     },
 
     classification_labels={
-        1: "Very Low",
-        2: "Low",
-        3: "Moderate",
-        4: "High",
-        5: "Very High",
+        1: "Very Low Susceptibility",
+        2: "Low Susceptibility",
+        3: "Moderate Susceptibility",
+        4: "High Susceptibility",
+        5: "Very High Susceptibility",
     },
 
     minimum_valid_criteria=8,
@@ -105,7 +105,7 @@ FLOOD_AHP = AHPModelConfig(
         "source": "AHP_Full_Steps_11Factors",
         "source_run_id": "56",
         "method": "Saaty pairwise comparison",
-        "criterion": "Flood suitability",
+        "criterion": "Flood susceptibility",
         "default_continuous_product_id": "flood_11_factor_v1_available_evidence_suitability",
         "default_classified_product_id": "flood_11_factor_v1_available_evidence_suitability_classified",
         "strict_continuous_product_id": "flood_11_factor_v1_strict_suitability",

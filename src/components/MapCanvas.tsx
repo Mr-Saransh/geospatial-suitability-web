@@ -261,10 +261,16 @@ export default function MapCanvas({
                 <div style={{ fontWeight: 600, color: activeColor }}>
                   {selectedZone.district || 'Inspected Point'}
                 </div>
-                <div style={{ color: '#647d9a', fontSize: '10px' }}>
-                  Score: <strong style={{ color: activeColor }}>{selectedZone.score.toFixed(3)}</strong> ({SUIT_META[selectedZone.cls]?.label})
+                <div style={{ color: '#c4d4e8', fontSize: '10px' }}>
+                  Susceptibility Score: <strong style={{ color: activeColor }}>{selectedZone.score.toFixed(3)}</strong>
                 </div>
-                <div style={{ color: '#374f6a', fontSize: '9px', fontFamily: 'monospace' }}>
+                <div style={{ color: '#647d9a', fontSize: '10px' }}>
+                  Class: {selectedZone.classifiedValue ? `Class ${selectedZone.classifiedValue} — ` : ''}{SUIT_META[selectedZone.cls]?.label}
+                </div>
+                <div style={{ color: '#00b4d8', fontSize: '9px', marginTop: '2px', fontStyle: 'italic' }}>
+                  Modeled susceptibility index (not a flood prediction)
+                </div>
+                <div style={{ color: '#374f6a', fontSize: '9px', fontFamily: 'monospace', marginTop: '2px' }}>
                   {selectedZone.lat.toFixed(4)}°N, {selectedZone.lng.toFixed(4)}°E
                 </div>
               </div>
@@ -312,7 +318,7 @@ export default function MapCanvas({
           <span className="font-semibold text-[#00b4d8]">Himachal Pradesh</span>
           <span style={{ color: 'var(--c-text3)' }}>·</span>
           <span style={{ color: 'var(--c-text2)' }}>
-            {activeLayer ? activeLayer.name : '11-Factor Flood Suitability'}
+            {activeLayer ? activeLayer.name : '11-Factor Flood Susceptibility'}
           </span>
           <span style={{ color: 'var(--c-text3)' }}>·</span>
           <span className="text-[10px]" style={{ color: 'var(--c-text3)' }}>30 m EPSG:4326</span>

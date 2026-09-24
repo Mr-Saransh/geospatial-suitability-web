@@ -8,7 +8,7 @@ router = APIRouter(prefix="/api/v1", tags=["models"])
 
 @router.get("/models", response_model=list[ModelSummary])
 def list_models():
-    """List all available suitability models."""
+    """List all available susceptibility models."""
     return [
         ModelSummary(
             model_id=m.model_id,

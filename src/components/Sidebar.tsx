@@ -35,7 +35,7 @@ export default function Sidebar({
   basemap,
   onBasemap,
   onSelectLocation,
-  modelName = '11-Factor Flood Suitability AHP',
+  modelName = '11-Factor Flood Susceptibility AHP',
   onRefresh,
 }: Props) {
   const [section, setSection] = useState<Record<string, boolean>>({
@@ -167,7 +167,7 @@ export default function Sidebar({
                   </select>
                 </Field>
               </div>
-              <Field label="Suitability Model">
+              <Field label="Susceptibility Model">
                 <select className="w-full" value={modelName} disabled>
                   <option>{modelName}</option>
                 </select>
@@ -235,10 +235,10 @@ export default function Sidebar({
           </SideSection>
 
           {/* Legend */}
-          <SideSection label="Suitability Legend" open={section.legend} onToggle={() => toggle('legend')}>
+          <SideSection label="Susceptibility Legend" open={section.legend} onToggle={() => toggle('legend')}>
             <div className="px-4 pb-4">
               <div className="text-[10px] mb-2" style={{ color: 'var(--c-text2)', fontFamily: 'var(--font-mono)' }}>
-                11-Factor AHP Flood Suitability (Class 1–5)
+                11-Factor AHP Flood Susceptibility (Classes 1–5)
               </div>
               <div className="flex flex-col gap-1.5 mb-3">
                 {SUIT_ORDER.map(cls => {
@@ -253,9 +253,26 @@ export default function Sidebar({
                 })}
               </div>
               {/* Gradient bar */}
-              <div className="h-2.5 rounded-sm mb-1" style={{ background: 'linear-gradient(to right, #ef4444, #f97316, #fbbf24, #4ade80, #00c896)' }} />
-              <div className="flex justify-between text-[9px]" style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>
-                <span>1 (Very Low)</span><span>2</span><span>3</span><span>4</span><span>5 (Very High)</span>
+              <div className="h-2.5 rounded-sm mb-1" style={{ background: 'linear-gradient(to right, #00c896, #4ade80, #fbbf24, #f97316, #ef4444)' }} />
+              <div className="flex justify-between text-[9px] mb-1.5" style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>
+                <span style={{ color: '#00c896', fontWeight: 600 }}>1 (Very Low)</span>
+                <span>2</span>
+                <span>3</span>
+                <span>4</span>
+                <span style={{ color: '#ef4444', fontWeight: 600 }}>5 (Very High)</span>
+              </div>
+              <div className="flex justify-between items-center text-[9px] px-2 py-1 rounded mb-2" style={{ background: 'var(--c-panel)', border: '1px solid var(--c-border)', fontFamily: 'var(--font-mono)' }}>
+                <span className="flex items-center gap-1" style={{ color: '#00c896', fontWeight: 600 }}>
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#00c896' }} />
+                  GREEN: Lower Hazard
+                </span>
+                <span className="flex items-center gap-1" style={{ color: '#ef4444', fontWeight: 600 }}>
+                  RED: Higher Hazard
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#ef4444' }} />
+                </span>
+              </div>
+              <div className="mt-2 pt-2 border-t border-[var(--c-border)] text-[10px] leading-relaxed" style={{ color: 'var(--c-text3)' }}>
+                <em>Flood susceptibility indicates environmental susceptibility under this model. It is NOT a flood probability or prediction.</em>
               </div>
             </div>
           </SideSection>

@@ -66,10 +66,13 @@ export default function RightPanel({ zone, onLayerEvidence, statistics, modelDet
                 </div>
               </div>
               <div>
+                <div className="text-[10px] text-right font-medium" style={{ color: 'var(--c-text3)' }}>
+                  Susceptibility Score
+                </div>
                 <div className="text-2xl font-semibold text-right" style={{ fontFamily: 'var(--font-mono)', color: SUIT_META[zone.cls]?.color || '#00b4d8' }}>
                   {zone.score ? zone.score.toFixed(2) : 'N/A'}
                 </div>
-                <div className="text-[9px] text-right" style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>
+                <div className="text-[9px] text-right font-semibold" style={{ color: SUIT_META[zone.cls]?.color || '#00b4d8', fontFamily: 'var(--font-mono)' }}>
                   {zone.classifiedValue ? `Class ${zone.classifiedValue} / 5` : 'NoData'}
                 </div>
               </div>
@@ -111,7 +114,7 @@ export default function RightPanel({ zone, onLayerEvidence, statistics, modelDet
         {!zone && tab !== 'statistics' && tab !== 'metadata' ? (
           <EmptyState icon={<IconAnalyze size={18} />}
             title="No coordinates selected"
-            body="Click anywhere on the Himachal Pradesh map to inspect real-time pixel values across all 11 criteria and suitability models." />
+            body="Click anywhere on the Himachal Pradesh map to inspect real-time pixel values across all 11 criteria and susceptibility models." />
         ) : (
           <>
             {tab === 'overview'   && zone && <OverviewTab zone={zone} />}
@@ -144,6 +147,16 @@ function OverviewTab({ zone }: { zone: Zone }) {
 
   return (
     <div className="p-4 flex flex-col gap-4">
+      {/* Overview UX Clarity Callout */}
+      <div className="p-3 rounded flex flex-col gap-1.5" style={{ background: 'rgba(0,180,216,0.06)', border: '1px solid rgba(0,180,216,0.22)' }}>
+        <div className="text-xs font-semibold text-[#00b4d8]">
+          Understanding Flood Susceptibility
+        </div>
+        <div className="text-[11px] leading-relaxed" style={{ color: 'var(--c-text2)' }}>
+          Flood susceptibility indicates how strongly the selected environmental factors combine to indicate susceptibility under this model. It is NOT a probability of flooding and does NOT mean flooding is impossible or guaranteed.
+        </div>
+      </div>
+
       {/* Partial Evidence Callout */}
       {zone.finalStatus === 'PARTIAL_EVIDENCE' && (
         <div className="p-3 rounded flex flex-col gap-1.5" style={{ background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.3)' }}>
@@ -173,11 +186,24 @@ function OverviewTab({ zone }: { zone: Zone }) {
         </div>
       )}
 
-      {/* Summary */}
+      {/* Point Evaluation Summary */}
       {zone.finalStatus !== 'OUTSIDE_ANALYSIS_AREA' && (
         <div className="p-3 rounded" style={{ background: `${m.color}0d`, border: `1px solid ${m.color}25` }}>
           <div className="text-xs leading-relaxed" style={{ color: 'var(--c-text)' }}>
-            This coordinate ({zone.lat.toFixed(4)}°N, {zone.lng.toFixed(4)}°E) is evaluated with <strong style={{ color: m.color }}>{m.label.toLowerCase()} flood suitability</strong> (Continuous Score: {zone.score ? zone.score.toFixed(3) : 'N/A'}/5.00). Inundation vulnerability is driven by local slope gradient, rainfall intensity, and distance to primary river channels.
+            This coordinate ({zone.lat.toFixed(4)}°N, {zone.lng.toFixed(4)}°E) is evaluated with <strong style={{ color: m.color }}>{m.label.toLowerCase()}</strong>.
+          </div>
+          <div className="mt-2 text-[11px] flex flex-col gap-1.5 pt-2 border-t border-[var(--c-border)]" style={{ color: 'var(--c-text2)' }}>
+            <div className="flex items-center justify-between">
+              <span style={{ color: 'var(--c-text3)' }}>Susceptibility Score:</span>
+              <strong style={{ color: m.color, fontFamily: 'var(--font-mono)' }}>{zone.score ? zone.score.toFixed(3) : 'N/A'} / 5.00</strong>
+            </div>
+            <div className="flex items-center justify-between">
+              <span style={{ color: 'var(--c-text3)' }}>Susceptibility Class:</span>
+              <strong style={{ color: m.color, fontFamily: 'var(--font-mono)' }}>Class {zone.classifiedValue ?? 'N/A'} — {m.label}</strong>
+            </div>
+          </div>
+          <div className="mt-2 pt-1.5 text-[10px] leading-relaxed border-t border-[var(--c-border)]" style={{ color: 'var(--c-text3)' }}>
+            <em>Result is a multi-criteria model score, not a flood/no-flood prediction.</em>
           </div>
         </div>
       )}
@@ -346,7 +372,7 @@ function StatisticsTab({ stats }: { stats: AnalysisStatistics }) {
     name: d.label,
     value: d.percentage,
     area: d.area_km2,
-    color: d.class_value === 5 ? '#00c896' : d.class_value === 4 ? '#4ade80' : d.class_value === 3 ? '#fbbf24' : d.class_value === 2 ? '#f97316' : '#ef4444',
+    color: d.class_value === 1 ? '#00c896' : d.class_value === 2 ? '#4ade80' : d.class_value === 3 ? '#fbbf24' : d.class_value === 4 ? '#f97316' : '#ef4444',
   }));
 
   const maxArea = Math.max(...classDist.map(d => d.area_km2), 1);
@@ -371,7 +397,7 @@ function StatisticsTab({ stats }: { stats: AnalysisStatistics }) {
 
       {/* Suitability class pie */}
       <div>
-        <SectionLabel>Suitability Distribution — Available Evidence</SectionLabel>
+        <SectionLabel>Susceptibility Distribution — Available Evidence</SectionLabel>
         <div className="flex items-center gap-3">
           <ResponsiveContainer width={100} height={100}>
             <PieChart>
@@ -420,7 +446,7 @@ function StatisticsTab({ stats }: { stats: AnalysisStatistics }) {
 
       {/* Area by class */}
       <div>
-        <SectionLabel>Area by Suitability Class (km²)</SectionLabel>
+        <SectionLabel>Area by Susceptibility Class (km²)</SectionLabel>
         {distChartData.map(d => (
           <div key={d.name} className="flex items-center gap-2 mb-1.5">
             <span className="text-[10px] w-16 flex-shrink-0" style={{ color: 'var(--c-text2)' }}>{d.name}</span>
@@ -445,7 +471,7 @@ function EvidenceTab({ zone, onEvidence }: { zone: Zone; onEvidence: (id: string
       {/* Why box */}
       <div className="p-3 rounded border-l-2" style={{ background: `${m.color}0a`, borderLeftColor: m.color }}>
         <div className="text-xs font-semibold mb-1.5" style={{ color: m.color }}>
-          Why is this coordinate evaluated as {m.label} suitability?
+          Why is this coordinate evaluated as {m.label}?
         </div>
         <div className="text-xs leading-relaxed" style={{ color: 'var(--c-text2)' }}>
           Evaluated under the canonical 11-Factor AHP Flood Model (Run #56). Multi-criteria aggregation formula:
@@ -493,7 +519,7 @@ function EvidenceTab({ zone, onEvidence }: { zone: Zone; onEvidence: (id: string
 /* ── Metadata ───────────────────────────────────────────────── */
 function MetadataTab({ modelDetail }: { modelDetail?: ModelDetail | null }) {
   const rows = [
-    ['Model',           '11-Factor Flood Suitability AHP'],
+    ['Model',           '11-Factor Flood Susceptibility AHP'],
     ['Model ID',        'flood_11_factor_v1'],
     ['Canonical Run',   'Run #56'],
     ['Published Rasters','28 Published Rasters (11 F + 11 R + 4 Res + 2 Q)'],
