@@ -1,8 +1,8 @@
 """
 AHP weights for the flood_11_factor_v1 model.
 
-Authoritative source: geo_engine/ahp/flood_config.py in the scientific engine.
-These values are READ-ONLY copies used by the API for inspection responses.
+Authoritative source: geo_engine/ahp/flood_config.py in the scientific engine (Run #56).
+These values are READ-ONLY copies used by the API for inspection and model responses.
 """
 from __future__ import annotations
 
@@ -25,6 +25,11 @@ class AHPModelConfig:
     random_index: float
     classification_ranges: dict[int, tuple[float, float]]
     classification_labels: dict[int, str]
+    minimum_valid_criteria: int = 8
+    scoring_modes: tuple[str, ...] = (
+        "AVAILABLE_EVIDENCE_RENORMALIZED",
+        "STRICT_11_OF_11",
+    )
     metadata: dict[str, str] = field(default_factory=dict)
 
     def weight_for(self, criterion: str) -> float:
@@ -34,12 +39,12 @@ class AHPModelConfig:
             raise ValueError(f"No AHP weight for criterion: {criterion}")
 
 
-# ── Flood 11-factor model — copied from geo_engine/ahp/flood_config.py ──
+# ── Flood 11-factor model — canonical Run #56 ──
 
 FLOOD_AHP = AHPModelConfig(
     model_id="flood_11_factor_v1",
     name="11-Factor Flood Suitability AHP",
-    version="1",
+    version="1.0",
 
     criteria=(
         "rainfall",
@@ -90,12 +95,23 @@ FLOOD_AHP = AHPModelConfig(
         5: "Very High",
     },
 
+    minimum_valid_criteria=8,
+    scoring_modes=(
+        "AVAILABLE_EVIDENCE_RENORMALIZED",
+        "STRICT_11_OF_11",
+    ),
+
     metadata={
         "source": "AHP_Full_Steps_11Factors",
+        "source_run_id": "56",
         "method": "Saaty pairwise comparison",
         "criterion": "Flood suitability",
-        "continuous_product_id": "flood_11_factor_v1_full_suitability",
-        "classified_product_id": "flood_11_factor_v1_full_suitability_classified",
+        "default_continuous_product_id": "flood_11_factor_v1_available_evidence_suitability",
+        "default_classified_product_id": "flood_11_factor_v1_available_evidence_suitability_classified",
+        "strict_continuous_product_id": "flood_11_factor_v1_strict_suitability",
+        "strict_classified_product_id": "flood_11_factor_v1_strict_suitability_classified",
+        "legacy_continuous_alias": "flood_11_factor_v1_full_suitability",
+        "legacy_classified_alias": "flood_11_factor_v1_full_suitability_classified",
     },
 )
 

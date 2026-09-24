@@ -1,15 +1,8 @@
 import { useState, type ReactNode } from 'react';
 import { SUIT_META, SUIT_ORDER, HIMACHAL_LOCATIONS } from '../data';
 import type { Layer } from '../types';
-import { IconEye, IconEyeOff, IconInfo, IconChevronD, IconChevronR, IconFilter, IconSettings, IconRefresh, IconGlobe } from '../icons';
+import { IconEye, IconEyeOff, IconInfo, IconChevronD, IconChevronR, IconSettings, IconRefresh, IconGlobe } from '../icons';
 import { Btn, Pill } from '../ui';
-
-const LAYER_GROUPS = [
-  { id: 'composite',     label: 'Analysis Results' },
-  { id: 'hydrological',  label: 'Hydrological Criteria' },
-  { id: 'topographic',   label: 'Topographic Criteria' },
-  { id: 'environmental', label: 'Environmental Criteria' },
-];
 
 const BASEMAPS = [
   { id: 'dark',      label: 'Dark Canvas', color: '#080d18' },
@@ -29,6 +22,7 @@ interface Props {
   onBasemap: (b: string) => void;
   onSelectLocation?: (loc: { lat: number; lng: number }) => void;
   modelName?: string;
+  onRefresh?: () => void;
 }
 
 export default function Sidebar({
@@ -42,6 +36,7 @@ export default function Sidebar({
   onBasemap,
   onSelectLocation,
   modelName = '11-Factor Flood Suitability AHP',
+  onRefresh,
 }: Props) {
   const [section, setSection] = useState<Record<string, boolean>>({
     analysis: true, layers: true, legend: true, filters: false, basemap: false, options: false,
@@ -70,11 +65,69 @@ export default function Sidebar({
     }
   };
 
+  // Dynamic layer counts derived from actual layer catalog
+  const factorCount = layers.filter(l => l.layerType === 'FACTOR' || (!l.id.includes('rating') && !l.id.includes('suitability') && !l.id.includes('criteria'))).length;
+  const ratingCount = layers.filter(l => l.layerType === 'RATING' || l.id.includes('rating')).length;
+  const resultCount = layers.filter(l => l.layerType === 'RESULT' || l.id.includes('suitability')).length;
+  const qualityCount = layers.filter(l => l.layerType === 'QUALITY' || l.id.includes('criteria')).length;
+
+  // Semantic sidebar sections with zero duplicate display names
+  const SECTIONS = [
+    {
+      id: 'results',
+      label: 'Analysis Results',
+      badge: `${resultCount}`,
+      layers: layers.filter(l => l.group === 'composite' || l.layerType === 'RESULT' || l.id.includes('suitability')),
+    },
+    {
+      id: 'hydro_factors',
+      label: 'Hydrological Criteria',
+      badge: 'Raw',
+      layers: layers.filter(l => l.group === 'hydrological' && (l.layerType === 'FACTOR' || !l.id.includes('rating'))),
+    },
+    {
+      id: 'hydro_ratings',
+      label: 'Standardized Ratings',
+      badge: 'Hydrological (1–5)',
+      layers: layers.filter(l => l.group === 'hydrological' && (l.layerType === 'RATING' || l.id.includes('rating'))),
+    },
+    {
+      id: 'topo_factors',
+      label: 'Topographic Criteria',
+      badge: 'Raw',
+      layers: layers.filter(l => l.group === 'topographic' && (l.layerType === 'FACTOR' || !l.id.includes('rating'))),
+    },
+    {
+      id: 'topo_ratings',
+      label: 'Standardized Ratings',
+      badge: 'Topographic (1–5)',
+      layers: layers.filter(l => l.group === 'topographic' && (l.layerType === 'RATING' || l.id.includes('rating'))),
+    },
+    {
+      id: 'env_factors',
+      label: 'Environmental Criteria',
+      badge: 'Raw',
+      layers: layers.filter(l => l.group === 'environmental' && (l.layerType === 'FACTOR' || !l.id.includes('rating'))),
+    },
+    {
+      id: 'env_ratings',
+      label: 'Standardized Ratings',
+      badge: 'Environmental (1–5)',
+      layers: layers.filter(l => l.group === 'environmental' && (l.layerType === 'RATING' || l.id.includes('rating'))),
+    },
+    {
+      id: 'quality',
+      label: 'Quality & Coverage',
+      badge: `${qualityCount}`,
+      layers: layers.filter(l => l.group === 'quality' || l.layerType === 'QUALITY' || l.id.includes('criteria')),
+    },
+  ];
+
   return (
     <aside className="flex-shrink-0 flex flex-col overflow-hidden transition-all duration-300 z-20"
-      style={{ width: open ? 300 : 0, minWidth: open ? 300 : 0, background: 'var(--c-surface)', borderRight: '1px solid var(--c-border)' }}>
+      style={{ width: open ? 320 : 0, minWidth: open ? 320 : 0, background: 'var(--c-surface)', borderRight: '1px solid var(--c-border)' }}>
       {open && (
-        <div className="flex flex-col h-full overflow-y-auto" style={{ minWidth: 300 }}>
+        <div className="flex flex-col h-full overflow-y-auto" style={{ minWidth: 320 }}>
 
           {/* Panel header */}
           <div className="flex items-center justify-between px-4 py-2.5 flex-shrink-0"
@@ -83,7 +136,7 @@ export default function Sidebar({
               GIS CONTROL PANEL
             </div>
             <div className="flex items-center gap-1">
-              <Btn title="Refresh Layer Catalog" className="w-6 h-6"><IconRefresh size={11} /></Btn>
+              <Btn title="Refresh Layer Catalog" onClick={onRefresh} className="w-6 h-6"><IconRefresh size={11} /></Btn>
               <Btn title="Settings" className="w-6 h-6"><IconSettings size={11} /></Btn>
             </div>
           </div>
@@ -109,10 +162,8 @@ export default function Sidebar({
                   </select>
                 </Field>
                 <Field label="Spatial Extent">
-                  <select className="w-full">
+                  <select className="w-full" disabled>
                     <option>Statewide (135M px)</option>
-                    <option>Valley Focus</option>
-                    <option>River Corridors</option>
                   </select>
                 </Field>
               </div>
@@ -138,21 +189,35 @@ export default function Sidebar({
             </div>
           </SideSection>
 
-          {/* Layers */}
-          <SideSection label="Raster Layers (24)" open={section.layers} onToggle={() => toggle('layers')}
+          {/* Layers — Dynamic Count */}
+          <SideSection
+            label={`Raster Layers (${layers.length})`}
+            open={section.layers}
+            onToggle={() => toggle('layers')}
             actions={
               <div className="flex items-center gap-1">
                 <button onClick={showAll} className="text-[10px] px-1.5 py-0.5 rounded" style={{ color: '#00b4d8', border: '1px solid rgba(0,180,216,0.25)' }}>All</button>
                 <button onClick={hideAll} className="text-[10px] px-1.5 py-0.5 rounded" style={{ color: 'var(--c-text2)', border: '1px solid var(--c-border)' }}>None</button>
               </div>
             }>
+            {/* Dynamic catalog inventory breakdown */}
+            <div className="px-4 py-1.5 mb-1.5 text-[9px] flex items-center justify-between"
+              style={{ background: 'rgba(0,180,216,0.05)', borderBottom: '1px solid var(--c-border)', color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>
+              <span>{factorCount} Factors</span>
+              <span>·</span>
+              <span>{ratingCount} Ratings</span>
+              <span>·</span>
+              <span>{resultCount} Results</span>
+              <span>·</span>
+              <span>{qualityCount} Quality</span>
+            </div>
+
             <div className="pb-3">
-              {LAYER_GROUPS.map(g => {
-                const gl = layers.filter(l => l.group === g.id);
-                if (!gl.length) return null;
+              {SECTIONS.map(s => {
+                if (!s.layers.length) return null;
                 return (
-                  <LayerGroup key={g.id} label={g.label}>
-                    {gl.map(l => (
+                  <LayerGroup key={s.id} label={s.label} badge={s.badge}>
+                    {s.layers.map(l => (
                       <LayerRow
                         key={l.id}
                         layer={l}
@@ -216,7 +281,7 @@ export default function Sidebar({
           {/* Footer Metadata */}
           <div className="mt-auto px-4 py-3 flex-shrink-0" style={{ borderTop: '1px solid var(--c-border)', background: 'var(--c-panel)' }}>
             <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
-              <Pill color="#00b4d8">Run ID: 51</Pill>
+              <Pill color="#00b4d8">Run #56</Pill>
               <Pill color="#00c896">CR: 0.0158 ✓</Pill>
               <Pill color="#374f6a">11 Criteria</Pill>
             </div>
@@ -251,19 +316,27 @@ function SideSection({ label, open, onToggle, children, actions }: {
   );
 }
 
-function LayerGroup({ label, children }: { label: string; children: ReactNode }) {
+function LayerGroup({ label, badge, children }: { label: string; badge?: string; children: ReactNode }) {
   const [open, setOpen] = useState(true);
   return (
-    <div>
+    <div className="mb-1">
       <button onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center gap-1.5 px-4 py-1 text-[10px] font-medium"
+        className="w-full flex items-center justify-between px-4 py-1 text-[10px] font-semibold"
         style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em' }}>
-        <span className="flex-shrink-0" style={{ transform: open ? 'rotate(90deg)' : 'rotate(0)' }}>
-          <IconChevronR size={9} />
-        </span>
-        {label.toUpperCase()}
+        <div className="flex items-center gap-1.5">
+          <span className="flex-shrink-0" style={{ transform: open ? 'rotate(90deg)' : 'rotate(0)' }}>
+            <IconChevronR size={9} />
+          </span>
+          <span>{label.toUpperCase()}</span>
+        </div>
+        {badge && (
+          <span className="text-[9px] px-1.5 py-0.2 rounded font-normal opacity-70"
+            style={{ background: 'var(--c-panel)', border: '1px solid var(--c-border)' }}>
+            {badge}
+          </span>
+        )}
       </button>
-      {open && <div className="pl-2">{children}</div>}
+      {open && <div className="pl-1 pr-1">{children}</div>}
     </div>
   );
 }
@@ -293,49 +366,45 @@ function LayerRow({ layer, isActive, onToggle, onSelect, onOpacity, onInfo }: {
         <span
           className="flex-1 text-xs truncate cursor-pointer select-none"
           style={{ color: layer.visible ? 'var(--c-text)' : 'var(--c-text2)', fontWeight: isActive ? 600 : 400 }}
-          onClick={() => { onSelect(layer.id); onToggle(layer.id); }}>
+          onClick={() => { onSelect(layer.id); onToggle(layer.id); }}
+          title={layer.name}>
           {layer.name}
-          {layer.unit && <span className="ml-1 text-[10px]" style={{ color: 'var(--c-text3)' }}>({layer.unit})</span>}
+          {layer.unit && <span className="ml-1 text-[9px] opacity-75" style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>({layer.unit})</span>}
         </span>
         <button onClick={() => onInfo(layer.id)} title="Layer info"
-          className="w-5 h-5 flex items-center justify-center" style={{ color: 'var(--c-text3)' }}>
+          className="w-5 h-5 flex items-center justify-center rounded transition-opacity opacity-40 hover:opacity-100"
+          style={{ color: 'var(--c-text2)' }}>
           <IconInfo size={11} />
         </button>
         <button onClick={() => setExpanded(v => !v)}
-          className="w-5 h-5 flex items-center justify-center" style={{ color: 'var(--c-text3)' }}>
-          <IconChevronR size={10} style={{ transform: expanded ? 'rotate(90deg)' : 'none' }} />
+          className="w-4 h-4 flex items-center justify-center opacity-40 hover:opacity-100 transition-opacity"
+          style={{ color: 'var(--c-text2)' }}>
+          <span style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block' }}>
+            <IconChevronD size={9} />
+          </span>
         </button>
       </div>
+
+      {/* Expanded controls */}
       {expanded && (
-        <div className="pb-2.5 pl-5 pr-2 flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] w-12 flex-shrink-0 font-medium" style={{ color: 'var(--c-text2)' }}>Opacity</span>
-            <div className="relative flex-1 flex items-center h-4">
-              <input
-                type="range"
-                min={10}
-                max={100}
-                value={layer.opacity}
-                onChange={e => onOpacity(layer.id, +e.target.value)}
-                className="w-full opacity-slider cursor-pointer"
-                style={{
-                  background: `linear-gradient(to right, #00b4d8 0%, #00b4d8 ${layer.opacity}%, rgba(100,125,154,0.3) ${layer.opacity}%, rgba(100,125,154,0.3) 100%)`,
-                }}
-              />
+        <div className="pb-2 pt-1 px-1 border-t flex flex-col gap-1.5" style={{ borderColor: 'var(--c-border)' }}>
+          <div className="flex items-center justify-between text-[10px]" style={{ color: 'var(--c-text3)' }}>
+            <span>Opacity</span>
+            <span style={{ fontFamily: 'var(--font-mono)' }}>{layer.opacity}%</span>
+          </div>
+          <input
+            type="range"
+            min={10}
+            max={100}
+            value={layer.opacity}
+            onChange={e => onOpacity(layer.id, parseInt(e.target.value))}
+            className="w-full h-1 accent-[#00b4d8] cursor-pointer"
+          />
+          {layer.description && (
+            <div className="text-[10px] leading-relaxed pt-1" style={{ color: 'var(--c-text2)' }}>
+              {layer.description}
             </div>
-            <span className="text-[10px] w-8 text-right font-semibold" style={{ color: '#00b4d8', fontFamily: 'var(--font-mono)' }}>
-              {layer.opacity}%
-            </span>
-          </div>
-          <div className="text-[10px] leading-relaxed" style={{ color: 'var(--c-text2)' }}>
-            {layer.source}
-            {layer.resolution && <span> · {layer.resolution}</span>}
-          </div>
-          <button onClick={() => onInfo(layer.id)}
-            className="text-[10px] h-5 px-2 rounded flex items-center gap-1 self-start"
-            style={{ color: '#00b4d8', border: '1px solid rgba(0,180,216,0.25)', background: 'rgba(0,180,216,0.06)' }}>
-            Render Layer on Map
-          </button>
+          )}
         </div>
       )}
     </div>
@@ -345,7 +414,7 @@ function LayerRow({ layer, isActive, onToggle, onSelect, onOpacity, onInfo }: {
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
-      <div className="text-[10px]" style={{ color: 'var(--c-text2)' }}>{label}</div>
+      <label className="text-[10px] font-medium" style={{ color: 'var(--c-text2)' }}>{label}</label>
       {children}
     </div>
   );

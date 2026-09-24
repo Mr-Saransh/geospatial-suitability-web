@@ -1,4 +1,5 @@
 {
+  "title": "MCDSE",
   "description": "Empowering urban and regional planners, this web app offers a comprehensive geospatial suitability analysis with interactive maps, AI insights, and data-driven decision support.",
   "robots": {
     "index": false

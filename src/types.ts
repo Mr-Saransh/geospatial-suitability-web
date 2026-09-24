@@ -5,13 +5,15 @@ export type AppModal = 'export' | null;
 export type BasemapId = 'dark' | 'satellite' | 'topo' | 'streets';
 
 export interface Layer {
-  id: string;
-  name: string;
+  id: string; // product_id
+  name: string; // unique display_name
   layer_name?: string;
-  layer_type?: 'factor_raster' | 'rating_raster' | 'result_raster' | string;
+  layer_type?: string;
+  layerType?: 'FACTOR' | 'RATING' | 'RESULT' | 'QUALITY' | string;
   criterion_id?: string;
-  group: 'composite' | 'topographic' | 'hydrological' | 'environmental';
+  group: 'composite' | 'topographic' | 'hydrological' | 'environmental' | 'quality' | string;
   groupLabel: string;
+  subgroup?: string;
   visible: boolean;
   opacity: number;
   unit?: string;
@@ -19,6 +21,7 @@ export interface Layer {
   resolution?: string;
   date?: string;
   description: string;
+  scoring_mode?: string | null;
 }
 
 export interface Zone {
@@ -32,7 +35,13 @@ export interface Zone {
   district: string;
   region: string;
   area: number;
-  finalStatus?: string;
+  finalStatus?: 'VALID' | 'PARTIAL_EVIDENCE' | 'NODATA' | 'OUTSIDE_ANALYSIS_AREA' | string;
+  evidenceCount?: number;
+  evidenceTotal?: number;
+  missingCriteria?: string[];
+  scoringMode?: string;
+  strictScore?: number | null;
+  availableEvidenceScore?: number | null;
   criteria?: CriterionRow[];
 }
 
@@ -48,7 +57,7 @@ export interface CriterionRow {
   layerId: string;
   source: string;
   evidence: string;
-  status?: string;
+  status?: 'VALID' | 'NODATA' | 'OUTSIDE_ANALYSIS_AREA' | string;
 }
 
 export interface AIMessage {

@@ -17,20 +17,23 @@ class Settings:
             "SPATIAL_KNOWLEDGE_ROOT",
             "../outputs/Himachal_Pradesh_Spatial_Knowledge.gdb",
         )
-        # Resolve relative to the backend/ directory
         base = Path(__file__).resolve().parent.parent
-        self.spatial_knowledge_root: Path = (base / raw).resolve()
+        raw_path = Path(raw)
+        if raw_path.is_absolute():
+            self.spatial_knowledge_root: Path = raw_path.resolve()
+        else:
+            self.spatial_knowledge_root: Path = (base / raw).resolve()
 
     def validate(self) -> None:
-        """Raise if the package path is missing."""
+        """Raise if the package path is missing or invalid."""
         if not self.spatial_knowledge_root.exists():
             raise FileNotFoundError(
-                f"Spatial Knowledge Package not found at: {self.spatial_knowledge_root}"
+                "Spatial Knowledge Package not found at configured SPATIAL_KNOWLEDGE_ROOT."
             )
         manifest = self.spatial_knowledge_root / "manifest.json"
         if not manifest.exists():
             raise FileNotFoundError(
-                f"manifest.json not found inside: {self.spatial_knowledge_root}"
+                "manifest.json not found inside configured SPATIAL_KNOWLEDGE_ROOT."
             )
 
 

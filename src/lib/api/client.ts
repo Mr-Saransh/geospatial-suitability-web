@@ -42,6 +42,7 @@ export const api = {
   getPackageMetadata: () => request<PackageMetadata>('/api/v1/metadata/package'),
   getAnalysisMetadata: (analysisId: string) =>
     request<Record<string, any>>(`/api/v1/analyses/${encodeURIComponent(analysisId)}/metadata`),
+  getBoundary: () => request<any>('/api/v1/boundary'),
 
   // Models
   getModels: () => request<ModelSummary[]>('/api/v1/models'),
@@ -65,7 +66,6 @@ export const api = {
 
   // Tiles URL builder
   getTileUrlTemplate: (layerId: string) => {
-    // Slippy tile URL template for Leaflet
     return `${BASE_URL}/api/v1/tiles/${encodeURIComponent(layerId)}/{z}/{x}/{y}.png`
   },
 }

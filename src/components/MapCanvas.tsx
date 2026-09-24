@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, useMap, useMapEvents, Marker, Popup } from 're
 import L from 'leaflet';
 import type { Zone, Layer } from '../types';
 import { SUIT_META } from '../data';
+import { api } from '../lib/api/client';
 import {
   IconZoomIn, IconZoomOut, IconLocate, IconMaximize,
   IconMeasure, IconBookmark, IconCompare, IconPrint, IconGlobe
@@ -156,8 +157,7 @@ export default function MapCanvas({
   const [boundaryGeoJson, setBoundaryGeoJson] = useState<any>(null);
 
   useEffect(() => {
-    fetch('/api/v1/boundary')
-      .then(r => r.ok ? r.json() : null)
+    api.getBoundary()
       .then(data => {
         if (data && data.features && data.features.length > 0) {
           setBoundaryGeoJson(data);
@@ -179,9 +179,9 @@ export default function MapCanvas({
     onPointClick(lat, lng);
   }, [onPointClick]);
 
-  // Construct tile URL for the active raster layer
+  // Construct tile URL for the active raster layer using centralized API client
   const tileUrl = activeLayer && activeLayer.visible
-    ? `/api/v1/tiles/${encodeURIComponent(activeLayer.id)}/{z}/{x}/{y}.png`
+    ? api.getTileUrlTemplate(activeLayer.id)
     : null;
 
   const activeColor = selectedZone ? SUIT_META[selectedZone.cls]?.color || '#00b4d8' : '#00b4d8';
