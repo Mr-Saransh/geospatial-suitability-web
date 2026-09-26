@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell,
   ResponsiveContainer, CartesianGrid,
@@ -8,12 +8,14 @@ import type { Zone, RightTab } from '../types';
 import type { AnalysisStatistics, ModelDetail } from '../lib/api/types';
 import { SuitBadge, ScoreBar, SectionLabel, StatTile, TabBar, EmptyState, Mono, Pill } from '../ui';
 import { IconAnalyze, IconChart } from '../icons';
+import { getCoverageInfo } from '../utils/coverage';
 
 interface Props {
   zone: Zone | null;
   onLayerEvidence: (id: string) => void;
   statistics?: AnalysisStatistics | null;
   modelDetail?: ModelDetail | null;
+  activeTab?: RightTab;
   onTabChange?: (t: RightTab) => void;
   onClose?: () => void;
 }
@@ -26,9 +28,22 @@ const TABS = [
   { id: 'metadata',   label: 'Metadata' },
 ];
 
-export default function RightPanel({ zone, onLayerEvidence, statistics, modelDetail, onClose }: Props) {
-  const [tab, setTab] = useState<RightTab>('statistics');
+export default function RightPanel({ zone, onLayerEvidence, statistics, modelDetail, activeTab, onTabChange, onClose }: Props) {
+  const [internalTab, setInternalTab] = useState<RightTab>(activeTab || (zone ? 'overview' : 'statistics'));
+
+  useEffect(() => {
+    if (activeTab) {
+      setInternalTab(activeTab);
+    }
+  }, [activeTab]);
+
+  const tab = activeTab || internalTab;
+  const setTab = (t: RightTab) => {
+    setInternalTab(t);
+    onTabChange?.(t);
+  };
   const stats = statistics || (INITIAL_STATS as any);
+  const coverage = zone ? getCoverageInfo(zone.finalStatus, zone.evidenceCount, zone.evidenceTotal) : null;
 
   return (
     <div className="flex flex-col overflow-hidden z-20 w-full sm:w-80 md:w-[320px] shrink-0" style={{ background: 'var(--c-surface)', borderLeft: '1px solid var(--c-border)' }}>
@@ -83,17 +98,12 @@ export default function RightPanel({ zone, onLayerEvidence, statistics, modelDet
             <div className="flex items-center gap-2 mt-2 flex-wrap">
               <Pill color="#00b4d8">{zone.lat.toFixed(4)}°N, {zone.lng.toFixed(4)}°E</Pill>
               <Pill color="#374f6a">30 m pixel</Pill>
-              {zone.finalStatus === 'VALID' && (
-                <Pill color="#00c896">Valid Sample (11/11)</Pill>
-              )}
-              {zone.finalStatus === 'PARTIAL_EVIDENCE' && (
-                <Pill color="#f97316">Partial Evidence ({zone.evidenceCount ?? 10}/11)</Pill>
-              )}
-              {zone.finalStatus === 'OUTSIDE_ANALYSIS_AREA' && (
-                <Pill color="#ef4444">Outside Analysis Area</Pill>
-              )}
-              {zone.finalStatus === 'NODATA' && (
-                <Pill color="#ef4444">NoData (&lt;8 Criteria)</Pill>
+              {coverage && (
+                <span title={coverage.tooltip}>
+                  <Pill color={coverage.badgeColor}>
+                    Analysis Coverage: {coverage.status}
+                  </Pill>
+                </span>
               )}
             </div>
           </>
@@ -129,13 +139,14 @@ export default function RightPanel({ zone, onLayerEvidence, statistics, modelDet
 
 /* ── Overview ───────────────────────────────────────────────── */
 function OverviewTab({ zone }: { zone: Zone }) {
+  const coverage = getCoverageInfo(zone.finalStatus, zone.evidenceCount, zone.evidenceTotal);
   const m = SUIT_META[zone.cls] || SUIT_META['low'];
   const criteria = zone.criteria || [];
-  const positive = criteria.filter(c => c.cls === 'positive' && c.status === 'VALID');
-  const limiting = criteria.filter(c => c.cls === 'limiting' && c.status === 'VALID');
+  const positive = criteria.filter(c => c.cls === 'positive' && (c.status === 'VALID' || !c.status));
+  const limiting = criteria.filter(c => c.cls === 'limiting' && (c.status === 'VALID' || !c.status));
 
   const topContributors = [...criteria]
-    .filter(c => c.status === 'VALID' && c.contribution !== null)
+    .filter(c => (c.status === 'VALID' || !c.status) && c.contribution !== null)
     .sort((a, b) => (b.contribution ?? 0) - (a.contribution ?? 0))
     .slice(0, 5)
     .map(c => ({
@@ -157,21 +168,45 @@ function OverviewTab({ zone }: { zone: Zone }) {
         </div>
       </div>
 
-      {/* Partial Evidence Callout */}
-      {zone.finalStatus === 'PARTIAL_EVIDENCE' && (
-        <div className="p-3 rounded flex flex-col gap-1.5" style={{ background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.3)' }}>
+      {/* Coverage Status Callout */}
+      {coverage.status === 'PARTIAL' && (
+        <div className="p-3 rounded flex flex-col gap-1.5" style={{ background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.3)' }} title={coverage.tooltip}>
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#f97316]">Partial Evidence Analysis</span>
-            <span className="text-[9px] px-1.5 py-0.5 rounded font-mono" style={{ background: 'rgba(249,115,22,0.2)', color: '#f97316' }}>
-              {zone.evidenceCount ?? 10} / 11 Criteria
+            <span className="text-xs font-semibold text-[#f97316]">Analysis Coverage</span>
+            <span className="text-[9px] px-2 py-0.5 rounded font-mono font-semibold" style={{ background: 'rgba(249,115,22,0.2)', color: '#f97316' }}>
+              PARTIAL
             </span>
           </div>
-          <div className="text-[11px] leading-relaxed flex flex-col gap-1" style={{ color: 'var(--c-text2)' }}>
-            <div><span style={{ color: 'var(--c-text3)' }}>Evidence: </span><strong style={{ color: 'var(--c-text)' }}>{zone.evidenceCount ?? 10} / 11 criteria</strong></div>
-            <div><span style={{ color: 'var(--c-text3)' }}>Missing: </span><strong style={{ color: '#f97316' }}>{zone.missingCriteria && zone.missingCriteria.length > 0 ? zone.missingCriteria.map(c => c.charAt(0).toUpperCase() + c.slice(1).replace(/_/g, ' ')).join(', ') : 'None'}</strong></div>
-            <div><span style={{ color: 'var(--c-text3)' }}>Strict: </span><strong style={{ color: 'var(--c-text)' }}>NoData</strong></div>
-            <div><span style={{ color: 'var(--c-text3)' }}>Available Evidence: </span><strong style={{ color: '#00b4d8' }}>{zone.score.toFixed(3)}</strong></div>
-            <div><span style={{ color: 'var(--c-text3)' }}>Scoring: </span><strong style={{ color: '#00c896' }}>Available-Evidence Renormalized</strong></div>
+          <div className="text-[11px] leading-relaxed" style={{ color: 'var(--c-text2)' }}>
+            The result is calculated using the valid available evidence for this location.
+          </div>
+        </div>
+      )}
+
+      {coverage.status === 'COMPLETE' && (
+        <div className="p-3 rounded flex flex-col gap-1.5" style={{ background: 'rgba(0,200,150,0.08)', border: '1px solid rgba(0,200,150,0.25)' }} title={coverage.tooltip}>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-[#00c896]">Analysis Coverage</span>
+            <span className="text-[9px] px-2 py-0.5 rounded font-mono font-semibold" style={{ background: 'rgba(0,200,150,0.2)', color: '#00c896' }}>
+              COMPLETE
+            </span>
+          </div>
+          <div className="text-[11px] leading-relaxed" style={{ color: 'var(--c-text2)' }}>
+            Sufficient validated evidence is available across all physical criteria for this location.
+          </div>
+        </div>
+      )}
+
+      {coverage.status === 'UNAVAILABLE' && (
+        <div className="p-3 rounded flex flex-col gap-1.5" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)' }} title={coverage.tooltip}>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-[#ef4444]">Analysis Coverage</span>
+            <span className="text-[9px] px-2 py-0.5 rounded font-mono font-semibold" style={{ background: 'rgba(239,68,68,0.2)', color: '#ef4444' }}>
+              UNAVAILABLE
+            </span>
+          </div>
+          <div className="text-[11px] leading-relaxed" style={{ color: 'var(--c-text2)' }}>
+            Insufficient validated evidence is available for this location.
           </div>
         </div>
       )}
@@ -195,11 +230,15 @@ function OverviewTab({ zone }: { zone: Zone }) {
           <div className="mt-2 text-[11px] flex flex-col gap-1.5 pt-2 border-t border-[var(--c-border)]" style={{ color: 'var(--c-text2)' }}>
             <div className="flex items-center justify-between">
               <span style={{ color: 'var(--c-text3)' }}>Susceptibility Score:</span>
-              <strong style={{ color: m.color, fontFamily: 'var(--font-mono)' }}>{zone.score ? zone.score.toFixed(3) : 'N/A'} / 5.00</strong>
+              <strong style={{ color: m.color, fontFamily: 'var(--font-mono)' }}>{zone.score ? zone.score.toFixed(2) : 'N/A'} / 5.00</strong>
             </div>
             <div className="flex items-center justify-between">
               <span style={{ color: 'var(--c-text3)' }}>Susceptibility Class:</span>
               <strong style={{ color: m.color, fontFamily: 'var(--font-mono)' }}>Class {zone.classifiedValue ?? 'N/A'} — {m.label}</strong>
+            </div>
+            <div className="flex items-center justify-between">
+              <span style={{ color: 'var(--c-text3)' }}>Analysis Coverage:</span>
+              <strong style={{ color: coverage.badgeColor, fontFamily: 'var(--font-mono)' }}>{coverage.label}</strong>
             </div>
           </div>
           <div className="mt-2 pt-1.5 text-[10px] leading-relaxed border-t border-[var(--c-border)]" style={{ color: 'var(--c-text3)' }}>
@@ -269,7 +308,7 @@ function OverviewTab({ zone }: { zone: Zone }) {
 function CriteriaTab({ zone, onEvidence }: { zone: Zone; onEvidence: (id: string) => void }) {
   const criteria = zone.criteria || [];
   const chartData = criteria
-    .filter(c => c.status === 'VALID' && c.rating !== null)
+    .filter(c => (c.status === 'VALID' || !c.status) && c.rating !== null)
     .map(c => ({
       name: c.name
         .replace('Terrain ', '')
@@ -355,7 +394,7 @@ function CriteriaTab({ zone, onEvidence }: { zone: Zone; onEvidence: (id: string
                 Rating: {!isNoData && c.rating !== null ? `${c.rating.toFixed(1)}/5` : 'N/A'} · Contrib: {!isNoData && c.contribution !== null ? `${((c.contribution ?? 0) * 100).toFixed(1)}%` : 'N/A'}
               </span>
               <span className={isNoData ? 'text-[#f97316]' : ''}>
-                {isNoData ? 'Missing in Mask' : c.source}
+                {isNoData ? 'Not Available' : c.source}
               </span>
             </div>
           </div>
@@ -382,22 +421,22 @@ function StatisticsTab({ stats }: { stats: AnalysisStatistics }) {
     <div className="p-4 flex flex-col gap-4">
       {/* Statewide summary statistics */}
       <div>
-        <SectionLabel>Analysis Statistics (Statewide HP — Run #56)</SectionLabel>
+        <SectionLabel>Analysis Statistics (Statewide HP)</SectionLabel>
         <div className="grid grid-cols-2 gap-2">
           <StatTile label="Total Grid Pixels" value={`${(stats.total_pixels / 1e6).toFixed(1)} M`} sub="30 m grid" />
           <StatTile label="Valid Area (HP)"   value={`${((stats.valid_pixels * 900) / 1e6).toFixed(0)} km²`} accent="#00c896" />
           <StatTile label="Score Min"        value={stats.score_min?.toFixed(2) || '1.06'} sub="pixel minimum" />
           <StatTile label="Score Max"        value={stats.score_max?.toFixed(2) || '4.87'} sub="pixel maximum" />
-          <StatTile label="Mean Score"       value={stats.score_mean?.toFixed(2) || '1.74'} sub="μ (Available)" accent="#00b4d8" />
+          <StatTile label="Mean Score"       value={stats.score_mean?.toFixed(2) || '1.74'} sub="μ (Statewide)" accent="#00b4d8" />
           <StatTile label="Std Dev"          value={stats.score_std?.toFixed(3) || '0.352'} sub="σ" />
-          <StatTile label="Valid Coverage"   value={`${stats.valid_coverage_pct?.toFixed(1)}%`} sub="within HP bounds" />
-          <StatTile label="AHP CR"           value="0.0158" sub="validated consistent" accent="#00c896" />
+          <StatTile label="Data Coverage"    value={`${stats.valid_coverage_pct?.toFixed(1)}%`} sub="within HP bounds" />
+          <StatTile label="Data Integrity"   value="Verified" sub="consistent criteria" accent="#00c896" />
         </div>
       </div>
 
       {/* Suitability class pie */}
       <div>
-        <SectionLabel>Susceptibility Distribution — Available Evidence</SectionLabel>
+        <SectionLabel>Susceptibility Distribution</SectionLabel>
         <div className="flex items-center gap-3">
           <ResponsiveContainer width={100} height={100}>
             <PieChart>
@@ -418,31 +457,6 @@ function StatisticsTab({ stats }: { stats: AnalysisStatistics }) {
         </div>
       </div>
 
-      {/* Evidence criteria distribution */}
-      {evidenceDist.length > 0 && (
-        <div>
-          <SectionLabel>Evidence Criteria Distribution</SectionLabel>
-          <div className="flex flex-col gap-2">
-            {evidenceDist.map(e => (
-              <div key={e.criteria_count} className="p-2 rounded" style={{ background: 'var(--c-panel)', border: '1px solid var(--c-border)' }}>
-                <div className="flex items-center justify-between text-[11px] mb-1">
-                  <span style={{ color: e.criteria_count === 11 ? '#00c896' : '#00b4d8' }}>{e.label}</span>
-                  <Mono color="var(--c-text)">{e.percentage.toFixed(2)}%</Mono>
-                </div>
-                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--c-track)' }}>
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${e.percentage}%`,
-                      background: e.criteria_count === 11 ? '#00c896' : '#00b4d8'
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Area by class */}
       <div>
@@ -474,11 +488,11 @@ function EvidenceTab({ zone, onEvidence }: { zone: Zone; onEvidence: (id: string
           Why is this coordinate evaluated as {m.label}?
         </div>
         <div className="text-xs leading-relaxed" style={{ color: 'var(--c-text2)' }}>
-          Evaluated under the canonical 11-Factor AHP Flood Model (Run #56). Multi-criteria aggregation formula:
+          Multi-factor weighted suitability analysis using 11 environmental and hydrological criteria. Aggregation formula:
           <div className="my-1.5 font-mono text-[10px] px-2 py-1 rounded" style={{ background: 'var(--c-panel)', color: '#00b4d8', border: '1px solid var(--c-border)' }}>
-            S = Σ (wᵢ × rᵢ) = {zone.score ? zone.score.toFixed(3) : 'N/A'}
+            S = Σ (wᵢ × rᵢ) = {zone.score ? zone.score.toFixed(2) : 'N/A'}
           </div>
-          The combination of high terrain slopes and distance from river banks reduces flood accumulation risk, despite high regional monsoon rainfall.
+          The combination of terrain gradient and distance from stream corridors dictates local flood susceptibility alongside regional rainfall.
         </div>
       </div>
 
@@ -494,11 +508,11 @@ function EvidenceTab({ zone, onEvidence }: { zone: Zone; onEvidence: (id: string
                 <Mono color={isNoData ? '#ef4444' : (c.cls === 'positive' ? '#00c896' : '#f97316')}>
                   {!isNoData && c.rawScore !== null ? c.rawScore.toFixed(1) : 'NoData'}{!isNoData && c.unit ? ` ${c.unit}` : ''}
                 </Mono>
-                <span className="text-[9px]" style={{ color: 'var(--c-text3)' }}>w={c.weight.toFixed(3)}</span>
+                <span className="text-[9px]" style={{ color: 'var(--c-text3)' }}>w={(c.weight * 100).toFixed(1)}%</span>
               </div>
             </div>
             <div className="text-[11px] leading-relaxed mb-2" style={{ color: 'var(--c-text2)' }}>
-              {isNoData ? 'This criterion is missing at this pixel and was dynamically handled via Available-Evidence Renormalization.' : c.evidence}
+              {isNoData ? 'This criterion is not available at this location; suitability is calculated using the remaining valid criteria.' : c.evidence}
             </div>
             <div className="flex items-center gap-1.5 flex-wrap">
               <button onClick={() => onEvidence(c.layerId)}
@@ -518,26 +532,17 @@ function EvidenceTab({ zone, onEvidence }: { zone: Zone; onEvidence: (id: string
 
 /* ── Metadata ───────────────────────────────────────────────── */
 function MetadataTab({ modelDetail }: { modelDetail?: ModelDetail | null }) {
-  const rows = [
-    ['Model',           '11-Factor Flood Susceptibility AHP'],
-    ['Model ID',        'flood_11_factor_v1'],
-    ['Canonical Run',   'Run #56'],
-    ['Published Rasters','28 Published Rasters (11 F + 11 R + 4 Res + 2 Q)'],
-    ['AHP Method',      'Saaty (1980) Pairwise Matrix'],
-    ['CR (Consistency)','0.0158  <  0.10 ✓ (Consistent)'],
-    ['Criteria Count',  '11 Biophysical Criteria'],
-    ['Min. Criteria',   '8 Criteria (Available-Evidence Threshold)'],
-    ['Scoring Modes',   'Available-Evidence Renormalized & Strict 11-of-11'],
-    ['Validation',      'PASSED (Checksum & Boundary Verified)'],
-    ['Kappa Metric',    'N/A (Independent reference data unavailable)'],
-    ['DEM Source',      'SRTM 30 m DEM (NASA)'],
-    ['Climate',         'CHIRPS v2.0 (IMD / UCSB)'],
-    ['LULC',            'ESA WorldCover 10 m (2021)'],
-    ['Hydrology',       'HydroRIVERS + OSM Hydrology'],
-    ['Soil',            'SoilGrids v2.0 (ISRIC 250 m)'],
-    ['Vegetation',      'Sentinel-2 L2A Annual Composite'],
-    ['Output CRS',      'EPSG:4326'],
-    ['Spatial Res.',    '30 m spatial resolution'],
+  const [showTechnical, setShowTechnical] = useState(false);
+
+  const publicRows = [
+    ['Analysis',           'Flood Susceptibility'],
+    ['Analysis Area',      'Himachal Pradesh'],
+    ['Criteria',           '11 Physical / Environmental Factors'],
+    ['Spatial Resolution', '30 m'],
+    ['Coordinate System',  'EPSG:4326'],
+    ['Data Integrity',     'Verified'],
+    ['Last Updated',       modelDetail?.publication_date || 'September 2026'],
+    ['Data Sources',       'SRTM · CHIRPS · ESA WorldCover · HydroRIVERS / OSM · SoilGrids · Sentinel-2'],
   ];
 
   const weights = modelDetail?.weights || [
@@ -559,8 +564,8 @@ function MetadataTab({ modelDetail }: { modelDetail?: ModelDetail | null }) {
   return (
     <div className="p-4 flex flex-col gap-4">
       <div>
-        <SectionLabel>Spatial Knowledge Package Metadata (Run #56)</SectionLabel>
-        {rows.map(([k, v]) => (
+        <SectionLabel>Analysis & Spatial Dataset Metadata</SectionLabel>
+        {publicRows.map(([k, v]) => (
           <div key={k} className="flex items-start gap-2 py-1.5" style={{ borderBottom: '1px solid var(--c-border)' }}>
             <span className="text-[10px] flex-shrink-0 w-28" style={{ color: 'var(--c-text3)' }}>{k}</span>
             <span className="text-[10px] text-right flex-1" style={{ color: 'var(--c-text2)', fontFamily: 'var(--font-mono)' }}>{v}</span>
@@ -569,7 +574,7 @@ function MetadataTab({ modelDetail }: { modelDetail?: ModelDetail | null }) {
       </div>
 
       <div>
-        <SectionLabel>AHP Weight Configuration (11 Criteria)</SectionLabel>
+        <SectionLabel>Criteria Weights (11 Factors)</SectionLabel>
         {weights.map(r => (
           <div key={r.criterion_id} className="flex items-center gap-2 mb-1.5">
             <span className="text-[10px] flex-1 truncate" style={{ color: 'var(--c-text)' }}>
@@ -582,15 +587,51 @@ function MetadataTab({ modelDetail }: { modelDetail?: ModelDetail | null }) {
           </div>
         ))}
         <div className="mt-2 p-2 rounded text-[10px]" style={{ background: 'var(--c-panel)', color: '#00c896', border: '1px solid var(--c-border)', fontFamily: 'var(--font-mono)' }}>
-          Σ weights = 1.0000  ·  CR = 0.0158 (Passes Saaty consistency &lt; 0.10)
+          Σ weights = 100.00%  ·  11 Evaluated Criteria
         </div>
       </div>
 
       <div>
-        <SectionLabel>AHP Mathematical Methodology</SectionLabel>
+        <SectionLabel>Methodology Overview</SectionLabel>
         <div className="text-[11px] leading-relaxed" style={{ color: 'var(--c-text2)' }}>
-          Multi-Criteria Decision Analysis (MCDA) based on the Analytic Hierarchy Process (Saaty, 1980). A pairwise comparison matrix (11×11) was evaluated to compute priority eigenvalue weights. Consistency validated with Principal Eigenvalue (λmax = 11.238), Consistency Index (CI = 0.0238), and Random Index (RI = 1.51), yielding a Consistency Ratio (CR) of 0.0158.
+          Multi-factor weighted suitability analysis using 11 environmental and hydrological criteria. Priority weights are synthesized across standardized spatial factor layers.
         </div>
+      </div>
+
+      {/* Internal / Technical details toggle (unobtrusive & collapsed by default) */}
+      <div className="pt-2 border-t border-[var(--c-border)]">
+        <button
+          onClick={() => setShowTechnical(!showTechnical)}
+          className="text-[10px] flex items-center gap-1.5 hover:opacity-80 transition-opacity"
+          style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}
+        >
+          <span>{showTechnical ? '▾' : '▸'}</span>
+          <span>{showTechnical ? 'Hide Technical Details' : 'Technical Pipeline Details (Audit)'}</span>
+        </button>
+        {showTechnical && (
+          <div className="mt-2 p-2.5 rounded flex flex-col gap-1 text-[10px]" style={{ background: 'var(--c-panel)', border: '1px solid var(--c-border)', fontFamily: 'var(--font-mono)' }}>
+            <div className="flex justify-between py-0.5 border-b border-[var(--c-border)]">
+              <span style={{ color: 'var(--c-text3)' }}>Model ID</span>
+              <span style={{ color: 'var(--c-text2)' }}>{modelDetail?.model_id || 'flood_11_factor_v1'}</span>
+            </div>
+            <div className="flex justify-between py-0.5 border-b border-[var(--c-border)]">
+              <span style={{ color: 'var(--c-text3)' }}>Canonical Run</span>
+              <span style={{ color: 'var(--c-text2)' }}>Run #{modelDetail?.source_run_id || '56'}</span>
+            </div>
+            <div className="flex justify-between py-0.5 border-b border-[var(--c-border)]">
+              <span style={{ color: 'var(--c-text3)' }}>AHP Method</span>
+              <span style={{ color: 'var(--c-text2)' }}>Pairwise Matrix Synthesis</span>
+            </div>
+            <div className="flex justify-between py-0.5 border-b border-[var(--c-border)]">
+              <span style={{ color: 'var(--c-text3)' }}>Consistency (CR)</span>
+              <span style={{ color: '#00c896' }}>0.0158 (&lt; 0.10 Consistent)</span>
+            </div>
+            <div className="flex justify-between py-0.5">
+              <span style={{ color: 'var(--c-text3)' }}>Published Rasters</span>
+              <span style={{ color: 'var(--c-text2)' }}>28 Canonical Rasters</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

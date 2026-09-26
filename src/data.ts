@@ -158,10 +158,10 @@ export const INITIAL_LAYERS: Layer[] = [
     visible: true,
     opacity: 85,
     unit: 'class (1–5)',
-    source: 'AHP Multi-Criteria Composite (Run #56)',
+    source: 'AHP Multi-Criteria Composite',
     resolution: '30 m',
     date: '2026-09',
-    description: 'Canonical user-facing classified flood susceptibility (1: Very Low Susceptibility to 5: Very High Susceptibility) with Available-Evidence Renormalization.',
+    description: 'User-facing classified flood susceptibility (1: Very Low to 5: Very High).',
   },
   {
     id: 'flood_11_factor_v1_available_evidence_suitability',
@@ -173,14 +173,14 @@ export const INITIAL_LAYERS: Layer[] = [
     visible: false,
     opacity: 80,
     unit: 'score (1.0–5.0)',
-    source: 'AHP Multi-Criteria Composite (Run #56)',
+    source: 'AHP Multi-Criteria Composite',
     resolution: '30 m',
     date: '2026-09',
-    description: 'Canonical continuous flood susceptibility score (1.0 to 5.0) under Available-Evidence mode.',
+    description: 'Continuous flood susceptibility index (1.0 to 5.0).',
   },
   {
     id: 'flood_11_factor_v1_strict_suitability_classified',
-    name: 'Strict Susceptibility — Classified',
+    name: 'Strict Flood Susceptibility — Classified',
     group: 'composite',
     groupLabel: 'Analysis Results',
     subgroup: 'Analysis Results',
@@ -195,7 +195,7 @@ export const INITIAL_LAYERS: Layer[] = [
   },
   {
     id: 'flood_11_factor_v1_strict_suitability',
-    name: 'Strict Susceptibility — Continuous',
+    name: 'Strict Flood Susceptibility — Continuous',
     group: 'composite',
     groupLabel: 'Analysis Results',
     subgroup: 'Analysis Results',
@@ -584,6 +584,20 @@ export const INITIAL_LAYERS: Layer[] = [
   },
 ];
 
+export const INITIAL_CRITERIA: CriterionRow[] = [
+  { name: 'Terrain Slope', criterionId: 'slope', weight: 0.2306, rawScore: 28.5, rating: 1.0, contribution: 0.2306, unit: '°', cls: 'positive', layerId: 'slope', source: 'SRTM 30 m DEM', evidence: 'Steep hill slopes promote rapid surface drainage into valleys.', status: 'VALID' },
+  { name: 'Distance to Rivers', criterionId: 'distance_to_rivers', weight: 0.1480, rawScore: 1850.0, rating: 1.0, contribution: 0.1480, unit: 'm', cls: 'positive', layerId: 'distance_to_rivers', source: 'HydroRIVERS', evidence: 'Located 1.85 km from primary channel, well above normal floodline.', status: 'VALID' },
+  { name: 'Topographic Wetness Index', criterionId: 'twi', weight: 0.1422, rawScore: 6.2, rating: 1.0, contribution: 0.1422, unit: 'index', cls: 'positive', layerId: 'twi', source: 'SRTM D8', evidence: 'Low TWI indicates low moisture retention risk.', status: 'VALID' },
+  { name: 'Annual Rainfall', criterionId: 'rainfall', weight: 0.1326, rawScore: 1420.0, rating: 4.0, contribution: 0.5304, unit: 'mm/yr', cls: 'limiting', layerId: 'rainfall', source: 'CHIRPS v2.0', evidence: 'Monsoon precipitation of 1,420 mm/yr contributes to regional runoff.', status: 'VALID' },
+  { name: 'Flow Accumulation', criterionId: 'flow_accumulation', weight: 0.1115, rawScore: 42.0, rating: 1.0, contribution: 0.1115, unit: 'cells', cls: 'positive', layerId: 'flow_accumulation', source: 'SRTM Flow Routing', evidence: 'Minimal upstream catchment area directly draining to ridge.', status: 'VALID' },
+  { name: 'Drainage Density', criterionId: 'drainage_density', weight: 0.0668, rawScore: 1.2, rating: 2.0, contribution: 0.1336, unit: 'km/km²', cls: 'positive', layerId: 'drainage_density', source: 'Stream Network', evidence: 'Moderate stream density in immediate watershed.', status: 'VALID' },
+  { name: 'Land Cover (LULC)', criterionId: 'lulc', weight: 0.0573, rawScore: 10.0, rating: 1.0, contribution: 0.0573, unit: 'class', cls: 'positive', layerId: 'lulc', source: 'ESA WorldCover', evidence: 'Dense tree canopy moderates runoff generation.', status: 'VALID' },
+  { name: 'Elevation', criterionId: 'elevation', weight: 0.0345, rawScore: 1650.0, rating: 3.0, contribution: 0.1035, unit: 'm asl', cls: 'positive', layerId: 'elevation', source: 'SRTM DEM', evidence: 'Mountain elevation with gravity drainage.', status: 'VALID' },
+  { name: 'Soil Texture', criterionId: 'soil', weight: 0.0317, rawScore: 2.0, rating: 2.0, contribution: 0.0635, unit: 'class', cls: 'positive', layerId: 'soil', source: 'SoilGrids v2.0', evidence: 'Coarse mountain soils provide moderate infiltration.', status: 'VALID' },
+  { name: 'Curvature', criterionId: 'curvature', weight: 0.0282, rawScore: 0.005, rating: 2.0, contribution: 0.0564, unit: '1/m', cls: 'positive', layerId: 'curvature', source: 'SRTM DEM Derivatives', evidence: 'Convex ridge profile disperses runoff divergence.', status: 'VALID' },
+  { name: 'NDVI Vegetation', criterionId: 'ndvi', weight: 0.0166, rawScore: 0.62, rating: 1.0, contribution: 0.0166, unit: 'index', cls: 'positive', layerId: 'ndvi', source: 'Sentinel-2 L2A', evidence: 'Vegetation cover provides canopy interception.', status: 'VALID' },
+];
+
 export const INITIAL_ZONE: Zone = {
   id: 'point-himachal-sample',
   label: 'Shimla Ridge Point',
@@ -596,27 +610,15 @@ export const INITIAL_ZONE: Zone = {
   region: 'Himachal Pradesh',
   area: 44.3,
   finalStatus: 'VALID',
+  coverageStatus: 'COMPLETE',
   evidenceCount: 11,
   evidenceTotal: 11,
   missingCriteria: [],
   scoringMode: 'STRICT_11_OF_11',
   strictScore: 1.78,
   availableEvidenceScore: 1.78,
+  criteria: INITIAL_CRITERIA,
 };
-
-export const INITIAL_CRITERIA: CriterionRow[] = [
-  { name: 'Terrain Slope', criterionId: 'slope', weight: 0.2306, rawScore: 28.5, rating: 1.0, contribution: 0.2306, unit: '°', cls: 'positive', layerId: 'slope', source: 'SRTM 30 m DEM', evidence: 'Steep hill slopes promote rapid surface drainage into valleys.' },
-  { name: 'Distance to Rivers', criterionId: 'distance_to_rivers', weight: 0.1480, rawScore: 1850.0, rating: 1.0, contribution: 0.1480, unit: 'm', cls: 'positive', layerId: 'distance_to_rivers', source: 'HydroRIVERS', evidence: 'Located 1.85 km from primary channel, well above normal floodline.' },
-  { name: 'Topographic Wetness Index', criterionId: 'twi', weight: 0.1422, rawScore: 6.2, rating: 1.0, contribution: 0.1422, unit: 'index', cls: 'positive', layerId: 'twi', source: 'SRTM D8', evidence: 'Low TWI indicates low moisture retention risk.' },
-  { name: 'Annual Rainfall', criterionId: 'rainfall', weight: 0.1326, rawScore: 1420.0, rating: 4.0, contribution: 0.5304, unit: 'mm/yr', cls: 'limiting', layerId: 'rainfall', source: 'CHIRPS v2.0', evidence: 'Monsoon precipitation of 1,420 mm/yr contributes to regional runoff.' },
-  { name: 'Flow Accumulation', criterionId: 'flow_accumulation', weight: 0.1115, rawScore: 42.0, rating: 1.0, contribution: 0.1115, unit: 'cells', cls: 'positive', layerId: 'flow_accumulation', source: 'SRTM Flow Routing', evidence: 'Minimal upstream catchment area directly draining to ridge.' },
-  { name: 'Drainage Density', criterionId: 'drainage_density', weight: 0.0668, rawScore: 1.2, rating: 2.0, contribution: 0.1336, unit: 'km/km²', cls: 'positive', layerId: 'drainage_density', source: 'Stream Network', evidence: 'Moderate stream density in immediate watershed.' },
-  { name: 'Land Cover (LULC)', criterionId: 'lulc', weight: 0.0573, rawScore: 10.0, rating: 1.0, contribution: 0.0573, unit: 'class', cls: 'positive', layerId: 'lulc', source: 'ESA WorldCover', evidence: 'Dense tree canopy moderates runoff generation.' },
-  { name: 'Elevation', criterionId: 'elevation', weight: 0.0345, rawScore: 1650.0, rating: 3.0, contribution: 0.1035, unit: 'm asl', cls: 'positive', layerId: 'elevation', source: 'SRTM DEM', evidence: 'Mountain elevation with gravity drainage.' },
-  { name: 'Soil Texture', criterionId: 'soil', weight: 0.0317, rawScore: 2.0, rating: 2.0, contribution: 0.0635, unit: 'class', cls: 'positive', layerId: 'soil', source: 'SoilGrids v2.0', evidence: 'Coarse mountain soils provide moderate infiltration.' },
-  { name: 'Curvature', criterionId: 'curvature', weight: 0.0282, rawScore: 0.005, rating: 2.0, contribution: 0.0564, unit: '1/m', cls: 'positive', layerId: 'curvature', source: 'SRTM DEM Derivatives', evidence: 'Convex ridge profile disperses runoff divergence.' },
-  { name: 'NDVI Vegetation', criterionId: 'ndvi', weight: 0.0166, rawScore: 0.62, rating: 1.0, contribution: 0.0166, unit: 'index', cls: 'positive', layerId: 'ndvi', source: 'Sentinel-2 L2A', evidence: 'Vegetation cover provides canopy interception.' },
-];
 
 export const INITIAL_STATS = {
   model_id: 'flood_11_factor_v1',
@@ -659,7 +661,7 @@ export const AI_PRESETS: Array<{ q: string; context?: string }> = [
 
 export const AI_ANSWERS: Record<string, { text: string; actions?: Array<{ label: string; type: 'layer' | 'evidence' | 'stats'; target: string }> }> = {
   'Why is this location classified with its current flood susceptibility?': {
-    text: `Under the canonical **11-Factor AHP Flood Model (Run #56)**, this location in Himachal Pradesh is evaluated using Available-Evidence multi-criteria synthesis:\n\n• **Slope (w=0.2306):** High gradient promotes rapid overland runoff away from ridges.\n• **Distance to Rivers (w=0.1480):** Proximity to active stream corridors dictates overbank inundation hazard.\n• **Rainfall (w=0.1326):** Monsoonal rainfall remains the dominant regional hazard driver.\n\nPixels with at least 8 valid criteria are dynamically renormalized, while pixels missing factors like soil are transparently flagged as Partial Evidence.`,
+    text: `Under the **11-Factor Flood Susceptibility Model**, this location in Himachal Pradesh is evaluated using multi-criteria synthesis across physical criteria:\n\n• **Slope (w=0.2306):** High gradient promotes rapid overland runoff away from ridges.\n• **Distance to Rivers (w=0.1480):** Proximity to active stream corridors dictates overbank inundation hazard.\n• **Rainfall (w=0.1326):** Monsoonal rainfall remains the dominant regional hazard driver.\n\nLocations with all validated data are marked as Complete Coverage, while areas where certain factors are unavailable are transparently denoted with Partial Coverage.`,
     actions: [
       { label: 'Show Slope Layer', type: 'layer', target: 'slope' },
       { label: 'Show Rainfall Layer', type: 'layer', target: 'rainfall' },

@@ -71,13 +71,27 @@ export default function Sidebar({
   const resultCount = layers.filter(l => l.layerType === 'RESULT' || l.id.includes('suitability')).length;
   const qualityCount = layers.filter(l => l.layerType === 'QUALITY' || l.id.includes('criteria')).length;
 
+  // Canonical results order
+  const RESULT_ORDER = [
+    'flood_11_factor_v1_available_evidence_suitability_classified',
+    'flood_11_factor_v1_available_evidence_suitability',
+    'flood_11_factor_v1_strict_suitability_classified',
+    'flood_11_factor_v1_strict_suitability',
+  ];
+
   // Semantic sidebar sections with zero duplicate display names
   const SECTIONS = [
     {
       id: 'results',
       label: 'Analysis Results',
       badge: `${resultCount}`,
-      layers: layers.filter(l => l.group === 'composite' || l.layerType === 'RESULT' || l.id.includes('suitability')),
+      layers: layers
+        .filter(l => l.group === 'composite' || l.layerType === 'RESULT' || l.id.includes('suitability'))
+        .sort((a, b) => {
+          const idxA = RESULT_ORDER.indexOf(a.id);
+          const idxB = RESULT_ORDER.indexOf(b.id);
+          return (idxA !== -1 ? idxA : 99) - (idxB !== -1 ? idxB : 99);
+        }),
     },
     {
       id: 'hydro_factors',
@@ -114,12 +128,6 @@ export default function Sidebar({
       label: 'Standardized Ratings',
       badge: 'Environmental (1–5)',
       layers: layers.filter(l => l.group === 'environmental' && (l.layerType === 'RATING' || l.id.includes('rating'))),
-    },
-    {
-      id: 'quality',
-      label: 'Quality & Coverage',
-      badge: `${qualityCount}`,
-      layers: layers.filter(l => l.group === 'quality' || l.layerType === 'QUALITY' || l.id.includes('criteria')),
     },
   ];
 
@@ -203,13 +211,11 @@ export default function Sidebar({
             {/* Dynamic catalog inventory breakdown */}
             <div className="px-4 py-1.5 mb-1.5 text-[9px] flex items-center justify-between"
               style={{ background: 'rgba(0,180,216,0.05)', borderBottom: '1px solid var(--c-border)', color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>
-              <span>{factorCount} Factors</span>
+              <span>{factorCount} Factors (Raw)</span>
               <span>·</span>
-              <span>{ratingCount} Ratings</span>
+              <span>{ratingCount} Standardized Ratings</span>
               <span>·</span>
               <span>{resultCount} Results</span>
-              <span>·</span>
-              <span>{qualityCount} Quality</span>
             </div>
 
             <div className="pb-3">
@@ -298,12 +304,12 @@ export default function Sidebar({
           {/* Footer Metadata */}
           <div className="mt-auto px-4 py-3 flex-shrink-0" style={{ borderTop: '1px solid var(--c-border)', background: 'var(--c-panel)' }}>
             <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
-              <Pill color="#00b4d8">Run #56</Pill>
-              <Pill color="#00c896">CR: 0.0158 ✓</Pill>
+              <Pill color="#00b4d8">Himachal Pradesh</Pill>
+              <Pill color="#00c896">Data Verified</Pill>
               <Pill color="#374f6a">11 Criteria</Pill>
             </div>
             <div className="text-[10px]" style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>
-              Himachal Pradesh Spatial Knowledge · v1.0
+              Statewide 30 m Spatial Analysis · v1.0
             </div>
           </div>
         </div>
@@ -312,22 +318,22 @@ export default function Sidebar({
   );
 }
 
-/* Sub-components */
 function SideSection({ label, open, onToggle, children, actions }: {
   label: string; open: boolean; onToggle: () => void; children: ReactNode; actions?: ReactNode;
 }) {
   return (
     <div style={{ borderBottom: '1px solid var(--c-border)' }}>
-      <button onClick={onToggle}
-        className="flex items-center w-full px-4 py-2.5 transition-colors hover:opacity-80"
+      <div
+        onClick={onToggle}
+        className="flex items-center w-full px-4 py-2.5 transition-colors hover:opacity-80 cursor-pointer select-none"
         style={{ color: 'var(--c-text2)' }}>
         <span className="flex-1 text-left text-[10px] font-semibold tracking-[0.08em] uppercase"
           style={{ fontFamily: 'var(--font-mono)' }}>{label}</span>
-        {actions && <span onClick={e => e.stopPropagation()}>{actions}</span>}
+        {actions && <span onClick={e => e.stopPropagation()} className="cursor-default">{actions}</span>}
         <span className="ml-2 flex-shrink-0 transition-transform duration-200" style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}>
           <IconChevronD size={11} />
         </span>
-      </button>
+      </div>
       {open && children}
     </div>
   );

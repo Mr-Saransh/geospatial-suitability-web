@@ -283,6 +283,8 @@ def point_inspection(model_id: str, lat: float, lon: float) -> dict:
             "source": fl.get("description", "Canonical Package") if fl else "Canonical Package",
         })
 
+    coverage_status = "COMPLETE" if final_status == "VALID" else ("PARTIAL" if final_status == "PARTIAL_EVIDENCE" else "UNAVAILABLE")
+
     return {
         "lat": lat,
         "lon": lon,
@@ -291,6 +293,7 @@ def point_inspection(model_id: str, lat: float, lon: float) -> dict:
         "classified_value": classified_value,
         "class_label": class_label,
         "final_status": final_status,
+        "coverage_status": coverage_status,
         "evidence_count": evidence_count,
         "evidence_total": 11,
         "missing_criteria": missing_criteria,
@@ -326,6 +329,7 @@ def _outside_analysis_response(model_id: str, lat: float, lon: float, model_conf
         "classified_value": None,
         "class_label": None,
         "final_status": "OUTSIDE_ANALYSIS_AREA",
+        "coverage_status": "UNAVAILABLE",
         "evidence_count": 0,
         "evidence_total": 11,
         "missing_criteria": [],
@@ -646,6 +650,30 @@ def compute_statistics(model_id: str) -> dict:
         },
     ]
 
+    coverage_dist = [
+        {
+            "status": "COMPLETE",
+            "label": "Complete",
+            "pixel_count": 49291505,
+            "percentage": 67.52,
+            "color": "#00c896",
+        },
+        {
+            "status": "PARTIAL",
+            "label": "Partial",
+            "pixel_count": 23708788,
+            "percentage": 32.48,
+            "color": "#00b4d8",
+        },
+        {
+            "status": "UNAVAILABLE",
+            "label": "Unavailable",
+            "pixel_count": 0,
+            "percentage": 0.0,
+            "color": "#ef4444",
+        },
+    ]
+
     result = {
         "model_id": model_id,
         "source_run_id": 56,
@@ -661,6 +689,7 @@ def compute_statistics(model_id: str) -> dict:
         "score_std": 0.3521,
         "class_distribution": class_dist,
         "evidence_distribution": evidence_dist,
+        "coverage_distribution": coverage_dist,
         "resolution_m": 30.0,
         "crs": "EPSG:4326",
     }

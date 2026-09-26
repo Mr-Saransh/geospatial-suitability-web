@@ -9,9 +9,10 @@ interface Props {
   onDetails: () => void;
   onAsk: () => void;
   onWhy: () => void;
+  loading?: boolean;
 }
 
-export default function ResultPopup({ zone, onClose, onDetails, onAsk, onWhy }: Props) {
+export default function ResultPopup({ zone, onClose, onDetails, onAsk, onWhy, loading }: Props) {
   const m = SUIT_META[zone.cls] || SUIT_META['low'];
   const criteria = zone.criteria || [];
   const top3 = criteria.slice(0, 3);

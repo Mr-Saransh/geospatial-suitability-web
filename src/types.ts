@@ -36,6 +36,7 @@ export interface Zone {
   region: string;
   area: number;
   finalStatus?: 'VALID' | 'PARTIAL_EVIDENCE' | 'NODATA' | 'OUTSIDE_ANALYSIS_AREA' | string;
+  coverageStatus?: 'COMPLETE' | 'PARTIAL' | 'UNAVAILABLE';
   evidenceCount?: number;
   evidenceTotal?: number;
   missingCriteria?: string[];

@@ -14,9 +14,10 @@ import {
   CRITERIA_INFO,
   classValueToSuitClass,
 } from './data';
-import type { Zone, AppModal, Layer, CriterionRow } from './types';
+import type { Zone, AppModal, Layer, CriterionRow, RightTab } from './types';
 import { api } from './lib/api/client';
 import type { ModelSummary, ModelDetail, AnalysisStatistics, LayerInfo, PointInspectionResponse } from './lib/api/types';
+import { getCoverageInfo } from './utils/coverage';
 
 function useIsMobile() {
   const [mobile, setMobile] = useState(window.innerWidth < 640);
@@ -33,6 +34,7 @@ export default function App() {
 
   const [sidebarOpen, setSidebarOpen]   = useState(true);
   const [rightOpen, setRightOpen]       = useState(false);
+  const [rightTab, setRightTab]         = useState<RightTab>('overview');
   const [aiOpen, setAiOpen]             = useState(false);
   const [compareOpen, setCompareOpen]   = useState(false);
   const [modal, setModal]               = useState<AppModal>(null);
@@ -119,9 +121,33 @@ export default function App() {
 
           const isDefaultVisible = l.product_id === 'flood_11_factor_v1_available_evidence_suitability_classified';
 
+          // Canonical public names
+          let displayName = l.display_name;
+          if (isResult) {
+            if (l.product_id.includes('available_evidence_suitability_classified')) {
+              displayName = 'Flood Susceptibility — Classified';
+            } else if (l.product_id.includes('available_evidence_suitability')) {
+              displayName = 'Flood Susceptibility — Continuous';
+            } else if (l.product_id.includes('strict_suitability_classified')) {
+              displayName = 'Strict Flood Susceptibility — Classified';
+            } else if (l.product_id.includes('strict_suitability')) {
+              displayName = 'Strict Flood Susceptibility — Continuous';
+            }
+          } else if (!isQuality) {
+            if (l.type === 'RATING' || l.product_id.endsWith('_rating')) {
+              if (!displayName.includes('Rating')) {
+                displayName = `${displayName.replace(/ — Raw.*/, '')} — Rating`;
+              }
+            } else {
+              if (!displayName.includes('Raw')) {
+                displayName = `${displayName.replace(/ — Rating.*/, '')} — Raw`;
+              }
+            }
+          }
+
           return {
             id: l.product_id,
-            name: l.display_name, // Guaranteed unique semantic name from backend!
+            name: displayName,
             layer_name: l.product_id,
             layerType: l.type,
             criterion_id: l.criterion_id,
@@ -130,7 +156,7 @@ export default function App() {
             visible: isDefaultVisible,
             opacity: isResult ? 85 : 75,
             unit: l.unit || critMeta?.unit || '',
-            source: l.description || critMeta?.source || 'Himachal Spatial Knowledge Package (Run #56)',
+            source: l.description || critMeta?.source || 'Himachal Spatial Knowledge Package',
             resolution: l.resolution || '30 m',
             date: '2026-09',
             description: l.description || critMeta?.description || '',
@@ -174,13 +200,15 @@ export default function App() {
         unit: c.unit || critMeta?.unit || '',
         cls: isLimiting ? 'limiting' : 'positive',
         layerId: c.criterion,
-        source: c.source || critMeta?.source || 'Canonical Package (Run #56)',
+        source: c.source || critMeta?.source || 'Canonical Spatial Package',
         evidence: c.status === 'NODATA'
-          ? (c.nodata_reason || 'Factor missing in mask — dynamic Available-Evidence mode applied')
+          ? (c.nodata_reason || 'Factor not available for this location — suitability calculated from valid criteria.')
           : (critMeta?.evidence || `Sampled value: ${c.raw_value}`),
         status: c.status,
       };
     });
+
+    const coverage = getCoverageInfo(pt.final_status, pt.evidence_count, pt.evidence_total);
 
     const newZone: Zone = {
       id: `pt-${lat.toFixed(4)}-${lon.toFixed(4)}`,
@@ -194,6 +222,7 @@ export default function App() {
       region: 'Himalayan Basin',
       area: 44.3,
       finalStatus: pt.final_status,
+      coverageStatus: coverage.status,
       evidenceCount: pt.evidence_count,
       evidenceTotal: pt.evidence_total,
       missingCriteria: pt.missing_criteria,
@@ -212,7 +241,8 @@ export default function App() {
     try {
       const pt = await api.inspectPoint(activeModelId, lat, lon);
       handlePointInspectionResult(pt, lat, lon);
-      // Auto open right panel on inspection
+      // Auto open right panel on inspection overview
+      setRightTab('overview');
       setRightOpen(true);
     } catch (err) {
       console.error('Point inspection failed:', err);
@@ -229,8 +259,10 @@ export default function App() {
         region: 'Himalayan Basin',
         area: 44.3,
         finalStatus: 'OUTSIDE_ANALYSIS_AREA',
+        coverageStatus: 'UNAVAILABLE',
         criteria: INITIAL_CRITERIA,
       });
+      setRightTab('overview');
       setRightOpen(true);
     } finally {
       setLoadingInspection(false);
@@ -267,6 +299,17 @@ export default function App() {
     handlePointClick(loc.lat, loc.lng);
   };
 
+  const handleToggleAnalytics = () => {
+    if (!rightOpen) {
+      setRightTab('statistics');
+      setRightOpen(true);
+    } else if (rightTab !== 'statistics') {
+      setRightTab('statistics');
+    } else {
+      setRightOpen(false);
+    }
+  };
+
   const activeLayer = layers.find(l => l.id === activeLayerId) || layers.find(l => l.visible) || null;
 
   if (isMobile) return <MobileApp />;
@@ -276,7 +319,7 @@ export default function App() {
       {/* Navbar */}
       <Navbar
         sidebarOpen={sidebarOpen}  onSidebar={() => setSidebarOpen(v => !v)}
-        rightOpen={rightOpen}      onRight={() => setRightOpen(v => !v)}
+        rightOpen={rightOpen}      onRight={handleToggleAnalytics}
         aiOpen={aiOpen}            onAI={() => setAiOpen(v => !v)}
         compareOpen={compareOpen}  onCompare={() => setCompareOpen(v => !v)}
         onExport={() => setModal('export')}
@@ -323,8 +366,18 @@ export default function App() {
           {selectedZone && !rightOpen && (
             <ResultPopup
               zone={selectedZone}
-              onOpenDetails={() => setRightOpen(true)}
-              onDismiss={() => setSelectedZone(null)}
+              onClose={() => setSelectedZone(null)}
+              onDetails={() => {
+                setRightTab('overview');
+                setRightOpen(true);
+              }}
+              onWhy={() => {
+                setRightTab('evidence');
+                setRightOpen(true);
+              }}
+              onAsk={() => {
+                setAiOpen(true);
+              }}
               loading={loadingInspection}
             />
           )}
@@ -348,6 +401,8 @@ export default function App() {
             onLayerEvidence={handleLayerEvidence}
             statistics={statistics}
             modelDetail={modelDetail}
+            activeTab={rightTab}
+            onTabChange={setRightTab}
             onClose={() => setRightOpen(false)}
           />
         )}

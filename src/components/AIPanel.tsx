@@ -12,7 +12,7 @@ interface Props {
 
 const SYSTEM_INIT: AIMessage = {
   role: 'assistant',
-  text: 'I have loaded scientific context for the **11-Factor Flood Susceptibility AHP Model** (Himachal Pradesh, run ID 56). I can analyze multi-criteria flood susceptibility, AHP weights, pairwise consistency (CR = 0.0158), and point inspections. Click any location on the map or ask an analytical question below.',
+  text: 'I have loaded spatial context for the **11-Factor Flood Susceptibility Model** (Himachal Pradesh). I can explain flood susceptibility criteria, factor weights, analysis coverage, and point inspections. Click any location on the map or select a question below.',
   actions: [],
 };
 

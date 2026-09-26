@@ -144,6 +144,7 @@ class PointInspectionResponse(BaseModel):
     classified_value: Optional[float] = None
     class_label: Optional[str] = None
     final_status: str = "VALID"  # VALID | PARTIAL_EVIDENCE | NODATA | OUTSIDE_ANALYSIS_AREA
+    coverage_status: Optional[str] = "COMPLETE"  # COMPLETE | PARTIAL | UNAVAILABLE
     evidence_count: int = 11
     evidence_total: int = 11
     missing_criteria: list[str] = []
@@ -169,6 +170,14 @@ class EvidenceDistributionItem(BaseModel):
     percentage: float
 
 
+class CoverageDistributionItem(BaseModel):
+    status: str
+    label: str
+    percentage: float
+    pixel_count: Optional[int] = None
+    color: Optional[str] = None
+
+
 class AnalysisStatistics(BaseModel):
     model_id: str
     source_run_id: int = 56
@@ -184,6 +193,7 @@ class AnalysisStatistics(BaseModel):
     score_std: Optional[float] = None
     class_distribution: list[ClassDistribution]
     evidence_distribution: list[EvidenceDistributionItem] = []
+    coverage_distribution: list[CoverageDistributionItem] = []
     resolution_m: Optional[float] = None
     crs: str = ""
 
