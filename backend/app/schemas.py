@@ -1,7 +1,7 @@
 """Pydantic response schemas for all API endpoints."""
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Optional, Union
 from pydantic import BaseModel
 
 
@@ -78,6 +78,8 @@ class ModelDetail(BaseModel):
     model_id: str
     name: str
     version: str
+    source_run_id: Optional[Union[int, str]] = 56
+    publication_date: Optional[str] = "September 2026"
     criterion_count: int
     criteria: list[str]
     weights: list[CriterionWeight]

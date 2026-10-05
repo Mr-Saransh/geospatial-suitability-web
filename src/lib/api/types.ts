@@ -42,6 +42,8 @@ export interface ModelDetail {
   model_id: string
   name: string
   version: string
+  source_run_id?: number | string
+  publication_date?: string
   criterion_count: number
   criteria: string[]
   weights: CriterionWeight[]

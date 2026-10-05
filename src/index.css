@@ -145,6 +145,7 @@ input[type=checkbox] { accent-color: var(--c-cyan); }
 
 /* Select */
 select {
+  appearance: none;
   -webkit-appearance: none;
   background: var(--c-surface);
   border: 1px solid var(--c-border);

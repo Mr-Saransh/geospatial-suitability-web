@@ -31,6 +31,8 @@ def get_model(model_id: str):
         model_id=model.model_id,
         name=model.name,
         version=model.version,
+        source_run_id=model.metadata.get("source_run_id", 56),
+        publication_date=model.metadata.get("publication_date", "September 2026"),
         criterion_count=len(model.criteria),
         criteria=list(model.criteria),
         weights=[

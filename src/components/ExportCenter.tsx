@@ -1,8 +1,14 @@
 import { useState } from 'react';
 import { Modal, SectionLabel, Btn, Mono } from '../ui';
 import { IconDownload, IconFile, IconImage, IconDatabase, IconGrid, IconChart, IconCheck } from '../icons';
+import type { Zone, Layer } from '../types';
 
-interface Props { onClose: () => void; }
+interface Props {
+  onClose: () => void;
+  zone?: Zone | null;
+  layers?: Layer[];
+  activeLayer?: Layer | null;
+}
 
 const FORMATS = [
   {
@@ -40,7 +46,7 @@ const RESOLUTIONS = [
 
 const PROJECTIONS = ['EPSG:32645 (UTM 45N)', 'EPSG:4326 (WGS84)', 'EPSG:3857 (Web Mercator)'];
 
-export default function ExportCenter({ onClose }: Props) {
+export default function ExportCenter({ onClose, zone, layers, activeLayer }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set(['csv', 'report']));
   const [resolution, setResolution] = useState('30');
   const [projection, setProjection] = useState(PROJECTIONS[0]);

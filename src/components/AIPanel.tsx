@@ -1,13 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
 import { AI_PRESETS, AI_ANSWERS } from '../data';
-import type { Zone, AIMessage } from '../types';
+import type { Zone, AIMessage, Layer } from '../types';
 import { IconBot, IconSend, IconX, IconInfo } from '../icons';
 import { Btn, Pill, Mono } from '../ui';
 
 interface Props {
+  open?: boolean;
   zone: Zone | null;
+  activeLayer?: Layer | null;
   onClose: () => void;
   onLayerEvidence: (id: string) => void;
+  onSelectLayer?: (id: string) => void;
 }
 
 const SYSTEM_INIT: AIMessage = {

@@ -541,7 +541,7 @@ function MetadataTab({ modelDetail }: { modelDetail?: ModelDetail | null }) {
     ['Spatial Resolution', '30 m'],
     ['Coordinate System',  'EPSG:4326'],
     ['Data Integrity',     'Verified'],
-    ['Last Updated',       modelDetail?.publication_date || 'September 2026'],
+    ['Last Updated',       modelDetail?.publication_date || (modelDetail?.metadata as any)?.publication_date || 'September 2026'],
     ['Data Sources',       'SRTM · CHIRPS · ESA WorldCover · HydroRIVERS / OSM · SoilGrids · Sentinel-2'],
   ];
 
@@ -616,7 +616,7 @@ function MetadataTab({ modelDetail }: { modelDetail?: ModelDetail | null }) {
             </div>
             <div className="flex justify-between py-0.5 border-b border-[var(--c-border)]">
               <span style={{ color: 'var(--c-text3)' }}>Canonical Run</span>
-              <span style={{ color: 'var(--c-text2)' }}>Run #{modelDetail?.source_run_id || '56'}</span>
+              <span style={{ color: 'var(--c-text2)' }}>Run #{modelDetail?.source_run_id || (modelDetail?.metadata as any)?.source_run_id || '56'}</span>
             </div>
             <div className="flex justify-between py-0.5 border-b border-[var(--c-border)]">
               <span style={{ color: 'var(--c-text3)' }}>AHP Method</span>
