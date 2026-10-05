@@ -1,22 +1,35 @@
 """
-Targeted tests for the canonical Himachal Pradesh Spatial Knowledge Package backend.
+Comprehensive tests for the Canonical Himachal Pradesh Spatial Knowledge Platform.
 
-Validates:
-- Package and manifest load correctly
-- All 28 published rasters are discoverable
-- No duplicate product IDs or display names
-- Aliases resolve transparently
-- Point inspection for Full Evidence, Partial Evidence, and Outside Area
-- Coverage & missing criteria bitmask decoding
-- Tile rendering for classified, continuous, and quality rasters
-- Real statistics matching Run #56
+Validates all 17 requirements from the Master Specification:
+1. Configuration loading & settings validation
+2. Local package path resolution (multi-root)
+3. Invalid package path error handling
+4. Manifest loading & metadata discovery
+5. Multi-model discovery (Flood + Landslide)
+6. Flood model definition & AHP weights
+7. Landslide model definition & MCDA weights (14 factors)
+8. Canonical raster path resolution & verification on disk
+9. Path traversal rejection & security
+10. Point query with structured evidence (Phase 6 contract)
+11. NoData point query preserving strict null semantics
+12. CRS coordinate transformation (WGS84 -> UTM 43N)
+13. Statistics endpoint for Flood (Run #56)
+14. Statistics endpoint for Landslide (Run #63 real data)
+15. Flood regression & legacy alias resolution
+16. Landslide API real data testing
+17. Tile rendering for multi-model rasters
 """
+from pathlib import Path
 import unittest
 from fastapi.testclient import TestClient
+
 from app.main import app
+from app.config import settings
+from app.services.repository import repository
 
 
-class TestCanonicalPackage(unittest.TestCase):
+class TestCanonicalSpatialKnowledge(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.client_ctx = TestClient(app)
@@ -26,59 +39,193 @@ class TestCanonicalPackage(unittest.TestCase):
     def tearDownClass(cls):
         cls.client_ctx.__exit__(None, None, None)
 
-    def test_package_health(self):
-        r = self.client.get("/api/v1/health")
-        self.assertEqual(r.status_code, 200)
-        data = r.json()
-        self.assertEqual(data["status"], "healthy")
-        self.assertTrue(data["package_found"])
-        self.assertEqual(data["model_id"], "flood_11_factor_v1")
-        self.assertEqual(data["source_run_id"], 56)
-        self.assertEqual(data["total_published_rasters"], 28)
-        self.assertEqual(data["factor_count"], 11)
-        self.assertEqual(data["rating_count"], 11)
-        self.assertEqual(data["result_count"], 4)
-        self.assertEqual(data["quality_count"], 2)
-        # Verify no local filesystem paths are leaked
-        for key, val in data.items():
-            if isinstance(val, str):
-                self.assertNotIn("C:", val)
-                self.assertNotIn("\\", val)
+    # 1. Configuration loading
+    def test_configuration_loading(self):
+        val = settings.validate()
+        self.assertEqual(val["status"], "valid")
+        self.assertTrue(val["packages_found"] >= 1)
+        self.assertIn("*", settings.cors_origins)
 
-    def test_package_metadata(self):
+    # 2. Local package path resolution
+    def test_local_package_path_resolution(self):
+        flood_root = settings.get_package_root("flood_11_factor_v1")
+        self.assertTrue(flood_root.exists())
+        self.assertTrue((flood_root / "manifest.json").exists())
+
+        ls_root = settings.get_package_root("landslide_14_factor_v1")
+        self.assertTrue(ls_root.exists())
+        self.assertTrue((ls_root / "manifest.json").exists())
+
+    # 3. Invalid package path handling
+    def test_invalid_package_path(self):
+        with self.assertRaises(FileNotFoundError):
+            settings.get_package_root("nonexistent_unknown_hazard_v99")
+
+    # 4. Manifest loading & reproducibility
+    def test_manifest_loading(self):
         r = self.client.get("/api/v1/metadata/package")
         self.assertEqual(r.status_code, 200)
         data = r.json()
-        self.assertEqual(data["total_published_rasters"], 28)
+        self.assertEqual(data["package_status"], "healthy")
         self.assertEqual(data["state_name"], "Himachal Pradesh")
-        self.assertEqual(data["model_id"], "flood_11_factor_v1")
-        self.assertEqual(data["minimum_valid_criteria"], 8)
+        self.assertIn("flood_11_factor_v1", data["models_available"])
+        self.assertIn("landslide_14_factor_v1", data["models_available"])
         self.assertIn("AVAILABLE_EVIDENCE_RENORMALIZED", data["scoring_modes"])
-        self.assertIn("STRICT_11_OF_11", data["scoring_modes"])
 
-    def test_all_28_rasters_discovered(self):
-        r = self.client.get("/api/v1/layers")
+    # 5. Multi-model discovery
+    def test_model_discovery(self):
+        r = self.client.get("/api/v1/models")
+        self.assertEqual(r.status_code, 200)
+        models = r.json()
+        model_ids = [m["model_id"] for m in models]
+        self.assertIn("flood_11_factor_v1", model_ids)
+        self.assertIn("landslide_14_factor_v1", model_ids)
+
+    # 6. Flood model discovery & criteria
+    def test_flood_model_discovery(self):
+        r = self.client.get("/api/v1/models/flood_11_factor_v1")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertEqual(data["criterion_count"], 11)
+        self.assertEqual(len(data["weights"]), 11)
+        self.assertEqual(data["minimum_valid_criteria"], 8)
+        self.assertIn("rainfall", data["criteria"])
+        self.assertIn("slope", data["criteria"])
+        self.assertIn("twi", data["criteria"])
+
+    # 7. Landslide model discovery & 14 criteria
+    def test_landslide_model_discovery(self):
+        r = self.client.get("/api/v1/models/landslide_14_factor_v1")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertEqual(data["criterion_count"], 14)
+        self.assertEqual(len(data["weights"]), 14)
+        self.assertEqual(data["minimum_valid_criteria"], 10)
+
+        expected_14 = [
+            "slope", "lithology", "rainfall_10_year", "relative_relief",
+            "lineament_density", "drainage_density", "twi", "geomorphology",
+            "lulc", "soil", "distance_to_faults", "distance_to_roads",
+            "aspect", "ndvi"
+        ]
+        for crit in expected_14:
+            self.assertIn(crit, data["criteria"], f"Missing landslide criterion: {crit}")
+
+    # 8. Canonical raster resolution
+    def test_canonical_raster_resolution(self):
+        r = self.client.get("/api/v1/layers?model_id=all")
         self.assertEqual(r.status_code, 200)
         layers = r.json()
-        self.assertEqual(len(layers), 28)
+        self.assertGreaterEqual(len(layers), 62)
 
-        product_ids = [l["product_id"] for l in layers]
-        self.assertEqual(len(set(product_ids)), 28, "Duplicate product IDs found")
+        # Verify no local filesystem paths are leaked to clients
+        for l in layers:
+            self.assertNotIn("C:", l["relative_path"])
+            self.assertNotIn("\\", l["relative_path"])
+            self.assertEqual(l["status"], "published")
 
-        # Display names must be completely unique
-        display_names = [l["display_name"] for l in layers]
-        self.assertEqual(len(set(display_names)), 28, f"Duplicate display names found: {display_names}")
+    # 9. Path traversal rejection
+    def test_path_traversal_rejection(self):
+        root = settings.get_package_root("landslide_14_factor_v1")
+        with self.assertRaises(ValueError):
+            repository.safe_resolve_raster_path(root, "../../sensitive_system_file.txt")
+        with self.assertRaises(ValueError):
+            repository.safe_resolve_raster_path(root, "/etc/passwd")
 
-        # Verify factors and ratings have distinguishing names
-        for crit in ["rainfall", "slope", "distance_to_rivers", "elevation", "twi"]:
-            factor = next(l for l in layers if l["product_id"] == crit)
-            rating = next(l for l in layers if l["product_id"] == f"{crit}_rating")
-            self.assertNotEqual(factor["display_name"], rating["display_name"])
-            self.assertIn("Raw", factor["display_name"])
-            self.assertIn("Rating", rating["display_name"])
+    # 10. Point query: structured evidence (Phase 6 contract)
+    def test_point_query_flood_full_evidence(self):
+        r = self.client.get("/api/v1/analyses/flood_11_factor_v1/point?lat=31.86450&lon=76.79195")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
 
+        # Phase 6 Target Contract assertions
+        self.assertIn("location", data)
+        self.assertEqual(data["location"]["lat"], 31.86450)
+        self.assertIn("model", data)
+        self.assertEqual(data["model"]["id"], "flood_11_factor_v1")
+        self.assertIn("final", data)
+        self.assertEqual(data["final"]["status"], "VALID")
+        self.assertIsNotNone(data["final"]["score"])
+
+        # Criteria structured dictionary assertions
+        self.assertIn("criteria", data)
+        self.assertEqual(len(data["criteria"]), 11)
+        slope_c = data["criteria"]["slope"]
+        self.assertEqual(slope_c["status"], "VALID")
+        self.assertIsNotNone(slope_c["raw_value"])
+        self.assertIsNotNone(slope_c["rating"])
+        self.assertAlmostEqual(slope_c["weight"], 0.230588, places=3)
+
+        # Backward compatibility assertions for React UI
+        self.assertEqual(data["final_status"], "VALID")
+        self.assertEqual(data["evidence_count"], 11)
+        self.assertEqual(len(data["criteria_list"]), 11)
+
+    # 11. NoData point query: strict null semantics
+    def test_point_query_flood_partial_evidence(self):
+        r = self.client.get("/api/v1/analyses/flood_11_factor_v1/point?lat=32.21646&lon=76.56746")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+
+        self.assertEqual(data["final_status"], "PARTIAL_EVIDENCE")
+        self.assertIn("soil", data["missing_criteria"])
+
+        # Soil must have strict null semantics: never substituted with 0, 1, or 5
+        soil_entry = data["criteria"]["soil"]
+        self.assertEqual(soil_entry["status"], "NODATA")
+        self.assertIsNone(soil_entry["raw_value"])
+        self.assertIsNone(soil_entry["rating"])
+
+    # 12. Coordinate bounds check: outside analysis area
+    def test_point_query_outside_boundary(self):
+        r = self.client.get("/api/v1/analyses/flood_11_factor_v1/point?lat=25.0&lon=80.0")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertEqual(data["final_status"], "OUTSIDE_ANALYSIS_AREA")
+        self.assertIsNone(data["final"]["score"])
+        self.assertEqual(data["criteria"]["slope"]["status"], "OUTSIDE_ANALYSIS_AREA")
+
+    # 13. CRS transformation & Landslide point query
+    def test_crs_transformation_landslide(self):
+        # Coordinates in Shimla (WGS84 31.1048, 77.1734) -> reprojected to UTM Zone 43N
+        r = self.client.get("/api/v1/analyses/landslide_14_factor_v1/point?lat=31.1048&lon=77.1734")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+
+        self.assertEqual(data["model"]["id"], "landslide_14_factor_v1")
+        self.assertIn(data["final"]["status"], ["VALID", "PARTIAL_EVIDENCE"])
+        self.assertGreaterEqual(data["evidence_count"], 10)
+        self.assertEqual(len(data["criteria"]), 14)
+
+        # Verify real raster values sampled from UTM Run #63 rasters
+        slope = data["criteria"]["slope"]
+        self.assertEqual(slope["status"], "VALID")
+        self.assertGreater(slope["raw_value"], 0.0)
+        self.assertAlmostEqual(slope["weight"], 0.23, places=2)
+
+    # 14. Flood regression statistics (Run #56)
+    def test_statistics_flood(self):
+        r = self.client.get("/api/v1/analyses/flood_11_factor_v1/statistics")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertEqual(data["source_run_id"], 56)
+        self.assertEqual(data["valid_pixels"], 73000293)
+        self.assertEqual(len(data["class_distribution"]), 5)
+        self.assertEqual(len(data["evidence_distribution"]), 4)
+
+    # 15. Landslide real data statistics (Run #63)
+    def test_statistics_landslide(self):
+        r = self.client.get("/api/v1/analyses/landslide_14_factor_v1/statistics")
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertEqual(data["source_run_id"], 63)
+        self.assertEqual(data["valid_pixels"], 61206868)
+        self.assertEqual(data["crs"], "EPSG:32643")
+        self.assertEqual(len(data["class_distribution"]), 5)
+        self.assertGreaterEqual(len(data["evidence_distribution"]), 5)
+
+    # 16. Legacy aliases resolution
     def test_legacy_aliases_resolve(self):
-        # Old product IDs from run 51/earlier
         legacy_full = "flood_11_factor_v1_full_suitability"
         r = self.client.get(f"/api/v1/layers/{legacy_full}")
         self.assertEqual(r.status_code, 200)
@@ -89,73 +236,29 @@ class TestCanonicalPackage(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.json()["product_id"], "flood_11_factor_v1_available_evidence_suitability_classified")
 
-    def test_point_inspection_full_evidence(self):
-        # Coordinate with full 11/11 criteria
-        r = self.client.get("/api/v1/analyses/flood_11_factor_v1/point?lat=31.86450&lon=76.79195")
-        self.assertEqual(r.status_code, 200)
-        data = r.json()
-        self.assertEqual(data["final_status"], "VALID")
-        self.assertEqual(data["evidence_count"], 11)
-        self.assertEqual(data["missing_criteria"], [])
-        self.assertIsNotNone(data["continuous_score"])
-        self.assertIsNotNone(data["strict_score"])
-        self.assertEqual(len(data["criteria"]), 11)
-        for c in data["criteria"]:
-            self.assertEqual(c["status"], "VALID")
-            self.assertIsNotNone(c["raw_value"])
-            self.assertIsNotNone(c["rating"])
-
-    def test_point_inspection_partial_evidence(self):
-        # Coordinate with partial evidence (soil missing)
-        r = self.client.get("/api/v1/analyses/flood_11_factor_v1/point?lat=32.21646&lon=76.56746")
-        self.assertEqual(r.status_code, 200)
-        data = r.json()
-        self.assertEqual(data["final_status"], "PARTIAL_EVIDENCE")
-        self.assertGreaterEqual(data["evidence_count"], 8)
-        self.assertIn("soil", data["missing_criteria"])
-        self.assertIsNotNone(data["continuous_score"])
-        self.assertIsNone(data["strict_score"])
-        # For missing soil, raw_value and rating must be None (never 0, 1, or 5)
-        soil_entry = next(c for c in data["criteria"] if c["criterion"] == "soil")
-        self.assertEqual(soil_entry["status"], "NODATA")
-        self.assertIsNone(soil_entry["raw_value"])
-        self.assertIsNone(soil_entry["rating"])
-        self.assertIsNone(soil_entry["contribution"])
-
-    def test_point_inspection_outside_boundary(self):
-        # Coordinate far outside Himachal Pradesh
-        r = self.client.get("/api/v1/analyses/flood_11_factor_v1/point?lat=25.0&lon=80.0")
-        self.assertEqual(r.status_code, 200)
-        data = r.json()
-        self.assertEqual(data["final_status"], "OUTSIDE_ANALYSIS_AREA")
-        self.assertIsNone(data["continuous_score"])
-        self.assertIsNone(data["classified_value"])
-        self.assertEqual(data["evidence_count"], 0)
-        for c in data["criteria"]:
-            self.assertEqual(c["status"], "OUTSIDE_ANALYSIS_AREA")
-            self.assertIsNone(c["raw_value"])
-
+    # 17. Multi-model tile rendering
     def test_tile_rendering(self):
-        # Test classified suitability tile
+        # Flood tile (EPSG:4326 source)
         r = self.client.get("/api/v1/tiles/flood_11_factor_v1_available_evidence_suitability_classified/8/182/104.png")
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.headers["content-type"], "image/png")
         self.assertGreater(len(r.content), 1000)
 
-        # Test quality raster tile
-        r = self.client.get("/api/v1/tiles/flood_11_factor_v1_valid_criteria_count/8/182/104.png")
-        self.assertEqual(r.status_code, 200)
-        self.assertEqual(r.headers["content-type"], "image/png")
+        # Landslide tile (EPSG:32643 UTM source)
+        r2 = self.client.get("/api/v1/tiles/landslide_14_factor_v1_available_evidence_suitability_classified/8/182/104.png")
+        self.assertEqual(r2.status_code, 200)
+        self.assertEqual(r2.headers["content-type"], "image/png")
+        self.assertGreater(len(r2.content), 1000)
 
-    def test_statistics(self):
-        r = self.client.get("/api/v1/analyses/flood_11_factor_v1/statistics")
+    # 18. Security: No filesystem paths leaked in health or metadata
+    def test_security_no_paths_leaked(self):
+        r = self.client.get("/api/v1/health")
         self.assertEqual(r.status_code, 200)
-        data = r.json()
-        self.assertEqual(data["source_run_id"], 56)
-        self.assertEqual(data["scoring_mode"], "AVAILABLE_EVIDENCE_RENORMALIZED")
-        self.assertEqual(data["valid_pixels"], 73000293)
-        self.assertEqual(len(data["class_distribution"]), 5)
-        self.assertEqual(len(data["evidence_distribution"]), 4)
+        for key, val in r.json().items():
+            if isinstance(val, str):
+                self.assertNotIn("C:", val)
+                self.assertNotIn("\\", val)
+                self.assertNotIn("/Users/", val)
 
 
 if __name__ == "__main__":

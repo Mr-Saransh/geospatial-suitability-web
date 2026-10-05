@@ -1,108 +1,118 @@
 # MCGSE Web-GIS Application
 
-> **Multi-Criteria Geospatial Suitability Engine (MCGSE)** — Real-time Web-GIS decision platform powered by FastAPI, Leaflet, and the Himachal Pradesh Spatial Knowledge Package.
+> **Multi-Criteria Geospatial Suitability Engine (MCGSE)** — Unified Web-GIS decision platform powered by FastAPI, Leaflet, and the canonical Himachal Pradesh Spatial Knowledge Package(s). Supports Flood Susceptibility, Landslide Susceptibility, and future MCDA hazards with zero source-code changes when moving between local and cloud deployments.
 
 ---
 
-## 🏛️ Architecture Overview
+## Architecture Overview
 
-The system bridges a high-fidelity Figma React frontend with a high-performance Python FastAPI backend that directly interacts with local GeoTIFF raster packages.
+The system bridges a high-fidelity Figma React frontend with a high-performance Python FastAPI backend that serves multi-hazard spatial intelligence directly from canonical GeoTIFF packages.
 
 ```
-project/
-├── MCGSE Web-GIS Application Design/   ← Workspace root (Frontend)
-│   ├── src/
-│   │   ├── components/                 ← React UI (MapCanvas, Sidebar, RightPanel, Navbar, etc.)
-│   │   ├── lib/api/                    ← Typed API Client (Fetch wrapper, Pydantic mirror types)
-│   │   ├── types.ts                    ← Application types & GIS schemas
-│   │   ├── data.ts                     ← Model metadata, color scales, spatial presets
-│   │   ├── index.css                   ← Tailwind CSS v4 design system
-│   │   └── main.tsx                    ← Entry point
-│   ├── vite.config.ts                  ← Vite config with API proxy to localhost:8000
-│   ├── package.json                    ← React 19, Leaflet, Recharts, Tailwind v4
-│   │
-│   └── backend/                        ← FastAPI Python Backend
-│       ├── app/
-│       │   ├── main.py                 ← FastAPI application & lifecycle handlers
-│       │   ├── config.py               ← Dynamic package root resolution
-│       │   ├── schemas.py              ← Pydantic response models
-│       │   ├── services/
-│       │   │   ├── package_service.py  ← Spatial package discovery & catalog caching
-│       │   │   ├── raster_service.py   ← Windowed point sampling, tile rendering & stats
-│       │   │   └── weights.py          ← AHP weights & Saaty consistency matrix
-│       │   └── routers/
-│       │       ├── health.py           ← /api/v1/health
-│       │       ├── metadata.py         ← /api/v1/metadata/package
-│       │       ├── models.py           ← /api/v1/models
-│       │       ├── layers.py           ← /api/v1/layers, /api/v1/tiles/{layer_id}/{z}/{x}/{y}.png
-│       │       └── analyses.py         ← /api/v1/analyses/{id}/point, /api/v1/analyses/{id}/statistics
-│       ├── requirements.txt            ← fastapi, uvicorn, rasterio, numpy, pyproj, pillow
-│       └── .env                        ← SPATIAL_KNOWLEDGE_ROOT path configuration
-│
-└── project code climate/
-    └── outputs/
-        └── Himachal_Pradesh_Spatial_Knowledge.gdb/  ← 24 GeoTIFF rasters + manifests
+                  ┌──────────────────────────────┐
+                  │        React Web App         │
+                  │        Existing              │
+                  └──────────────┬───────────────┘
+                                 │ HTTP/JSON
+                                 ▼
+                  ┌──────────────────────────────┐
+                  │          FastAPI             │
+                  │                              │
+                  │ Models / Layers / Point      │
+                  │ Statistics / Metadata        │
+                  └──────────────┬───────────────┘
+                                 │
+                                 ▼
+                  ┌──────────────────────────────┐
+                  │ Spatial Knowledge Repository │
+                  │                              │
+                  │ Manifest Resolver            │
+                  │ Raster Reader                │
+                  │ CRS Transformer              │
+                  │ Statistics                   │
+                  │ Provenance                   │
+                  └──────────────┬───────────────┘
+                                 │
+                 configured via environment only
+                                 │
+              ┌──────────────────┴──────────────────┐
+              │                                     │
+              ▼                                     ▼
+   Local Run #63 Package                    Cloud Mounted Package
+   Windows filesystem                      VM/container volume
+              │                                     │
+              └──────── same backend code ──────────┘
 ```
 
 ---
 
-## 🚀 Quick Start Guide
+## Critical Cloud Deployment Requirement
 
-### 1. Backend Setup & Startup
+**The source code does not contain environment-specific Spatial Knowledge paths. Configure `SPATIAL_KNOWLEDGE_ROOT` or the corresponding model-specific variable in the deployment environment.**
 
-Ensure you have Python 3.10+ (e.g., Miniconda or Python virtualenv) with GDAL and rasterio:
+- **No Windows filesystem paths** (e.g. `C:\Users\...`) exist in production code.
+- **Cross-platform**: Path handling uses Python's standard `pathlib.Path` with forward-slash manifests.
+- **Zero code changes**: Deploying to Docker, a Linux VM, Kubernetes, or cloud storage requires only changing an environment variable.
 
-```bash
-cd backend
-pip install -r requirements.txt
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
-```
+---
 
-- **Interactive API Documentation (Swagger):** [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-- **Health Check:** [http://127.0.0.1:8000/api/v1/health](http://127.0.0.1:8000/api/v1/health)
+## Quick Start Guide
+
+### 1. Backend Local Setup
+
+1. **Create & activate a virtual environment** (or conda environment with GDAL & Rasterio):
+   ```bash
+   conda activate gee_env
+   # or: python -m venv venv && source venv/bin/activate (Linux/Mac)
+   ```
+2. **Install dependencies**:
+   ```bash
+   cd backend
+   pip install -r requirements.txt
+   ```
+3. **Configure `.env`**:
+   Copy `.env.example` to `.env` in `backend/`:
+   ```env
+   ENVIRONMENT=development
+   SPATIAL_KNOWLEDGE_ROOT=C:\path\to\run_63\Himachal_Pradesh_Spatial_Knowledge.gdb
+   FLOOD_SPATIAL_KNOWLEDGE_ROOT=C:\path\to\flood\Himachal_Pradesh_Spatial_Knowledge.gdb
+   LANDSLIDE_SPATIAL_KNOWLEDGE_ROOT=C:\path\to\run_63\Himachal_Pradesh_Spatial_Knowledge.gdb
+   CORS_ORIGINS=http://localhost:5173
+   ```
+4. **Point `SPATIAL_KNOWLEDGE_ROOT` to the Run #63 package**:
+   ```env
+   SPATIAL_KNOWLEDGE_ROOT=C:\Users\ADMIN\Desktop\Private\Saransh project\project\project code climate\outputs\e2e_run\run_63\Himachal_Pradesh_Spatial_Knowledge.gdb
+   ```
+5. **Start FastAPI**:
+   ```bash
+   python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+   ```
+6. **Test health**:
+   ```bash
+   curl http://127.0.0.1:8000/api/v1/health
+   ```
+7. **Test models**:
+   ```bash
+   curl http://127.0.0.1:8000/api/v1/models
+   ```
+8. **Test point query**:
+   ```bash
+   # Flood point
+   curl "http://127.0.0.1:8000/api/v1/analyses/flood_11_factor_v1/point?lat=31.8645&lon=76.7920"
+   # Landslide point
+   curl "http://127.0.0.1:8000/api/v1/analyses/landslide_14_factor_v1/point?lat=31.1048&lon=77.1734"
+   ```
 
 ### 2. Frontend Setup & Startup
 
-```bash
-npm install
-npm run dev
-```
-
-- **Application Preview:** [http://127.0.0.1:5173](http://127.0.0.1:5173)
-
----
-
-## 📊 11-Factor Flood Suitability Model (Himachal Pradesh)
-
-The application evaluates flood susceptibility using the **Analytic Hierarchy Process (Saaty, 1980)**:
-
-$$\text{Suitability Score } S = \sum_{i=1}^{11} (w_i \times r_i)$$
-
-Where:
-- $w_i$ is the AHP priority weight ($\sum w_i = 1.0000$)
-- $r_i$ is the standardized rating ($1$ to $5$) sampled at the pixel location
-
-### Criteria Hierarchy & Weights
-
-| Criterion | AHP Weight ($w_i$) | Rating Range | Primary Source |
-|---|---|---|---|
-| **Terrain Slope** | `0.230588` (23.06%) | 1 – 5 | SRTM 30 m DEM |
-| **Distance to Rivers** | `0.148021` (14.80%) | 1 – 5 | HydroRIVERS / OSM |
-| **Topographic Wetness Index (TWI)** | `0.142168` (14.22%) | 1 – 5 | DEM Second Derivatives |
-| **Annual Rainfall** | `0.132592` (13.26%) | 1 – 5 | CHIRPS v2.0 (IMD/UCSB) |
-| **Flow Accumulation** | `0.111538` (11.15%) | 1 – 5 | SRTM D8 Flow Routing |
-| **Drainage Density** | `0.066758` (6.68%) | 1 – 5 | Stream Network Analysis |
-| **Land Cover (LULC)** | `0.057282` (5.73%) | 1 – 5 | ESA WorldCover 10 m |
-| **Elevation** | `0.034521` (3.45%) | 1 – 5 | SRTM 30 m DEM |
-| **Soil Texture** | `0.031730` (3.17%) | 1 – 5 | SoilGrids v2.0 (ISRIC) |
-| **Terrain Curvature** | `0.028179` (2.82%) | 1 – 5 | DEM Derivatives |
-| **NDVI (Vegetation)** | `0.016624` (1.66%) | 1 – 5 | Sentinel-2 L2A Composite |
-
-### Consistency Metrics
-- **Principal Eigenvalue ($\lambda_{max}$):** `11.238`
-- **Consistency Index (CI):** `0.0238`
-- **Random Index (RI, $n=11$):** `1.51`
-- **Consistency Ratio (CR):** `0.0158` (1.58%) $\ll 0.10$ *(Passes Saaty consistency requirement)*
+9. **Start frontend**:
+   ```bash
+   # In project root
+   npm install
+   npm run dev
+   ```
+   - **Frontend App:** [http://127.0.0.1:5173](http://127.0.0.1:5173)
+   - **Interactive API Documentation (Swagger):** [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
 ---
 
@@ -111,21 +121,40 @@ Where:
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/api/v1/health` | Backend and package health status |
-| `GET` | `/api/v1/metadata/package` | Spatial knowledge package metadata & layer counts |
-| `GET` | `/api/v1/models` | List available suitability models |
-| `GET` | `/api/v1/models/{model_id}` | Detailed AHP weights, criteria, & classification |
-| `GET` | `/api/v1/layers` | Catalog of all 24 spatial raster layers |
+| `GET` | `/api/v1/metadata/package` | Spatial knowledge package metadata & validation |
+| `GET` | `/api/v1/models` | List all available models (Flood, Landslide, etc.) |
+| `GET` | `/api/v1/models/{model_id}` | Detailed AHP/MCDA weights, criteria & classification |
+| `GET` | `/api/v1/layers` | Dynamic layer catalog (`?model_id=...` or `?model_id=all`) |
 | `GET` | `/api/v1/layers/{layer_id}` | Metadata for a specific raster layer |
-| `GET` | `/api/v1/tiles/{layer_id}/{z}/{x}/{y}.png` | Slippy map PNG tile generator |
-| `GET` | `/api/v1/analyses/{id}/point?lat=X&lon=Y` | Windowed point inspection across all 24 rasters |
-| `GET` | `/api/v1/analyses/{id}/statistics` | Area-wide pixel and class distribution statistics |
+| `GET` | `/api/v1/tiles/{layer_id}/{z}/{x}/{y}.png` | Slippy map PNG tile generator (EPSG:3857) |
+| `GET` | `/api/v1/analyses/{model_id}/point?lat=X&lon=Y` | Windowed point inspection with structured evidence |
+| `GET` | `/api/v1/analyses/{model_id}/statistics` | Canonical pixel, class, and evidence distributions |
+| `GET` | `/api/v1/analyses/{model_id}/metadata` | Provenance, CR, and scientific metadata |
+| `GET` | `/api/v1/boundary` | Official GeoJSON boundary for Himachal Pradesh |
 
 ---
 
-## 🗺️ Key Features Implemented
+## Supported Models
 
-1. **Leaflet + Raster Tile Engine**: Dynamic PNG tile generation straight from local 32-bit float GeoTIFFs without converting to cloud services.
-2. **Real Point Inspection**: Real-time windowed reads at exact mouse coordinates across all 11 factor rasters, 11 rating rasters, continuous score raster, and classified raster.
-3. **Statistical Aggregation**: Real area calculations (44,364 km² valid area) broken down by flood susceptibility class.
-4. **Figma Dark Theme Maintained**: Seamless glassmorphism, glowing status chips, custom dark basemaps (CartoDB Dark Matter, Esri Satellite, Topo), and Recharts charts.
-5. **Interactive AI & Evidence**: Direct linking between criteria explanations and map layers.
+### 1. Flood Susceptibility (`flood_11_factor_v1`)
+- **Methodology**: 11-Factor Analytic Hierarchy Process (AHP, Saaty 1980)
+- **Criteria (11)**: Rainfall, Slope, Flow Accumulation, Distance to Rivers, TWI, Drainage Density, Elevation, LULC, Curvature, Soil, NDVI
+- **CRS**: `EPSG:4326`
+- **Resolution**: 30 m (~0.00027°)
+- **Total Published Rasters**: 28
+
+### 2. Landslide Susceptibility (`landslide_14_factor_v1`)
+- **Methodology**: 14-Factor Multi-Criteria Decision Analysis (MCDA)
+- **Criteria (14)**: Slope, Lithology, Rainfall (10-Year), Relative Relief, Lineament Density, Drainage Density, TWI, Geomorphology, Soil, Distance to Faults, Distance to Roads, LULC, Aspect, NDVI
+- **CRS**: `EPSG:32643` (UTM Zone 43N)
+- **Resolution**: 30.0 m
+- **Total Published Rasters**: 34
+
+---
+
+## Security & Performance Features
+
+1. **Path Traversal Protection**: All paths resolved strictly within `package_root` using `Path.relative_to()`.
+2. **Zero In-Memory Statewide Rasters**: Reads utilize GDAL/Rasterio 1x1 windowed point sampling and tiled overviews.
+3. **Strict NoData Handling**: NoData values are never silently replaced with 0 or fabricated numbers.
+4. **Dynamic Coordinate Reprojection**: WGS84 coordinates dynamically reprojected to the dataset's native CRS (`EPSG:32643` for Landslide, `EPSG:4326` for Flood).

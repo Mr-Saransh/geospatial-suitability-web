@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from typing import Any, Optional, Union
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 # ── Health ──────────────────────────────────────────────────
@@ -12,6 +12,7 @@ class HealthResponse(BaseModel):
     package_status: str = "healthy"
     package_version: str = "1.0"
     model_id: str = "flood_11_factor_v1"
+    models_available: list[str] = Field(default_factory=list)
     source_run_id: int = 56
     factor_count: int = 11
     rating_count: int = 11
@@ -29,6 +30,7 @@ class PackageMetadata(BaseModel):
     package_version: str = "1.0"
     state_name: str = "Himachal Pradesh"
     model_id: str = "flood_11_factor_v1"
+    models_available: list[str] = Field(default_factory=list)
     source_run_id: int = 56
     published_at: str = ""
     package_type: str = "Spatial Knowledge Package"
@@ -45,12 +47,12 @@ class PackageMetadata(BaseModel):
     manifest_status: str = "valid"
     scoring_modes: list[str] = [
         "AVAILABLE_EVIDENCE_RENORMALIZED",
-        "STRICT_11_OF_11",
+        "STRICT",
     ]
     minimum_valid_criteria: int = 8
-    aliases: dict[str, Any] = {}
-    reproducibility: dict[str, Any] = {}
-    provenance: dict[str, Any] = {}
+    aliases: dict[str, Any] = Field(default_factory=dict)
+    reproducibility: dict[str, Any] = Field(default_factory=dict)
+    provenance: dict[str, Any] = Field(default_factory=dict)
     validation_status: str = "PASSED"
 
 
@@ -90,10 +92,10 @@ class ModelDetail(BaseModel):
     classification: list[ClassificationRange]
     scoring_modes: list[str] = [
         "AVAILABLE_EVIDENCE_RENORMALIZED",
-        "STRICT_11_OF_11",
+        "STRICT",
     ]
     minimum_valid_criteria: int = 8
-    metadata: dict[str, Any] = {}
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 # ── Layers ─────────────────────────────────────────────────
@@ -103,7 +105,7 @@ class LayerInfo(BaseModel):
     criterion_id: str = ""
     type: str  # FACTOR | RATING | RESULT | QUALITY
     layer_type: str  # factor_raster | rating_raster | result_raster | quality_mask
-    category: str  # Hydrological Criteria | Topographic Criteria | Environmental Criteria | Analysis Results | Quality & Coverage
+    category: str  # Hydrological Criteria | Topographic Criteria | Environmental Criteria | Geological Criteria | Analysis Results | Quality & Coverage
     model: str = "flood_11_factor_v1"
     unit: str = ""
     crs: str = "EPSG:4326"
@@ -112,7 +114,7 @@ class LayerInfo(BaseModel):
     resolution_y: float = 0.0
     width: int = 0
     height: int = 0
-    bounds: list[float] = []
+    bounds: list[float] = Field(default_factory=list)
     nodata_value: str = "nan"
     scoring_mode: Optional[str] = None
     status: str = "published"
@@ -149,11 +151,15 @@ class PointInspectionResponse(BaseModel):
     coverage_status: Optional[str] = "COMPLETE"  # COMPLETE | PARTIAL | UNAVAILABLE
     evidence_count: int = 11
     evidence_total: int = 11
-    missing_criteria: list[str] = []
+    missing_criteria: list[str] = Field(default_factory=list)
     scoring_mode: Optional[str] = None
     strict_score: Optional[float] = None
     available_evidence_score: Optional[float] = None
-    criteria: list[CriterionInspection]
+    criteria: Union[dict[str, Any], list[CriterionInspection]]
+    criteria_list: Optional[list[CriterionInspection]] = None
+    location: Optional[dict[str, float]] = None
+    model: Optional[dict[str, str]] = None
+    final: Optional[dict[str, Any]] = None
 
 
 # ── Statistics ─────────────────────────────────────────────
@@ -194,8 +200,8 @@ class AnalysisStatistics(BaseModel):
     score_mean: Optional[float] = None
     score_std: Optional[float] = None
     class_distribution: list[ClassDistribution]
-    evidence_distribution: list[EvidenceDistributionItem] = []
-    coverage_distribution: list[CoverageDistributionItem] = []
+    evidence_distribution: list[EvidenceDistributionItem] = Field(default_factory=list)
+    coverage_distribution: list[CoverageDistributionItem] = Field(default_factory=list)
     resolution_m: Optional[float] = None
     crs: str = ""
 
@@ -216,11 +222,11 @@ class AnalysisMetadata(BaseModel):
     validation_status: str
     scoring_modes: list[str] = [
         "AVAILABLE_EVIDENCE_RENORMALIZED",
-        "STRICT_11_OF_11",
+        "STRICT",
     ]
     minimum_valid_criteria: int = 8
     kappa: Optional[str] = None
     kappa_reason: Optional[str] = None
     nodata_value: str = "nan"
     package_type: str = "Spatial Knowledge Package"
-    reproducibility: dict[str, Any] = {}
+    reproducibility: dict[str, Any] = Field(default_factory=dict)

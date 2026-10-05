@@ -1,8 +1,8 @@
 """
 MCGSE Web-GIS Backend — FastAPI application.
 
-Serves the Himachal Pradesh Spatial Knowledge Package as a REST API
-for the React frontend.
+Serves the canonical Himachal Pradesh Spatial Knowledge Package(s) as a REST API
+for Flood Susceptibility, Landslide Susceptibility, and future MCDA hazards.
 """
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
+from app.services.repository import repository
 from app.services.package_service import package_service
 from app.routers import health, metadata, models, layers, analyses
 
@@ -25,23 +26,26 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup: validate package and load metadata."""
+    """Startup: validate package roots and load metadata."""
     logger.info("=" * 60)
-    logger.info("MCGSE Backend starting")
+    logger.info("MCGSE Backend starting — Canonical Spatial Knowledge Platform")
+    logger.info("Environment: %s", settings.environment)
     logger.info("=" * 60)
 
     try:
-        settings.validate()
+        val = settings.validate()
+        logger.info("Package configuration validation: %s", val["status"])
+        repository.load()
         package_service.load()
-        logger.info(
-            "Package loaded: %s — %s (%d layers)",
-            package_service.state_name,
-            package_service.model_id,
-            len(package_service.layers),
-        )
-    except FileNotFoundError as e:
-        logger.error("PACKAGE ERROR: %s", e)
-        logger.error("Backend will start but data endpoints will fail.")
+
+        logger.info("Discovered %d models across %d packages:", len(repository.models), len(repository.packages))
+        for mid, m in repository.models.items():
+            layers_count = len(repository.get_layers_for_model(mid))
+            logger.info("  ✓ %s: %s (%d layers)", mid, m["name"], layers_count)
+
+    except Exception as e:
+        logger.error("PACKAGE INITIALIZATION ERROR: %s", e)
+        logger.error("Backend will start in degraded mode.")
 
     logger.info("Backend ready — http://127.0.0.1:8000/docs")
     logger.info("=" * 60)
@@ -53,15 +57,17 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="MCGSE Web-GIS API",
-    description="Geospatial susceptibility analysis backend for the Himachal Pradesh Flood Model",
-    version="1.0.0",
+    description="Unified Geospatial Susceptibility Platform for Himachal Pradesh (Flood, Landslide, MCDA)",
+    version="2.0.0",
     lifespan=lifespan,
 )
 
-# CORS — allow the Vite dev server
+# CORS — dynamic configuration from environment
+cors_origins = settings.cors_origins
+logger.info("Configuring CORS origins: %s", cors_origins)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

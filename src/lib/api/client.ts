@@ -50,7 +50,10 @@ export const api = {
     request<ModelDetail>(`/api/v1/models/${encodeURIComponent(modelId)}`),
 
   // Layers
-  getLayers: () => request<LayerInfo[]>('/api/v1/layers'),
+  getLayers: (modelId?: string) =>
+    request<LayerInfo[]>(
+      modelId ? `/api/v1/layers?model_id=${encodeURIComponent(modelId)}` : '/api/v1/layers'
+    ),
   getLayer: (layerId: string) =>
     request<LayerInfo>(`/api/v1/layers/${encodeURIComponent(layerId)}`),
 

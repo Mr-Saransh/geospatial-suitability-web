@@ -77,6 +77,10 @@ export default function Sidebar({
     'flood_11_factor_v1_available_evidence_suitability',
     'flood_11_factor_v1_strict_suitability_classified',
     'flood_11_factor_v1_strict_suitability',
+    'landslide_14_factor_v1_available_evidence_suitability_classified',
+    'landslide_14_factor_v1_available_evidence_suitability',
+    'landslide_14_factor_v1_strict_suitability_classified',
+    'landslide_14_factor_v1_strict_suitability',
   ];
 
   // Semantic sidebar sections with zero duplicate display names
@@ -118,6 +122,18 @@ export default function Sidebar({
       layers: layers.filter(l => l.group === 'topographic' && (l.layerType === 'RATING' || l.id.includes('rating'))),
     },
     {
+      id: 'geo_factors',
+      label: 'Geological Criteria',
+      badge: 'Raw',
+      layers: layers.filter(l => l.group === 'geological' && (l.layerType === 'FACTOR' || !l.id.includes('rating'))),
+    },
+    {
+      id: 'geo_ratings',
+      label: 'Standardized Ratings',
+      badge: 'Geological (1–5)',
+      layers: layers.filter(l => l.group === 'geological' && (l.layerType === 'RATING' || l.id.includes('rating'))),
+    },
+    {
       id: 'env_factors',
       label: 'Environmental Criteria',
       badge: 'Raw',
@@ -128,6 +144,12 @@ export default function Sidebar({
       label: 'Standardized Ratings',
       badge: 'Environmental (1–5)',
       layers: layers.filter(l => l.group === 'environmental' && (l.layerType === 'RATING' || l.id.includes('rating'))),
+    },
+    {
+      id: 'quality',
+      label: 'Quality & Coverage',
+      badge: 'Masks',
+      layers: layers.filter(l => l.group === 'quality' || l.layerType === 'QUALITY' || l.id.includes('criteria')),
     },
   ];
 
@@ -211,11 +233,13 @@ export default function Sidebar({
             {/* Dynamic catalog inventory breakdown */}
             <div className="px-4 py-1.5 mb-1.5 text-[9px] flex items-center justify-between"
               style={{ background: 'rgba(0,180,216,0.05)', borderBottom: '1px solid var(--c-border)', color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>
-              <span>{factorCount} Factors (Raw)</span>
+              <span>{factorCount} Factors</span>
               <span>·</span>
-              <span>{ratingCount} Standardized Ratings</span>
+              <span>{ratingCount} Ratings</span>
               <span>·</span>
               <span>{resultCount} Results</span>
+              <span>·</span>
+              <span>{qualityCount} Quality</span>
             </div>
 
             <div className="pb-3">
@@ -244,7 +268,7 @@ export default function Sidebar({
           <SideSection label="Susceptibility Legend" open={section.legend} onToggle={() => toggle('legend')}>
             <div className="px-4 pb-4">
               <div className="text-[10px] mb-2" style={{ color: 'var(--c-text2)', fontFamily: 'var(--font-mono)' }}>
-                11-Factor AHP Flood Susceptibility (Classes 1–5)
+                {modelName} (Classes 1–5)
               </div>
               <div className="flex flex-col gap-1.5 mb-3">
                 {SUIT_ORDER.map(cls => {

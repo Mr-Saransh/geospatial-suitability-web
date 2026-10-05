@@ -73,8 +73,11 @@ export default function App() {
       const modelsRes = await api.getModels().catch(() => []);
       if (modelsRes.length > 0) {
         setModels(modelsRes);
-        setActiveModelId(modelsRes[0].model_id);
-        setActiveModelName(modelsRes[0].name);
+        const currentValid = modelsRes.some(m => m.model_id === activeModelId);
+        if (!currentValid) {
+          setActiveModelId(modelsRes[0].model_id);
+          setActiveModelName(modelsRes[0].name);
+        }
       }
 
       // Fetch model details
@@ -89,9 +92,16 @@ export default function App() {
         setStatistics(statsRes);
       }
 
-      // Fetch real canonical layers
-      const layersRes = await api.getLayers().catch(() => []);
+      // Fetch real canonical layers for active model
+      const layersRes = await api.getLayers(activeModelId).catch(() => []);
       if (layersRes.length > 0) {
+        const defaultClassifiedId = layersRes.find(
+          l => l.type === 'RESULT' && l.product_id.includes('classified')
+        )?.product_id;
+        const currentActiveStillValid = layersRes.some(l => l.product_id === activeLayerId);
+        const targetActiveId = currentActiveStillValid ? activeLayerId : (defaultClassifiedId || layersRes[0].product_id);
+        setActiveLayerId(targetActiveId);
+
         const mappedLayers: Layer[] = layersRes.map((l: LayerInfo) => {
           const isResult = l.type === 'RESULT' || l.layer_type === 'result_raster';
           const isQuality = l.type === 'QUALITY' || l.layer_type === 'quality_mask';
@@ -103,51 +113,34 @@ export default function App() {
           if (isQuality) {
             group = 'quality';
             groupLabel = 'Quality & Coverage';
-          } else if (!isResult) {
-            if (l.category.toLowerCase().includes('hydro')) {
+          } else if (isResult) {
+            group = 'composite';
+            groupLabel = 'Analysis Results';
+          } else {
+            const cat = (l.category || '').toLowerCase();
+            if (cat.includes('hydro')) {
               group = 'hydrological';
               groupLabel = 'Hydrological Criteria';
-            } else if (l.category.toLowerCase().includes('topo')) {
+            } else if (cat.includes('topo')) {
               group = 'topographic';
               groupLabel = 'Topographic Criteria';
-            } else if (l.category.toLowerCase().includes('environ')) {
-              group = 'environmental';
-              groupLabel = 'Environmental Criteria';
+            } else if (cat.includes('geo')) {
+              group = 'geological';
+              groupLabel = 'Geological Criteria';
             } else if (critMeta) {
               group = critMeta.group;
               groupLabel = critMeta.groupLabel;
-            }
-          }
-
-          const isDefaultVisible = l.product_id === 'flood_11_factor_v1_available_evidence_suitability_classified';
-
-          // Canonical public names
-          let displayName = l.display_name;
-          if (isResult) {
-            if (l.product_id.includes('available_evidence_suitability_classified')) {
-              displayName = 'Flood Susceptibility — Classified';
-            } else if (l.product_id.includes('available_evidence_suitability')) {
-              displayName = 'Flood Susceptibility — Continuous';
-            } else if (l.product_id.includes('strict_suitability_classified')) {
-              displayName = 'Strict Flood Susceptibility — Classified';
-            } else if (l.product_id.includes('strict_suitability')) {
-              displayName = 'Strict Flood Susceptibility — Continuous';
-            }
-          } else if (!isQuality) {
-            if (l.type === 'RATING' || l.product_id.endsWith('_rating')) {
-              if (!displayName.includes('Rating')) {
-                displayName = `${displayName.replace(/ — Raw.*/, '')} — Rating`;
-              }
             } else {
-              if (!displayName.includes('Raw')) {
-                displayName = `${displayName.replace(/ — Rating.*/, '')} — Raw`;
-              }
+              group = 'environmental';
+              groupLabel = 'Environmental Criteria';
             }
           }
+
+          const isDefaultVisible = l.product_id === targetActiveId;
 
           return {
             id: l.product_id,
-            name: displayName,
+            name: l.display_name,
             layer_name: l.product_id,
             layerType: l.type,
             criterion_id: l.criterion_id,
@@ -156,7 +149,7 @@ export default function App() {
             visible: isDefaultVisible,
             opacity: isResult ? 85 : 75,
             unit: l.unit || critMeta?.unit || '',
-            source: l.description || critMeta?.source || 'Himachal Spatial Knowledge Package',
+            source: l.description || critMeta?.source || 'Canonical Spatial Package',
             resolution: l.resolution || '30 m',
             date: '2026-09',
             description: l.description || critMeta?.description || '',
@@ -175,7 +168,7 @@ export default function App() {
     } catch (err) {
       console.warn('Backend loading note (fallback in use):', err);
     }
-  }, [activeModelId]);
+  }, [activeModelId, activeLayerId]);
 
   useEffect(() => {
     loadBackend();
@@ -187,7 +180,23 @@ export default function App() {
     const classifiedVal = pt.classified_value ?? (pt.class_label === 'Very High' ? 5 : pt.class_label === 'High' ? 4 : pt.class_label === 'Moderate' ? 3 : pt.class_label === 'Low' ? 2 : 1);
     const cls = classValueToSuitClass(classifiedVal);
 
-    const criteriaRows: CriterionRow[] = (pt.criteria || []).map(c => {
+    // Support both Array and Object criteria from backend
+    const rawCriteria: any[] = Array.isArray(pt.criteria)
+      ? pt.criteria
+      : Object.entries(pt.criteria || {}).map(([key, val]: [string, any]) => ({
+          criterion: key,
+          display_name: val.display_name || key.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
+          raw_value: val.raw_value,
+          rating: val.rating,
+          weight: val.weight,
+          status: val.status,
+          unit: val.unit || '',
+          source: val.source || 'Canonical Spatial Package',
+          nodata_reason: val.nodata_reason,
+          contribution: val.rating !== null && val.rating !== undefined ? val.rating * val.weight : null,
+        }));
+
+    const criteriaRows: CriterionRow[] = rawCriteria.map(c => {
       const critMeta = CRITERIA_INFO[c.criterion];
       const isLimiting = (c.rating !== null && c.rating >= 4) || (c.contribution !== null && c.contribution > 0.3);
       return {
@@ -202,7 +211,7 @@ export default function App() {
         layerId: c.criterion,
         source: c.source || critMeta?.source || 'Canonical Spatial Package',
         evidence: c.status === 'NODATA'
-          ? (c.nodata_reason || 'Factor not available for this location — suitability calculated from valid criteria.')
+          ? (c.nodata_reason || 'Factor not available for this location — susceptibility calculated from valid criteria.')
           : (critMeta?.evidence || `Sampled value: ${c.raw_value}`),
         status: c.status,
       };
@@ -288,9 +297,10 @@ export default function App() {
 
   const handleModelChange = (modelName: string) => {
     setActiveModelName(modelName);
-    const found = models.find(m => m.name === modelName);
+    const found = models.find(m => m.name === modelName || m.model_id === modelName);
     if (found) {
       setActiveModelId(found.model_id);
+      setActiveModelName(found.name);
     }
   };
 

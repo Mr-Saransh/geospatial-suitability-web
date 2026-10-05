@@ -1,40 +1,178 @@
-"""Backend configuration via environment variables."""
+"""Backend configuration via environment variables.
+
+Supports canonical Spatial Knowledge Package path resolution for local
+development and cloud deployment without any hardcoded filesystem paths.
+"""
+from __future__ import annotations
+
 import os
 from pathlib import Path
+from typing import Any, Optional
 
 from dotenv import load_dotenv
 
 # Load .env from the backend directory
-_env_path = Path(__file__).resolve().parent.parent / ".env"
+_backend_dir = Path(__file__).resolve().parent.parent
+_env_path = _backend_dir / ".env"
 load_dotenv(_env_path)
 
 
-class Settings:
-    """Application settings read from environment / .env file."""
+def _clean_path(raw: Optional[str], base_dir: Path) -> Optional[Path]:
+    """Parse a path string into a resolved Path, handling relative paths and quotes."""
+    if not raw:
+        return None
+    cleaned = raw.strip().strip("'\"")
+    if not cleaned:
+        return None
+    p = Path(cleaned)
+    if p.is_absolute():
+        return p.resolve()
+    return (base_dir / p).resolve()
+
+
+class SpatialKnowledgeSettings:
+    """Application settings read strictly from environment / .env file."""
 
     def __init__(self) -> None:
-        raw = os.getenv(
-            "SPATIAL_KNOWLEDGE_ROOT",
-            "../outputs/Himachal_Pradesh_Spatial_Knowledge.gdb",
+        self.environment: str = os.getenv("ENVIRONMENT", "development")
+        self.cors_origins_raw: str = os.getenv("CORS_ORIGINS", "*")
+
+        # Base reference directory (project root, parent of backend)
+        base = _backend_dir.parent
+
+        # 1. Primary package root
+        self._raw_root: Optional[str] = os.getenv("SPATIAL_KNOWLEDGE_ROOT")
+        self.spatial_knowledge_root: Optional[Path] = _clean_path(self._raw_root, base)
+
+        # 2. Model-specific package roots
+        self._raw_flood_root: Optional[str] = os.getenv("FLOOD_SPATIAL_KNOWLEDGE_ROOT")
+        self.flood_spatial_knowledge_root: Optional[Path] = _clean_path(self._raw_flood_root, base)
+
+        self._raw_landslide_root: Optional[str] = os.getenv("LANDSLIDE_SPATIAL_KNOWLEDGE_ROOT")
+        self.landslide_spatial_knowledge_root: Optional[Path] = _clean_path(self._raw_landslide_root, base)
+
+    @property
+    def default_package_root(self) -> Optional[Path]:
+        """Default package root for generic queries."""
+        if self.spatial_knowledge_root and self.spatial_knowledge_root.exists():
+            return self.spatial_knowledge_root
+        if self.landslide_spatial_knowledge_root and self.landslide_spatial_knowledge_root.exists():
+            return self.landslide_spatial_knowledge_root
+        if self.flood_spatial_knowledge_root and self.flood_spatial_knowledge_root.exists():
+            return self.flood_spatial_knowledge_root
+        return self.spatial_knowledge_root
+
+    @property
+    def cors_origins(self) -> list[str]:
+        """Parsed list of allowed CORS origins."""
+        if not self.cors_origins_raw or self.cors_origins_raw.strip() == "*":
+            return ["*"]
+        return [origin.strip() for origin in self.cors_origins_raw.split(",") if origin.strip()]
+
+    def get_package_root(self, model_id: Optional[str] = None) -> Path:
+        """
+        Resolve the canonical package root for a specific model with fallback priority:
+        1. Model-specific environment variable (FLOOD_... / LANDSLIDE_...)
+        2. SPATIAL_KNOWLEDGE_ROOT
+        3. Raise FileNotFoundError if no valid root is resolved
+        """
+        if model_id:
+            m_lower = model_id.lower()
+            if "flood" in m_lower:
+                if self.flood_spatial_knowledge_root and self.flood_spatial_knowledge_root.exists():
+                    return self.flood_spatial_knowledge_root
+                if self.spatial_knowledge_root and self.spatial_knowledge_root.exists():
+                    return self.spatial_knowledge_root
+                raise FileNotFoundError(
+                    f"No valid package root found for model '{model_id}'. "
+                    "Configure FLOOD_SPATIAL_KNOWLEDGE_ROOT or SPATIAL_KNOWLEDGE_ROOT."
+                )
+
+            if "landslide" in m_lower:
+                if self.landslide_spatial_knowledge_root and self.landslide_spatial_knowledge_root.exists():
+                    return self.landslide_spatial_knowledge_root
+                if self.spatial_knowledge_root and self.spatial_knowledge_root.exists():
+                    return self.spatial_knowledge_root
+                raise FileNotFoundError(
+                    f"No valid package root found for model '{model_id}'. "
+                    "Configure LANDSLIDE_SPATIAL_KNOWLEDGE_ROOT or SPATIAL_KNOWLEDGE_ROOT."
+                )
+
+            # Check custom model env var: e.g. DROUGHT_SPATIAL_KNOWLEDGE_ROOT
+            custom_env_key = f"{model_id.upper()}_SPATIAL_KNOWLEDGE_ROOT"
+            custom_env_val = os.getenv(custom_env_key)
+            if custom_env_val:
+                p = _clean_path(custom_env_val, _backend_dir.parent)
+                if p and p.exists():
+                    return p
+
+            raise FileNotFoundError(
+                f"Model '{model_id}' is not recognized and has no configured package root. "
+                f"Configure {custom_env_key} or SPATIAL_KNOWLEDGE_ROOT."
+            )
+
+        # Default resolution
+        if self.spatial_knowledge_root and self.spatial_knowledge_root.exists():
+            return self.spatial_knowledge_root
+
+        # If primary root not set, try model-specific roots if available
+        if self.landslide_spatial_knowledge_root and self.landslide_spatial_knowledge_root.exists():
+            return self.landslide_spatial_knowledge_root
+        if self.flood_spatial_knowledge_root and self.flood_spatial_knowledge_root.exists():
+            return self.flood_spatial_knowledge_root
+
+        raise FileNotFoundError(
+            "Spatial Knowledge Package not found. Configure SPATIAL_KNOWLEDGE_ROOT "
+            "or model-specific environment variables."
         )
-        base = Path(__file__).resolve().parent.parent
-        raw_path = Path(raw)
-        if raw_path.is_absolute():
-            self.spatial_knowledge_root: Path = raw_path.resolve()
-        else:
-            self.spatial_knowledge_root: Path = (base / raw).resolve()
 
-    def validate(self) -> None:
-        """Raise if the package path is missing or invalid."""
-        if not self.spatial_knowledge_root.exists():
-            raise FileNotFoundError(
-                "Spatial Knowledge Package not found at configured SPATIAL_KNOWLEDGE_ROOT."
-            )
-        manifest = self.spatial_knowledge_root / "manifest.json"
-        if not manifest.exists():
-            raise FileNotFoundError(
-                "manifest.json not found inside configured SPATIAL_KNOWLEDGE_ROOT."
-            )
+    def all_configured_roots(self) -> list[Path]:
+        """Return all distinct existing package roots configured in the environment."""
+        roots: list[Path] = []
+        for candidate in [
+            self.spatial_knowledge_root,
+            self.flood_spatial_knowledge_root,
+            self.landslide_spatial_knowledge_root,
+        ]:
+            if candidate and candidate.exists() and candidate not in roots:
+                roots.append(candidate)
+        return roots
+
+    def validate(self) -> dict[str, Any]:
+        """
+        Validate package configuration state without leaking server filesystem paths.
+        Returns a dictionary of health flags and model availability.
+        """
+        primary_valid = bool(
+            self.spatial_knowledge_root
+            and self.spatial_knowledge_root.exists()
+            and (self.spatial_knowledge_root / "manifest.json").exists()
+        )
+        flood_valid = bool(
+            self.flood_spatial_knowledge_root
+            and self.flood_spatial_knowledge_root.exists()
+            and (self.flood_spatial_knowledge_root / "manifest.json").exists()
+        )
+        landslide_valid = bool(
+            self.landslide_spatial_knowledge_root
+            and self.landslide_spatial_knowledge_root.exists()
+            and (self.landslide_spatial_knowledge_root / "manifest.json").exists()
+        )
+
+        has_any_package = primary_valid or flood_valid or landslide_valid
+
+        return {
+            "environment": self.environment,
+            "status": "valid" if has_any_package else "missing_or_invalid",
+            "primary_configured": self._raw_root is not None,
+            "primary_valid": primary_valid,
+            "flood_configured": self._raw_flood_root is not None,
+            "flood_valid": flood_valid,
+            "landslide_configured": self._raw_landslide_root is not None,
+            "landslide_valid": landslide_valid,
+            "packages_found": len(self.all_configured_roots()),
+        }
 
 
-settings = Settings()
+# Global singleton instance
+settings = SpatialKnowledgeSettings()
