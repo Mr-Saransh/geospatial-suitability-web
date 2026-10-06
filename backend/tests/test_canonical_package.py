@@ -22,7 +22,7 @@ Validates all 17 requirements from the Master Specification:
 """
 from pathlib import Path
 import unittest
-from fastapi.testclient import TestClient
+from fastapi.testclient import TestClient  # type: ignore
 
 from app.main import app
 from app.config import settings
@@ -260,6 +260,32 @@ class TestCanonicalSpatialKnowledge(unittest.TestCase):
                 self.assertNotIn("\\", val)
                 self.assertNotIn("/Users/", val)
 
+    # 19. Same-location validation: Continuous vs Classified synchronization
+    def test_same_location_continuous_classified_sync(self):
+        # Point 1: 31.8645, 76.7920
+        r1 = self.client.get("/api/v1/analyses/landslide_14_factor_v1/point?lat=31.86450&lon=76.79200")
+        self.assertEqual(r1.status_code, 200)
+        d1 = r1.json()
+        self.assertEqual(d1["location"]["lat"], 31.86450)
+        self.assertEqual(d1["location"]["lon"], 76.79200)
+        self.assertAlmostEqual(d1["continuous_score"], 2.4725, places=3)
+        self.assertEqual(d1["classified_value"], 2)
+        self.assertEqual(d1["class_label"], "Low Susceptibility")
+        # Class 2 range is 2.0 to 3.0: continuous_score must fall inside
+        self.assertTrue(2.0 <= d1["continuous_score"] < 3.0)
+
+        # Point 2: 32.0599, 76.9306
+        r2 = self.client.get("/api/v1/analyses/landslide_14_factor_v1/point?lat=32.05990&lon=76.93060")
+        self.assertEqual(r2.status_code, 200)
+        d2 = r2.json()
+        self.assertEqual(d2["location"]["lat"], 32.05990)
+        self.assertEqual(d2["location"]["lon"], 76.93060)
+        self.assertAlmostEqual(d2["continuous_score"], 2.6374, places=3)
+        self.assertEqual(d2["classified_value"], 2)
+        self.assertEqual(d2["class_label"], "Low Susceptibility")
+        self.assertTrue(2.0 <= d2["continuous_score"] < 3.0)
+
 
 if __name__ == "__main__":
     unittest.main()
+

@@ -11,13 +11,9 @@ interface Props {
   onClose: () => void;
   onLayerEvidence: (id: string) => void;
   onSelectLayer?: (id: string) => void;
+  activeModelId?: string;
+  activeModelName?: string;
 }
-
-const SYSTEM_INIT: AIMessage = {
-  role: 'assistant',
-  text: 'I have loaded spatial context for the **11-Factor Flood Susceptibility Model** (Himachal Pradesh). I can explain flood susceptibility criteria, factor weights, analysis coverage, and point inspections. Click any location on the map or select a question below.',
-  actions: [],
-};
 
 function formatText(text: string): string {
   return text
@@ -26,8 +22,18 @@ function formatText(text: string): string {
     .replace(/\n/g, '<br/>');
 }
 
-export default function AIPanel({ zone, onClose, onLayerEvidence }: Props) {
-  const [messages, setMessages] = useState<AIMessage[]>([SYSTEM_INIT]);
+export default function AIPanel({ zone, onClose, onLayerEvidence, activeModelId, activeModelName }: Props) {
+  const isLandslide = (activeModelId?.includes('landslide') || activeModelName?.toLowerCase().includes('landslide')) ?? false;
+  const hazardName = isLandslide ? 'Landslide' : 'Flood';
+  const modelTitle = activeModelName || (isLandslide ? '14-Factor Landslide Susceptibility MCDA' : '11-Factor Flood Susceptibility Model');
+
+  const [messages, setMessages] = useState<AIMessage[]>([
+    {
+      role: 'assistant',
+      text: `I have loaded spatial context for the **${modelTitle}** (Himachal Pradesh). I can explain ${hazardName.toLowerCase()} susceptibility criteria, factor weights, analysis coverage, and point inspections. Click any location on the map or select a question below.`,
+      actions: [],
+    },
+  ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -57,7 +63,11 @@ export default function AIPanel({ zone, onClose, onLayerEvidence }: Props) {
           ans = AI_ANSWERS['default'];
         }
       }
-      setMessages(m => [...m, { role: 'assistant', text: ans.text, actions: ans.actions }]);
+      let replyText = ans.text;
+      if (isLandslide) {
+        replyText = replyText.replace(/Flood/g, 'Landslide').replace(/flood/g, 'landslide');
+      }
+      setMessages(m => [...m, { role: 'assistant', text: replyText, actions: ans.actions }]);
       setLoading(false);
     }, 700);
   };
@@ -77,7 +87,7 @@ export default function AIPanel({ zone, onClose, onLayerEvidence }: Props) {
           <div>
             <div className="text-xs font-semibold" style={{ fontFamily: 'var(--font-display)', color: 'var(--c-text)' }}>MCGSE AI Assistant</div>
             <div className="text-[10px]" style={{ color: '#00b4d8', fontFamily: 'var(--font-mono)' }}>
-              Himachal Spatial Context · AHP Flood Engine
+              Himachal Spatial Context · {hazardName} Engine
             </div>
           </div>
         </div>
@@ -89,7 +99,7 @@ export default function AIPanel({ zone, onClose, onLayerEvidence }: Props) {
         style={{ background: 'var(--c-panel)', borderBottom: '1px solid var(--c-border)' }}>
         <div className="flex items-center gap-1">
           <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#00c896' }} />
-          <Mono color="#00b4d8">Flood AHP v1.0</Mono>
+          <Mono color="#00b4d8">{isLandslide ? 'Landslide MCDA v1.0' : 'Flood AHP v1.0'}</Mono>
         </div>
         {zone
           ? <><span style={{ color: 'var(--c-border)' }}>·</span><Pill color="#00b4d8">{zone.district || `${zone.lat.toFixed(2)}°N`} · Score {zone.score.toFixed(2)}</Pill></>
@@ -184,7 +194,7 @@ export default function AIPanel({ zone, onClose, onLayerEvidence }: Props) {
           <input
             className="flex-1 bg-transparent text-xs outline-none"
             style={{ color: 'var(--c-text)', fontFamily: 'var(--font-body)' }}
-            placeholder="Ask about Himachal flood susceptibility, AHP weights, criteria…"
+            placeholder={`Ask about Himachal ${hazardName.toLowerCase()} susceptibility, criteria, weights…`}
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && send(input)}

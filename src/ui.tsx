@@ -137,7 +137,7 @@ export function Modal({ children, onClose, title, width = 560 }: {
   children: React.ReactNode; onClose: () => void; title: string; width?: number;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
       <div className="relative rounded-xl shadow-2xl flex flex-col overflow-hidden"
         style={{ width, maxHeight: '90vh', background: 'var(--c-surface)', border: '1px solid var(--c-border)' }}>

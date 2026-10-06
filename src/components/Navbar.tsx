@@ -38,6 +38,7 @@ export default function Navbar({
     ? modelsList.map(m => m.name)
     : [
         '11-Factor Flood Susceptibility AHP',
+        '14-Factor Landslide Susceptibility MCDA',
         'Groundwater Recharge Potential v2.1',
         'Urban Expansion Suitability v1.3',
       ];
@@ -68,7 +69,7 @@ export default function Navbar({
   };
 
   return (
-    <header className="flex-shrink-0 z-40 relative" style={{ background: '#080d18', borderBottom: '1px solid #1c2e48', height: 44 }}>
+    <header className="flex-shrink-0 z-[1200] relative" style={{ background: '#080d18', borderBottom: '1px solid #1c2e48', height: 44 }}>
       <div className="flex items-center h-full px-3 gap-2">
 
         {/* Logo */}
@@ -108,26 +109,57 @@ export default function Navbar({
         </form>
 
         {/* Model selector */}
-        <div className="relative hidden md:block">
+        <div className="relative hidden md:block z-[1210]">
           <button onClick={() => setModelOpen(v => !v)}
             className="flex items-center gap-2 h-7 px-3 rounded text-xs transition-colors"
-            style={{ background: 'var(--c-panel)', border: `1px solid ${modelOpen ? '#00b4d8' : 'var(--c-border)'}`, color: 'var(--c-text)' }}>
+            style={{
+              background: 'var(--c-panel)',
+              border: `1px solid ${modelOpen ? '#00b4d8' : 'var(--c-border)'}`,
+              color: 'var(--c-text)',
+              boxShadow: modelOpen ? '0 0 0 1px rgba(0,180,216,0.3)' : 'none',
+            }}>
             <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#00c896' }} />
             <span className="max-w-[220px] truncate" style={{ fontFamily: 'var(--font-body)' }}>{model}</span>
-            <IconChevronD size={10} style={{ color: 'var(--c-text2)', flexShrink: 0 }} />
+            <IconChevronD size={10} style={{ color: 'var(--c-text2)', flexShrink: 0, transform: modelOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s ease' }} />
           </button>
           {modelOpen && (
-            <div className="absolute left-0 top-full mt-1 z-50 rounded-lg py-1 shadow-2xl min-w-[260px]"
-              style={{ background: 'var(--c-surface)', border: '1px solid var(--c-border)' }}>
-              {availableModels.map(m => (
-                <button key={m} onClick={() => { onModel(m); setModelOpen(false); }}
-                  className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 transition-colors hover:opacity-80"
-                  style={{ color: m === model ? '#00b4d8' : 'var(--c-text)' }}>
-                  {m === model && <span style={{ color: '#00b4d8' }}>✓</span>}
-                  {m !== model && <span className="w-4" />}
-                  {m}
-                </button>
-              ))}
+            <div className="absolute left-0 top-full mt-1.5 z-[1220] rounded-lg py-1.5 shadow-2xl min-w-[290px] sm:min-w-[320px]"
+              style={{
+                background: 'var(--c-surface)',
+                border: '1px solid var(--c-border)',
+                boxShadow: '0 16px 36px rgba(0,0,0,0.7), 0 2px 8px rgba(0,0,0,0.4)',
+              }}>
+              <div className="px-3 py-1 text-[10px] uppercase tracking-wider font-semibold border-b mb-1"
+                style={{ color: 'var(--c-text3)', borderColor: 'var(--c-border)', fontFamily: 'var(--font-mono)' }}>
+                Select Spatial Model
+              </div>
+              {availableModels.map(m => {
+                const isSelected = m === model;
+                return (
+                  <button key={m} onClick={() => { onModel(m); setModelOpen(false); }}
+                    className="w-full text-left px-3 py-2 text-xs flex items-center justify-between gap-3 transition-colors"
+                    style={{
+                      color: isSelected ? '#00b4d8' : 'var(--c-text)',
+                      background: isSelected ? 'rgba(0,180,216,0.12)' : 'transparent',
+                    }}
+                    onMouseEnter={e => {
+                      if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)';
+                    }}
+                    onMouseLeave={e => {
+                      if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent';
+                    }}>
+                    <div className="flex items-center gap-2 truncate">
+                      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: isSelected ? '#00c896' : 'var(--c-text3)' }} />
+                      <span className="truncate font-medium">{m}</span>
+                    </div>
+                    {isSelected ? (
+                      <span className="text-xs font-bold flex-shrink-0" style={{ color: '#00b4d8' }}>✓</span>
+                    ) : (
+                      <span className="text-[10px] opacity-40 uppercase flex-shrink-0 font-mono">Select</span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
@@ -176,7 +208,7 @@ export default function Navbar({
       </div>
 
       {/* Close model dropdown backdrop */}
-      {modelOpen && <div className="fixed inset-0 z-40" onClick={() => setModelOpen(false)} />}
+      {modelOpen && <div className="fixed inset-0 z-[1200]" onClick={() => setModelOpen(false)} />}
     </header>
   );
 }

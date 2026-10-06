@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import MapCanvas from './components/MapCanvas';
@@ -46,9 +46,22 @@ export default function App() {
   const [modelDetail, setModelDetail]   = useState<ModelDetail | null>(null);
   const [statistics, setStatistics]     = useState<AnalysisStatistics | null>(null);
 
-  // Layers state — default to the new canonical available-evidence classified product
+  // Layers state — default to the canonical available-evidence classified product
   const [layers, setLayers]             = useState<Layer[]>(INITIAL_LAYERS);
   const [activeLayerId, setActiveLayerId] = useState('flood_11_factor_v1_available_evidence_suitability_classified');
+
+  // ── 2. SINGLE SOURCE OF TRUTH FOR MAP LOCATION ────────────────────────────────
+  // There is ONE selected coordinate for the entire map (WGS84 EPSG:4326).
+  // It belongs to the MAP, not to any raster layer.
+  // Switching between Continuous and Classified raster layers must NEVER change this.
+  const [selectedMapCoordinate, setSelectedMapCoordinate] = useState<{ lat: number; lon: number }>({
+    lat: 31.8645,
+    lon: 76.7920,
+  });
+  const selectedMapCoordinateRef = useRef(selectedMapCoordinate);
+  useEffect(() => {
+    selectedMapCoordinateRef.current = selectedMapCoordinate;
+  }, [selectedMapCoordinate]);
 
   // Inspection state
   const [selectedZone, setSelectedZone] = useState<Zone | null>(INITIAL_ZONE);
@@ -67,6 +80,8 @@ export default function App() {
   }, [theme]);
 
   // ── 1. Fetch backend models, layers, stats, and metadata on load ─────────────────
+  // NOTE: activeLayerId is deliberately excluded from dependencies to ensure switching
+  // layers NEVER reloads the backend or overwrites the user's selectedMapCoordinate!
   const loadBackend = useCallback(async () => {
     try {
       // Fetch models
@@ -98,9 +113,11 @@ export default function App() {
         const defaultClassifiedId = layersRes.find(
           l => l.type === 'RESULT' && l.product_id.includes('classified')
         )?.product_id;
-        const currentActiveStillValid = layersRes.some(l => l.product_id === activeLayerId);
-        const targetActiveId = currentActiveStillValid ? activeLayerId : (defaultClassifiedId || layersRes[0].product_id);
-        setActiveLayerId(targetActiveId);
+
+        setActiveLayerId(prev => {
+          const currentActiveStillValid = layersRes.some(l => l.product_id === prev);
+          return currentActiveStillValid ? prev : (defaultClassifiedId || layersRes[0].product_id);
+        });
 
         const mappedLayers: Layer[] = layersRes.map((l: LayerInfo) => {
           const isResult = l.type === 'RESULT' || l.layer_type === 'result_raster';
@@ -136,8 +153,6 @@ export default function App() {
             }
           }
 
-          const isDefaultVisible = l.product_id === targetActiveId;
-
           return {
             id: l.product_id,
             name: l.display_name,
@@ -146,7 +161,7 @@ export default function App() {
             criterion_id: l.criterion_id,
             group,
             groupLabel,
-            visible: isDefaultVisible,
+            visible: l.product_id === (defaultClassifiedId || layersRes[0].product_id),
             opacity: isResult ? 85 : 75,
             unit: l.unit || critMeta?.unit || '',
             source: l.description || critMeta?.source || 'Canonical Spatial Package',
@@ -160,15 +175,16 @@ export default function App() {
         setLayers(mappedLayers);
       }
 
-      // Run initial point inspection at a valid sample point (31.8645, 76.7920)
-      const ptRes = await api.inspectPoint(activeModelId, 31.8645, 76.7920).catch(() => null);
+      // Query point inspection at currently selected canonical map coordinate
+      const currentTarget = selectedMapCoordinateRef.current || { lat: 31.8645, lon: 76.7920 };
+      const ptRes = await api.inspectPoint(activeModelId, currentTarget.lat, currentTarget.lon).catch(() => null);
       if (ptRes) {
-        handlePointInspectionResult(ptRes, 31.8645, 76.7920);
+        handlePointInspectionResult(ptRes, currentTarget.lat, currentTarget.lon);
       }
     } catch (err) {
       console.warn('Backend loading note (fallback in use):', err);
     }
-  }, [activeModelId, activeLayerId]);
+  }, [activeModelId]);
 
   useEffect(() => {
     loadBackend();
@@ -176,7 +192,11 @@ export default function App() {
 
   // Transform backend point inspection response to Zone structure
   const handlePointInspectionResult = (pt: PointInspectionResponse, lat: number, lon: number) => {
-    const rawScore = pt.continuous_score ?? 1.78;
+    if (import.meta.env?.DEV) {
+      console.log(`[Canonical Map Point Sync] lat=${lat}, lon=${lon}, continuous_score=${pt.continuous_score}, classified_value=${pt.classified_value}`);
+    }
+
+    const rawScore = pt.continuous_score !== null && pt.continuous_score !== undefined ? pt.continuous_score : 0;
     const classifiedVal = pt.classified_value ?? (pt.class_label === 'Very High' ? 5 : pt.class_label === 'High' ? 4 : pt.class_label === 'Moderate' ? 3 : pt.class_label === 'Low' ? 2 : 1);
     const cls = classValueToSuitClass(classifiedVal);
 
@@ -221,7 +241,7 @@ export default function App() {
 
     const newZone: Zone = {
       id: `pt-${lat.toFixed(4)}-${lon.toFixed(4)}`,
-      label: `Coord (${lat.toFixed(3)}°, ${lon.toFixed(3)}°)`,
+      label: `Coord (${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E)`,
       cls,
       score: rawScore,
       classifiedValue: classifiedVal,
@@ -246,6 +266,9 @@ export default function App() {
 
   // ── 2. Handle map point click (Live Backend Inspection) ──────────────────────
   const handlePointClick = useCallback(async (lat: number, lon: number) => {
+    // Instantly set canonical coordinate single source of truth
+    setSelectedMapCoordinate({ lat, lon });
+    selectedMapCoordinateRef.current = { lat, lon };
     setLoadingInspection(true);
     try {
       const pt = await api.inspectPoint(activeModelId, lat, lon);
@@ -255,12 +278,12 @@ export default function App() {
       setRightOpen(true);
     } catch (err) {
       console.error('Point inspection failed:', err);
-      // Fallback
+      // Fallback preserves clicked geographic coordinates
       setSelectedZone({
         id: `pt-${lat.toFixed(4)}-${lon.toFixed(4)}`,
-        label: `${lat.toFixed(3)}°N, ${lon.toFixed(3)}°E`,
+        label: `${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E`,
         cls: 'very-low',
-        score: 1.78,
+        score: 0,
         classifiedValue: 1,
         lat,
         lng: lon,
@@ -279,6 +302,7 @@ export default function App() {
   }, [activeModelId]);
 
   // ── 3. Handle layer selection for map rendering ──────────────────────────────
+  // Switching between Continuous and Classified NEVER changes selectedMapCoordinate!
   const handleSelectLayer = (id: string) => {
     setActiveLayerId(id);
     setLayers(prev => prev.map(l => ({
@@ -291,7 +315,7 @@ export default function App() {
     setActiveLayerId(id);
     setLayers(prev => prev.map(l => ({
       ...l,
-      visible: l.id === id ? true : false,
+      visible: l.id === id,
     })));
   };
 
@@ -342,7 +366,7 @@ export default function App() {
       />
 
       {/* Body */}
-      <div className="flex flex-1 overflow-hidden relative">
+      <div className="flex flex-1 overflow-hidden relative z-0">
         {/* Left sidebar */}
         <Sidebar
           open={sidebarOpen}
@@ -355,6 +379,7 @@ export default function App() {
           onBasemap={setBasemap}
           onSelectLocation={handleLocationFly}
           modelName={activeModelName}
+          activeModelId={activeModelId}
           onRefresh={loadBackend}
         />
 
@@ -362,6 +387,7 @@ export default function App() {
         <div className="relative flex-1 overflow-hidden">
           <MapCanvas
             selectedZone={selectedZone}
+            selectedMapCoordinate={selectedMapCoordinate}
             onPointClick={handlePointClick}
             activeLayer={activeLayer}
             compareMode={compareOpen}
@@ -370,6 +396,8 @@ export default function App() {
             onCoordChange={setCoord}
             centerTarget={centerTarget}
             theme={theme}
+            activeModelId={activeModelId}
+            activeModelName={activeModelName}
           />
 
           {/* Quick Floating inspection result chip if right panel closed */}
@@ -411,6 +439,8 @@ export default function App() {
             onLayerEvidence={handleLayerEvidence}
             statistics={statistics}
             modelDetail={modelDetail}
+            activeModelId={activeModelId}
+            activeModelName={activeModelName}
             activeTab={rightTab}
             onTabChange={setRightTab}
             onClose={() => setRightOpen(false)}
@@ -426,6 +456,8 @@ export default function App() {
             activeLayer={activeLayer}
             onSelectLayer={handleSelectLayer}
             onLayerEvidence={handleLayerEvidence}
+            activeModelId={activeModelId}
+            activeModelName={activeModelName}
           />
         )}
       </div>

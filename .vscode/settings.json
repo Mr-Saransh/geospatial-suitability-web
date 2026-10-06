@@ -1,7 +1,13 @@
 {
   "python.defaultInterpreterPath": "C:\\gee_env\\python.exe",
+  "python.pythonPath": "C:\\gee_env\\python.exe",
   "python.analysis.extraPaths": [
-    "./backend"
+    "./backend",
+    "C:\\gee_env\\Lib\\site-packages"
+  ],
+  "pyright.analysis.extraPaths": [
+    "./backend",
+    "C:\\gee_env\\Lib\\site-packages"
   ],
   "css.lint.unknownAtRules": "ignore"
 }

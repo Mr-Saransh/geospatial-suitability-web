@@ -44,6 +44,7 @@ export default function ResultPopup({ zone, onClose, onDetails, onAsk, onWhy, lo
         <div className="ml-auto text-right">
           <div className="text-2xl font-bold" style={{ fontFamily: 'var(--font-mono)', color: m.color, lineHeight: 1 }}>
             {zone.score.toFixed(2)}
+            <span className="text-xs font-normal opacity-70 ml-0.5" style={{ color: 'var(--c-text2)' }}> / 5.00</span>
           </div>
           <div className="text-[9px]" style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>Class {zone.classifiedValue || 1} / 5</div>
         </div>

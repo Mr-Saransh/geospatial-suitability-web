@@ -15,6 +15,8 @@ interface Props {
   onLayerEvidence: (id: string) => void;
   statistics?: AnalysisStatistics | null;
   modelDetail?: ModelDetail | null;
+  activeModelId?: string;
+  activeModelName?: string;
   activeTab?: RightTab;
   onTabChange?: (t: RightTab) => void;
   onClose?: () => void;
@@ -28,8 +30,23 @@ const TABS = [
   { id: 'metadata',   label: 'Metadata' },
 ];
 
-export default function RightPanel({ zone, onLayerEvidence, statistics, modelDetail, activeTab, onTabChange, onClose }: Props) {
+export default function RightPanel({
+  zone,
+  onLayerEvidence,
+  statistics,
+  modelDetail,
+  activeModelId,
+  activeModelName,
+  activeTab,
+  onTabChange,
+  onClose,
+}: Props) {
   const [internalTab, setInternalTab] = useState<RightTab>(activeTab || (zone ? 'overview' : 'statistics'));
+
+  const isLandslide = (modelDetail?.model_id || activeModelId || '').toLowerCase().includes('landslide') ||
+                      (modelDetail?.name || activeModelName || '').toLowerCase().includes('landslide');
+  const hazardName = isLandslide ? 'Landslide' : 'Flood';
+  const hazardLower = isLandslide ? 'landslide' : 'flood';
 
   useEffect(() => {
     if (activeTab) {
@@ -72,7 +89,7 @@ export default function RightPanel({ zone, onLayerEvidence, statistics, modelDet
               <div>
                 <div className="flex items-center gap-2 mb-0.5">
                   <span className="text-sm font-semibold" style={{ fontFamily: 'var(--font-display)', color: 'var(--c-text)' }}>
-                    {zone.label || `${zone.lat.toFixed(3)}°N, ${zone.lng.toFixed(3)}°E`}
+                    {zone.label || `${zone.lat.toFixed(4)}°N, ${zone.lng.toFixed(4)}°E`}
                   </span>
                   <SuitBadge cls={zone.cls} />
                 </div>
@@ -85,7 +102,7 @@ export default function RightPanel({ zone, onLayerEvidence, statistics, modelDet
                   Susceptibility Score
                 </div>
                 <div className="text-2xl font-semibold text-right" style={{ fontFamily: 'var(--font-mono)', color: SUIT_META[zone.cls]?.color || '#00b4d8' }}>
-                  {zone.score ? zone.score.toFixed(2) : 'N/A'}
+                  {zone.score !== null && zone.score !== undefined ? zone.score.toFixed(2) : 'N/A'}
                 </div>
                 <div className="text-[9px] text-right font-semibold" style={{ color: SUIT_META[zone.cls]?.color || '#00b4d8', fontFamily: 'var(--font-mono)' }}>
                   {zone.classifiedValue ? `Class ${zone.classifiedValue} / 5` : 'NoData'}
@@ -119,17 +136,17 @@ export default function RightPanel({ zone, onLayerEvidence, statistics, modelDet
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        {tab === 'statistics' && <StatisticsTab stats={stats} />}
-        {tab === 'metadata'   && <MetadataTab modelDetail={modelDetail} />}
+        {tab === 'statistics' && <StatisticsTab stats={stats} isLandslide={isLandslide} hazardLower={hazardLower} />}
+        {tab === 'metadata'   && <MetadataTab modelDetail={modelDetail} activeModelId={activeModelId} isLandslide={isLandslide} hazardName={hazardName} />}
         {!zone && tab !== 'statistics' && tab !== 'metadata' ? (
           <EmptyState icon={<IconAnalyze size={18} />}
             title="No coordinates selected"
-            body="Click anywhere on the Himachal Pradesh map to inspect real-time pixel values across all 11 criteria and susceptibility models." />
+            body={`Click anywhere on the Himachal Pradesh map to inspect real-time pixel values across all ${isLandslide ? 14 : 11} criteria and ${hazardLower} susceptibility models.`} />
         ) : (
           <>
-            {tab === 'overview'   && zone && <OverviewTab zone={zone} />}
+            {tab === 'overview'   && zone && <OverviewTab zone={zone} hazardName={hazardName} hazardLower={hazardLower} isLandslide={isLandslide} />}
             {tab === 'criteria'   && zone && <CriteriaTab zone={zone} onEvidence={onLayerEvidence} />}
-            {tab === 'evidence'   && zone && <EvidenceTab zone={zone} onEvidence={onLayerEvidence} />}
+            {tab === 'evidence'   && zone && <EvidenceTab zone={zone} onEvidence={onLayerEvidence} isLandslide={isLandslide} />}
           </>
         )}
       </div>
@@ -138,7 +155,17 @@ export default function RightPanel({ zone, onLayerEvidence, statistics, modelDet
 }
 
 /* ── Overview ───────────────────────────────────────────────── */
-function OverviewTab({ zone }: { zone: Zone }) {
+function OverviewTab({
+  zone,
+  hazardName,
+  hazardLower,
+  isLandslide,
+}: {
+  zone: Zone;
+  hazardName: string;
+  hazardLower: string;
+  isLandslide: boolean;
+}) {
   const coverage = getCoverageInfo(zone.finalStatus, zone.evidenceCount, zone.evidenceTotal);
   const m = SUIT_META[zone.cls] || SUIT_META['low'];
   const criteria = zone.criteria || [];
@@ -158,13 +185,13 @@ function OverviewTab({ zone }: { zone: Zone }) {
 
   return (
     <div className="p-4 flex flex-col gap-4">
-      {/* Overview UX Clarity Callout */}
+      {/* ── 14. MODEL-AWARE UX CLARITY CALLOUT ── */}
       <div className="p-3 rounded flex flex-col gap-1.5" style={{ background: 'rgba(0,180,216,0.06)', border: '1px solid rgba(0,180,216,0.22)' }}>
         <div className="text-xs font-semibold text-[#00b4d8]">
-          Understanding Flood Susceptibility
+          Understanding {hazardName} Susceptibility
         </div>
         <div className="text-[11px] leading-relaxed" style={{ color: 'var(--c-text2)' }}>
-          Flood susceptibility indicates how strongly the selected environmental factors combine to indicate susceptibility under this model. It is NOT a probability of flooding and does NOT mean flooding is impossible or guaranteed.
+          {hazardName} susceptibility indicates how strongly the selected environmental factors combine to indicate susceptibility under this model. It is NOT a probability of {isLandslide ? 'landslides' : 'flooding'} and does NOT mean {isLandslide ? 'landslide occurrence' : 'flooding'} is impossible or guaranteed.
         </div>
       </div>
 
@@ -230,11 +257,11 @@ function OverviewTab({ zone }: { zone: Zone }) {
           <div className="mt-2 text-[11px] flex flex-col gap-1.5 pt-2 border-t border-[var(--c-border)]" style={{ color: 'var(--c-text2)' }}>
             <div className="flex items-center justify-between">
               <span style={{ color: 'var(--c-text3)' }}>Susceptibility Score:</span>
-              <strong style={{ color: m.color, fontFamily: 'var(--font-mono)' }}>{zone.score ? zone.score.toFixed(2) : 'N/A'} / 5.00</strong>
+              <strong style={{ color: m.color, fontFamily: 'var(--font-mono)' }}>{zone.score !== null && zone.score !== undefined ? `${zone.score.toFixed(2)} / 5.00` : 'N/A'}</strong>
             </div>
             <div className="flex items-center justify-between">
               <span style={{ color: 'var(--c-text3)' }}>Susceptibility Class:</span>
-              <strong style={{ color: m.color, fontFamily: 'var(--font-mono)' }}>Class {zone.classifiedValue ?? 'N/A'} — {m.label}</strong>
+              <strong style={{ color: m.color, fontFamily: 'var(--font-mono)' }}>Class {zone.classifiedValue ?? 'N/A'} / 5 — {m.label}</strong>
             </div>
             <div className="flex items-center justify-between">
               <span style={{ color: 'var(--c-text3)' }}>Analysis Coverage:</span>
@@ -242,7 +269,7 @@ function OverviewTab({ zone }: { zone: Zone }) {
             </div>
           </div>
           <div className="mt-2 pt-1.5 text-[10px] leading-relaxed border-t border-[var(--c-border)]" style={{ color: 'var(--c-text3)' }}>
-            <em>Result is a multi-criteria model score, not a flood/no-flood prediction.</em>
+            <em>Result is a multi-criteria model score, not a {hazardLower}/no-{hazardLower} prediction.</em>
           </div>
         </div>
       )}
@@ -405,7 +432,15 @@ function CriteriaTab({ zone, onEvidence }: { zone: Zone; onEvidence: (id: string
 }
 
 /* ── Statistics ─────────────────────────────────────────────── */
-function StatisticsTab({ stats }: { stats: AnalysisStatistics }) {
+function StatisticsTab({
+  stats,
+  isLandslide = false,
+  hazardLower = 'flood',
+}: {
+  stats: AnalysisStatistics;
+  isLandslide?: boolean;
+  hazardLower?: string;
+}) {
   const classDist = stats.class_distribution || [];
   const distChartData = classDist.map(d => ({
     name: d.label,
@@ -476,7 +511,15 @@ function StatisticsTab({ stats }: { stats: AnalysisStatistics }) {
 }
 
 /* ── Evidence ───────────────────────────────────────────────── */
-function EvidenceTab({ zone, onEvidence }: { zone: Zone; onEvidence: (id: string) => void }) {
+function EvidenceTab({
+  zone,
+  onEvidence,
+  isLandslide = false,
+}: {
+  zone: Zone;
+  onEvidence: (id: string) => void;
+  isLandslide?: boolean;
+}) {
   const m = SUIT_META[zone.cls] || SUIT_META['low'];
   const criteria = zone.criteria || [];
 
@@ -488,11 +531,13 @@ function EvidenceTab({ zone, onEvidence }: { zone: Zone; onEvidence: (id: string
           Why is this coordinate evaluated as {m.label}?
         </div>
         <div className="text-xs leading-relaxed" style={{ color: 'var(--c-text2)' }}>
-          Multi-factor weighted suitability analysis using 11 environmental and hydrological criteria. Aggregation formula:
+          Multi-factor weighted susceptibility analysis using {criteria.length} physical and environmental criteria. Aggregation formula:
           <div className="my-1.5 font-mono text-[10px] px-2 py-1 rounded" style={{ background: 'var(--c-panel)', color: '#00b4d8', border: '1px solid var(--c-border)' }}>
             S = Σ (wᵢ × rᵢ) = {zone.score ? zone.score.toFixed(2) : 'N/A'}
           </div>
-          The combination of terrain gradient and distance from stream corridors dictates local flood susceptibility alongside regional rainfall.
+          {isLandslide
+            ? 'The combination of terrain slope, lithology, and structural lineaments dictates local landslide susceptibility alongside regional triggering factors.'
+            : 'The combination of terrain gradient and distance from stream corridors dictates local flood susceptibility alongside regional rainfall.'}
         </div>
       </div>
 
@@ -512,7 +557,7 @@ function EvidenceTab({ zone, onEvidence }: { zone: Zone; onEvidence: (id: string
               </div>
             </div>
             <div className="text-[11px] leading-relaxed mb-2" style={{ color: 'var(--c-text2)' }}>
-              {isNoData ? 'This criterion is not available at this location; suitability is calculated using the remaining valid criteria.' : c.evidence}
+              {isNoData ? 'This criterion is not available at this location; susceptibility is calculated using the remaining valid criteria.' : c.evidence}
             </div>
             <div className="flex items-center gap-1.5 flex-wrap">
               <button onClick={() => onEvidence(c.layerId)}
@@ -531,18 +576,28 @@ function EvidenceTab({ zone, onEvidence }: { zone: Zone; onEvidence: (id: string
 }
 
 /* ── Metadata ───────────────────────────────────────────────── */
-function MetadataTab({ modelDetail }: { modelDetail?: ModelDetail | null }) {
+function MetadataTab({
+  modelDetail,
+  activeModelId,
+  isLandslide = false,
+  hazardName = 'Flood',
+}: {
+  modelDetail?: ModelDetail | null;
+  activeModelId?: string;
+  isLandslide?: boolean;
+  hazardName?: string;
+}) {
   const [showTechnical, setShowTechnical] = useState(false);
 
   const publicRows = [
-    ['Analysis',           'Flood Susceptibility'],
+    ['Analysis',           `${hazardName} Susceptibility`],
     ['Analysis Area',      'Himachal Pradesh'],
-    ['Criteria',           '11 Physical / Environmental Factors'],
+    ['Criteria',           `${modelDetail?.criterion_count || (isLandslide ? 14 : 11)} Physical / Environmental Factors`],
     ['Spatial Resolution', '30 m'],
-    ['Coordinate System',  'EPSG:4326'],
+    ['Coordinate System',  modelDetail?.metadata?.crs || (isLandslide ? 'EPSG:32643 (UTM 43N)' : 'EPSG:4326')],
     ['Data Integrity',     'Verified'],
     ['Last Updated',       modelDetail?.publication_date || (modelDetail?.metadata as any)?.publication_date || 'September 2026'],
-    ['Data Sources',       'SRTM · CHIRPS · ESA WorldCover · HydroRIVERS / OSM · SoilGrids · Sentinel-2'],
+    ['Data Sources',       isLandslide ? 'DEM · Lithology · Faults · Roads · LULC · Soils · CHIRPS' : 'SRTM · CHIRPS · ESA WorldCover · HydroRIVERS / OSM · SoilGrids · Sentinel-2'],
   ];
 
   const weights = modelDetail?.weights || [
@@ -574,7 +629,7 @@ function MetadataTab({ modelDetail }: { modelDetail?: ModelDetail | null }) {
       </div>
 
       <div>
-        <SectionLabel>Criteria Weights (11 Factors)</SectionLabel>
+        <SectionLabel>Criteria Weights ({weights.length} Factors)</SectionLabel>
         {weights.map(r => (
           <div key={r.criterion_id} className="flex items-center gap-2 mb-1.5">
             <span className="text-[10px] flex-1 truncate" style={{ color: 'var(--c-text)' }}>
@@ -587,14 +642,14 @@ function MetadataTab({ modelDetail }: { modelDetail?: ModelDetail | null }) {
           </div>
         ))}
         <div className="mt-2 p-2 rounded text-[10px]" style={{ background: 'var(--c-panel)', color: '#00c896', border: '1px solid var(--c-border)', fontFamily: 'var(--font-mono)' }}>
-          Σ weights = 100.00%  ·  11 Evaluated Criteria
+          Σ weights = 100.00%  ·  {weights.length} Evaluated Criteria
         </div>
       </div>
 
       <div>
         <SectionLabel>Methodology Overview</SectionLabel>
         <div className="text-[11px] leading-relaxed" style={{ color: 'var(--c-text2)' }}>
-          Multi-factor weighted suitability analysis using 11 environmental and hydrological criteria. Priority weights are synthesized across standardized spatial factor layers.
+          Multi-factor weighted susceptibility analysis using {weights.length} physical and environmental criteria. Priority weights are synthesized across standardized spatial factor layers.
         </div>
       </div>
 
@@ -612,11 +667,11 @@ function MetadataTab({ modelDetail }: { modelDetail?: ModelDetail | null }) {
           <div className="mt-2 p-2.5 rounded flex flex-col gap-1 text-[10px]" style={{ background: 'var(--c-panel)', border: '1px solid var(--c-border)', fontFamily: 'var(--font-mono)' }}>
             <div className="flex justify-between py-0.5 border-b border-[var(--c-border)]">
               <span style={{ color: 'var(--c-text3)' }}>Model ID</span>
-              <span style={{ color: 'var(--c-text2)' }}>{modelDetail?.model_id || 'flood_11_factor_v1'}</span>
+              <span style={{ color: 'var(--c-text2)' }}>{modelDetail?.model_id || activeModelId || (isLandslide ? 'landslide_14_factor_v1' : 'flood_11_factor_v1')}</span>
             </div>
             <div className="flex justify-between py-0.5 border-b border-[var(--c-border)]">
               <span style={{ color: 'var(--c-text3)' }}>Canonical Run</span>
-              <span style={{ color: 'var(--c-text2)' }}>Run #{modelDetail?.source_run_id || (modelDetail?.metadata as any)?.source_run_id || '56'}</span>
+              <span style={{ color: 'var(--c-text2)' }}>Run #{modelDetail?.source_run_id || (modelDetail?.metadata as any)?.source_run_id || (isLandslide ? '64' : '56')}</span>
             </div>
             <div className="flex justify-between py-0.5 border-b border-[var(--c-border)]">
               <span style={{ color: 'var(--c-text3)' }}>AHP Method</span>
@@ -624,11 +679,11 @@ function MetadataTab({ modelDetail }: { modelDetail?: ModelDetail | null }) {
             </div>
             <div className="flex justify-between py-0.5 border-b border-[var(--c-border)]">
               <span style={{ color: 'var(--c-text3)' }}>Consistency (CR)</span>
-              <span style={{ color: '#00c896' }}>0.0158 (&lt; 0.10 Consistent)</span>
+              <span style={{ color: '#00c896' }}>0.0000 (&lt; 0.10 Consistent)</span>
             </div>
             <div className="flex justify-between py-0.5">
               <span style={{ color: 'var(--c-text3)' }}>Published Rasters</span>
-              <span style={{ color: 'var(--c-text2)' }}>28 Canonical Rasters</span>
+              <span style={{ color: 'var(--c-text2)' }}>{modelDetail?.metadata?.total_published_rasters || (isLandslide ? 34 : 28)} Canonical Rasters</span>
             </div>
           </div>
         )}

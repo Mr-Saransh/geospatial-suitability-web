@@ -11,6 +11,7 @@ import {
 
 interface Props {
   selectedZone: Zone | null;
+  selectedMapCoordinate?: { lat: number; lon: number } | null;
   onPointClick: (lat: number, lon: number) => void;
   activeLayer: Layer | null;
   compareMode: boolean;
@@ -19,6 +20,8 @@ interface Props {
   onCoordChange?: (coordStr: string) => void;
   centerTarget?: { lat: number; lng: number } | null;
   theme?: 'dark' | 'light';
+  activeModelId?: string;
+  activeModelName?: string;
 }
 
 // Custom neon pin icon for selected inspection point
@@ -136,6 +139,7 @@ function MapZoomController({ action, onComplete }: { action: 'in' | 'out' | 'res
 
 export default function MapCanvas({
   selectedZone,
+  selectedMapCoordinate,
   onPointClick,
   activeLayer,
   compareMode,
@@ -144,12 +148,18 @@ export default function MapCanvas({
   onCoordChange,
   centerTarget,
   theme = 'dark',
+  activeModelId,
+  activeModelName,
 }: Props) {
   const [zoom, setZoom] = useState(8);
   const [coord, setCoord] = useState({ lat: 31.1048, lng: 77.1734 });
   const [zoomAction, setZoomAction] = useState<'in' | 'out' | 'reset' | null>(null);
   const [comparePos, setComparePos] = useState(50);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+
+  const isLandslide = (activeModelId || '').toLowerCase().includes('landslide') || (activeModelName || '').toLowerCase().includes('landslide');
+  const hazardName = isLandslide ? 'Landslide' : 'Flood';
+  const hazardLower = isLandslide ? 'landslide' : 'flood';
 
   const effectiveBasemap = (theme === 'light' && basemap === 'dark') ? 'light' : basemap;
   const bm = BASEMAP_URLS[effectiveBasemap] || BASEMAP_URLS.dark;
@@ -193,6 +203,9 @@ export default function MapCanvas({
       document.exitFullscreen().catch(() => {});
     }
   };
+
+  // Marker anchor coordinate: canonical selectedMapCoordinate is the single source of truth
+  const markerCoord = selectedMapCoordinate || (selectedZone ? { lat: selectedZone.lat, lon: selectedZone.lng } : null);
 
   return (
     <div ref={mapContainerRef} className="relative w-full h-full overflow-hidden select-none" style={{ background: '#080d18' }}>
@@ -250,31 +263,36 @@ export default function MapCanvas({
           />
         )}
 
-        {/* Inspector Pin Marker */}
-        {selectedZone && (
+        {/* ── 8. POINTER RENDERING ────────────────────────────────────────────── */}
+        {/* The marker is rendered directly from selectedMapCoordinate using Leaflet's */}
+        {/* standard geographic coordinate API. It remains anchored during panning/zooming, */}
+        {/* layer switching (Continuous <-> Classified), and model changes. */}
+        {markerCoord && (
           <Marker
-            position={[selectedZone.lat, selectedZone.lng]}
+            position={[markerCoord.lat, markerCoord.lon]}
             icon={createInspectorIcon(activeColor)}
           >
-            <Popup className="mcgse-leaflet-popup">
-              <div style={{ background: '#0c1424', color: '#c4d4e8', padding: '6px 10px', borderRadius: '6px', fontSize: '11px', border: '1px solid #1c2e48' }}>
-                <div style={{ fontWeight: 600, color: activeColor }}>
-                  {selectedZone.district || 'Inspected Point'}
+            {selectedZone && (
+              <Popup className="mcgse-leaflet-popup">
+                <div style={{ background: '#0c1424', color: '#c4d4e8', padding: '6px 10px', borderRadius: '6px', fontSize: '11px', border: '1px solid #1c2e48' }}>
+                  <div style={{ fontWeight: 600, color: activeColor }}>
+                    {selectedZone.district || 'Inspected Point'}
+                  </div>
+                  <div style={{ color: '#c4d4e8', fontSize: '10px' }}>
+                    Susceptibility Score: <strong style={{ color: activeColor }}>{selectedZone.score !== null && selectedZone.score !== undefined ? `${selectedZone.score.toFixed(2)} / 5.00` : 'N/A'}</strong>
+                  </div>
+                  <div style={{ color: '#647d9a', fontSize: '10px' }}>
+                    Class: {selectedZone.classifiedValue ? `Class ${selectedZone.classifiedValue} / 5 — ` : ''}{SUIT_META[selectedZone.cls]?.label}
+                  </div>
+                  <div style={{ color: '#00b4d8', fontSize: '9px', marginTop: '2px', fontStyle: 'italic' }}>
+                    Modeled susceptibility index (not a {hazardLower} prediction)
+                  </div>
+                  <div style={{ color: '#374f6a', fontSize: '9px', fontFamily: 'monospace', marginTop: '2px' }}>
+                    {markerCoord.lat.toFixed(4)}°N, {markerCoord.lon.toFixed(4)}°E
+                  </div>
                 </div>
-                <div style={{ color: '#c4d4e8', fontSize: '10px' }}>
-                  Susceptibility Score: <strong style={{ color: activeColor }}>{selectedZone.score.toFixed(3)}</strong>
-                </div>
-                <div style={{ color: '#647d9a', fontSize: '10px' }}>
-                  Class: {selectedZone.classifiedValue ? `Class ${selectedZone.classifiedValue} — ` : ''}{SUIT_META[selectedZone.cls]?.label}
-                </div>
-                <div style={{ color: '#00b4d8', fontSize: '9px', marginTop: '2px', fontStyle: 'italic' }}>
-                  Modeled susceptibility index (not a flood prediction)
-                </div>
-                <div style={{ color: '#374f6a', fontSize: '9px', fontFamily: 'monospace', marginTop: '2px' }}>
-                  {selectedZone.lat.toFixed(4)}°N, {selectedZone.lng.toFixed(4)}°E
-                </div>
-              </div>
-            </Popup>
+              </Popup>
+            )}
           </Marker>
         )}
       </MapContainer>
@@ -318,7 +336,7 @@ export default function MapCanvas({
           <span className="font-semibold text-[#00b4d8]">Himachal Pradesh</span>
           <span style={{ color: 'var(--c-text3)' }}>·</span>
           <span style={{ color: 'var(--c-text2)' }}>
-            {activeLayer ? activeLayer.name : '11-Factor Flood Susceptibility'}
+            {activeLayer ? activeLayer.name : `${hazardName} Susceptibility`}
           </span>
           <span style={{ color: 'var(--c-text3)' }}>·</span>
           <span className="text-[10px]" style={{ color: 'var(--c-text3)' }}>30 m EPSG:4326</span>
@@ -333,7 +351,7 @@ export default function MapCanvas({
         </span>
         <span className="text-[10px]" style={{ color: 'var(--c-border)' }}>|</span>
         <span className="text-[10px]" style={{ color: 'var(--c-text2)', fontFamily: 'var(--font-mono)' }}>
-          Zoom {zoom}  ·  11 Criteria AHP Model
+          Zoom {zoom}  ·  {activeModelName || `${hazardName} Model`}
         </span>
         <span className="text-[10px]" style={{ color: 'var(--c-border)' }}>|</span>
         <span className="text-[10px]" style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>EPSG:4326 / EPSG:32643 UTM 43N</span>

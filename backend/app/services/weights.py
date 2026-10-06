@@ -153,11 +153,11 @@ LANDSLIDE_MCDA = AHPModelConfig(
     random_index=1.57,
     consistency_ratio=0.0,
     classification_ranges={
-        1: (1.0, 3.0),
-        2: (3.0, 5.0),
-        3: (5.0, 7.0),
-        4: (7.0, 9.0),
-        5: (9.0, 11.0),
+        1: (1.0, 2.0),
+        2: (2.0, 3.0),
+        3: (3.0, 4.0),
+        4: (4.0, 5.0),
+        5: (5.0, 5.01),
     },
     classification_labels={
         1: "Very Low Susceptibility",

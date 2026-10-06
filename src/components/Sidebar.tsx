@@ -22,6 +22,7 @@ interface Props {
   onBasemap: (b: string) => void;
   onSelectLocation?: (loc: { lat: number; lng: number }) => void;
   modelName?: string;
+  activeModelId?: string;
   onRefresh?: () => void;
 }
 
@@ -36,8 +37,12 @@ export default function Sidebar({
   onBasemap,
   onSelectLocation,
   modelName = '11-Factor Flood Susceptibility AHP',
+  activeModelId,
   onRefresh,
 }: Props) {
+  const isLandslide = (activeModelId?.includes('landslide') || modelName.toLowerCase().includes('landslide')) ?? false;
+  const hazardName = isLandslide ? 'Landslide' : 'Flood';
+
   const [section, setSection] = useState<Record<string, boolean>>({
     analysis: true, layers: true, legend: true, filters: false, basemap: false, options: false,
   });
@@ -302,7 +307,7 @@ export default function Sidebar({
                 </span>
               </div>
               <div className="mt-2 pt-2 border-t border-[var(--c-border)] text-[10px] leading-relaxed" style={{ color: 'var(--c-text3)' }}>
-                <em>Flood susceptibility indicates environmental susceptibility under this model. It is NOT a flood probability or prediction.</em>
+                <em>{hazardName} susceptibility indicates environmental susceptibility under this model. It is NOT a {hazardName.toLowerCase()} probability or prediction.</em>
               </div>
             </div>
           </SideSection>
@@ -413,7 +418,12 @@ function LayerRow({ layer, isActive, onToggle, onSelect, onOpacity, onInfo }: {
         <span
           className="flex-1 text-xs truncate cursor-pointer select-none"
           style={{ color: layer.visible ? 'var(--c-text)' : 'var(--c-text2)', fontWeight: isActive ? 600 : 400 }}
-          onClick={() => { onSelect(layer.id); onToggle(layer.id); }}
+          onClick={() => {
+            onSelect(layer.id);
+            if (!layer.visible) {
+              onToggle(layer.id);
+            }
+          }}
           title={layer.name}>
           {layer.name}
           {layer.unit && <span className="ml-1 text-[9px] opacity-75" style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>({layer.unit})</span>}
