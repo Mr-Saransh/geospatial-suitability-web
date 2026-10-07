@@ -24,8 +24,8 @@ function formatText(text: string): string {
 
 export default function AIPanel({ zone, onClose, onLayerEvidence, activeModelId, activeModelName }: Props) {
   const isLandslide = (activeModelId?.includes('landslide') || activeModelName?.toLowerCase().includes('landslide')) ?? false;
-  const hazardName = isLandslide ? 'Landslide' : 'Flood';
-  const modelTitle = activeModelName || (isLandslide ? '14-Factor Landslide Susceptibility MCDA' : '11-Factor Flood Susceptibility Model');
+  const hazardName = isLandslide ? 'Landslide' : (activeModelName || 'Flood');
+  const modelTitle = `${activeModelName || hazardName} Susceptibility Model`;
 
   const [messages, setMessages] = useState<AIMessage[]>([
     {

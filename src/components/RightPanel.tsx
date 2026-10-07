@@ -43,10 +43,15 @@ export default function RightPanel({
 }: Props) {
   const [internalTab, setInternalTab] = useState<RightTab>(activeTab || (zone ? 'overview' : 'statistics'));
 
+  const isPlaceholder = (modelDetail?.model_id || activeModelId || '').toLowerCase() === 'cyclone' ||
+                        (modelDetail?.model_id || activeModelId || '').toLowerCase() === 'drought' ||
+                        (modelDetail?.name || activeModelName || '').toLowerCase() === 'cyclone' ||
+                        (modelDetail?.name || activeModelName || '').toLowerCase() === 'drought';
+
   const isLandslide = (modelDetail?.model_id || activeModelId || '').toLowerCase().includes('landslide') ||
                       (modelDetail?.name || activeModelName || '').toLowerCase().includes('landslide');
-  const hazardName = isLandslide ? 'Landslide' : 'Flood';
-  const hazardLower = isLandslide ? 'landslide' : 'flood';
+  const hazardName = isLandslide ? 'Landslide' : (activeModelName || 'Flood');
+  const hazardLower = isLandslide ? 'landslide' : (activeModelName?.toLowerCase() || 'flood');
 
   useEffect(() => {
     if (activeTab) {
@@ -83,7 +88,14 @@ export default function RightPanel({
             </button>
           )}
         </div>
-        {zone ? (
+        {isPlaceholder ? (
+          <div className="flex items-center justify-between mt-2">
+            <span className="text-xs font-semibold" style={{ color: 'var(--c-text)' }}>
+              {activeModelName} Susceptibility Model
+            </span>
+            <Pill color="#f59e0b">Planned</Pill>
+          </div>
+        ) : zone ? (
           <>
             <div className="flex items-start justify-between mt-1">
               <div>
@@ -131,25 +143,42 @@ export default function RightPanel({
         )}
       </div>
 
-      {/* Tabs */}
-      <TabBar tabs={TABS} active={tab} onChange={t => setTab(t as RightTab)} />
-
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto">
-        {tab === 'statistics' && <StatisticsTab stats={stats} isLandslide={isLandslide} hazardLower={hazardLower} />}
-        {tab === 'metadata'   && <MetadataTab modelDetail={modelDetail} activeModelId={activeModelId} isLandslide={isLandslide} hazardName={hazardName} />}
-        {!zone && tab !== 'statistics' && tab !== 'metadata' ? (
-          <EmptyState icon={<IconAnalyze size={18} />}
-            title="No coordinates selected"
-            body={`Click anywhere on the Himachal Pradesh map to inspect real-time pixel values across all ${isLandslide ? 14 : 11} criteria and ${hazardLower} susceptibility models.`} />
-        ) : (
-          <>
-            {tab === 'overview'   && zone && <OverviewTab zone={zone} hazardName={hazardName} hazardLower={hazardLower} isLandslide={isLandslide} />}
-            {tab === 'criteria'   && zone && <CriteriaTab zone={zone} onEvidence={onLayerEvidence} />}
-            {tab === 'evidence'   && zone && <EvidenceTab zone={zone} onEvidence={onLayerEvidence} isLandslide={isLandslide} />}
-          </>
-        )}
-      </div>
+      {/* Tabs / Content */}
+      {isPlaceholder ? (
+        <div className="flex-1 p-6 flex flex-col items-center justify-center text-center gap-3">
+          <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ background: 'rgba(0,180,216,0.1)', color: '#00b4d8' }}>
+            <IconAnalyze size={22} />
+          </div>
+          <div className="text-sm font-semibold" style={{ color: 'var(--c-text)' }}>
+            {activeModelName} Susceptibility Model
+          </div>
+          <div className="text-xs leading-relaxed max-w-xs" style={{ color: 'var(--c-text2)' }}>
+            The {activeModelName} hazard model and multi-criteria spatial datasets are currently in development for Himachal Pradesh. No simulated or preliminary data is displayed.
+          </div>
+          <div className="text-[10px] px-3 py-1.5 rounded font-mono" style={{ background: 'var(--c-panel)', border: '1px solid var(--c-border)', color: 'var(--c-text3)' }}>
+            Status: Planned Integration · Statewide Analysis
+          </div>
+        </div>
+      ) : (
+        <>
+          <TabBar tabs={TABS} active={tab} onChange={t => setTab(t as RightTab)} />
+          <div className="flex-1 overflow-y-auto">
+            {tab === 'statistics' && <StatisticsTab stats={stats} isLandslide={isLandslide} hazardLower={hazardLower} />}
+            {tab === 'metadata'   && <MetadataTab modelDetail={modelDetail} activeModelId={activeModelId} isLandslide={isLandslide} hazardName={hazardName} />}
+            {!zone && tab !== 'statistics' && tab !== 'metadata' ? (
+              <EmptyState icon={<IconAnalyze size={18} />}
+                title="No coordinates selected"
+                body={`Click anywhere on the Himachal Pradesh map to inspect real-time pixel values across all ${isLandslide ? 14 : 11} criteria and ${hazardLower} susceptibility models.`} />
+            ) : (
+              <>
+                {tab === 'overview'   && zone && <OverviewTab zone={zone} hazardName={hazardName} hazardLower={hazardLower} isLandslide={isLandslide} />}
+                {tab === 'criteria'   && zone && <CriteriaTab zone={zone} onEvidence={onLayerEvidence} />}
+                {tab === 'evidence'   && zone && <EvidenceTab zone={zone} onEvidence={onLayerEvidence} isLandslide={isLandslide} />}
+              </>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -522,9 +551,74 @@ function EvidenceTab({
 }) {
   const m = SUIT_META[zone.cls] || SUIT_META['low'];
   const criteria = zone.criteria || [];
+  const coverage = getCoverageInfo(zone.finalStatus, zone.evidenceCount, zone.evidenceTotal);
+
+  // Derive human-readable missing evidence names if any
+  const missingNames = (zone.missingCriteria || []).map(cId => {
+    const row = criteria.find(c => c.criterionId === cId || c.layerId === cId);
+    return row ? row.name : cId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  });
 
   return (
     <div className="p-4 flex flex-col gap-4">
+      {/* Coverage Status Summary */}
+      <div
+        className="p-3 rounded flex flex-col gap-1.5"
+        style={{
+          background: coverage.status === 'COMPLETE'
+            ? 'rgba(0,200,150,0.08)'
+            : coverage.status === 'PARTIAL'
+            ? 'rgba(249,115,22,0.1)'
+            : 'rgba(239,68,68,0.1)',
+          border: `1px solid ${coverage.badgeColor}35`,
+        }}
+        title={coverage.tooltip}
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold" style={{ color: coverage.badgeColor }}>
+            Analysis Coverage
+          </span>
+          <span
+            className="text-[9px] px-2 py-0.5 rounded font-mono font-semibold"
+            style={{ background: `${coverage.badgeColor}25`, color: coverage.badgeColor }}
+          >
+            {coverage.status}
+          </span>
+        </div>
+        <div className="text-[11px] leading-relaxed" style={{ color: 'var(--c-text2)' }}>
+          {coverage.status === 'COMPLETE' &&
+            `Complete coverage: All ${zone.evidenceTotal || (isLandslide ? 14 : 11)} physical criteria are validated and present for this coordinate.`}
+          {coverage.status === 'PARTIAL' &&
+            `Partial coverage: Evaluated using ${zone.evidenceCount ?? (isLandslide ? 12 : 10)} of ${zone.evidenceTotal || (isLandslide ? 14 : 11)} physical criteria. Weights are dynamically renormalized.`}
+          {coverage.status === 'UNAVAILABLE' &&
+            'Analysis unavailable: Insufficient validated physical criteria are present for this location.'}
+        </div>
+      </div>
+
+      {/* Human-readable Missing Evidence Callout (only when missing factors exist) */}
+      {missingNames.length > 0 && (
+        <div className="p-3 rounded flex flex-col gap-1.5" style={{ background: 'rgba(249,115,22,0.06)', border: '1px solid rgba(249,115,22,0.22)' }}>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-[#f97316]">
+              Missing Evidence ({missingNames.length})
+            </span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded font-mono" style={{ background: 'rgba(249,115,22,0.15)', color: '#f97316' }}>
+              PARTIAL
+            </span>
+          </div>
+          <div className="text-[11px] leading-relaxed" style={{ color: 'var(--c-text2)' }}>
+            The following {missingNames.length === 1 ? 'factor has' : 'factors have'} localized NoData at this coordinate:
+            <ul className="mt-1 list-disc list-inside space-y-0.5">
+              {missingNames.map(name => (
+                <li key={name} className="text-[11px] font-medium" style={{ color: 'var(--c-text)' }}>
+                  {name}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
       {/* Why box */}
       <div className="p-3 rounded border-l-2" style={{ background: `${m.color}0a`, borderLeftColor: m.color }}>
         <div className="text-xs font-semibold mb-1.5" style={{ color: m.color }}>

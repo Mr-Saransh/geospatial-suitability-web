@@ -34,14 +34,7 @@ export default function Navbar({
   const [modelOpen, setModelOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const availableModels = modelsList && modelsList.length > 0
-    ? modelsList.map(m => m.name)
-    : [
-        '11-Factor Flood Susceptibility AHP',
-        '14-Factor Landslide Susceptibility MCDA',
-        'Groundwater Recharge Potential v2.1',
-        'Urban Expansion Suitability v1.3',
-      ];
+  const publicModels = ['Flood', 'Landslide', 'Cyclone', 'Drought'] as const;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,12 +111,13 @@ export default function Navbar({
               color: 'var(--c-text)',
               boxShadow: modelOpen ? '0 0 0 1px rgba(0,180,216,0.3)' : 'none',
             }}>
-            <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#00c896' }} />
-            <span className="max-w-[220px] truncate" style={{ fontFamily: 'var(--font-body)' }}>{model}</span>
+            <div className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+              style={{ background: (model === 'Cyclone' || model === 'Drought') ? '#f59e0b' : '#00c896' }} />
+            <span className="font-medium" style={{ fontFamily: 'var(--font-body)' }}>{model}</span>
             <IconChevronD size={10} style={{ color: 'var(--c-text2)', flexShrink: 0, transform: modelOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s ease' }} />
           </button>
           {modelOpen && (
-            <div className="absolute left-0 top-full mt-1.5 z-[1220] rounded-lg py-1.5 shadow-2xl min-w-[290px] sm:min-w-[320px]"
+            <div className="absolute left-0 top-full mt-1.5 z-[1220] rounded-lg py-1.5 shadow-2xl min-w-[210px]"
               style={{
                 background: 'var(--c-surface)',
                 border: '1px solid var(--c-border)',
@@ -131,10 +125,11 @@ export default function Navbar({
               }}>
               <div className="px-3 py-1 text-[10px] uppercase tracking-wider font-semibold border-b mb-1"
                 style={{ color: 'var(--c-text3)', borderColor: 'var(--c-border)', fontFamily: 'var(--font-mono)' }}>
-                Select Spatial Model
+                Susceptibility Model
               </div>
-              {availableModels.map(m => {
+              {publicModels.map(m => {
                 const isSelected = m === model;
+                const isPlaceholder = m === 'Cyclone' || m === 'Drought';
                 return (
                   <button key={m} onClick={() => { onModel(m); setModelOpen(false); }}
                     className="w-full text-left px-3 py-2 text-xs flex items-center justify-between gap-3 transition-colors"
@@ -149,7 +144,8 @@ export default function Navbar({
                       if (!isSelected) (e.currentTarget as HTMLElement).style.background = 'transparent';
                     }}>
                     <div className="flex items-center gap-2 truncate">
-                      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: isSelected ? '#00c896' : 'var(--c-text3)' }} />
+                      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                        style={{ background: isSelected ? '#00b4d8' : isPlaceholder ? 'var(--c-text3)' : '#00c896' }} />
                       <span className="truncate font-medium">{m}</span>
                     </div>
                     {isSelected ? (

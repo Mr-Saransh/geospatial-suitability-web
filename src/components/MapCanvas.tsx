@@ -158,8 +158,8 @@ export default function MapCanvas({
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
   const isLandslide = (activeModelId || '').toLowerCase().includes('landslide') || (activeModelName || '').toLowerCase().includes('landslide');
-  const hazardName = isLandslide ? 'Landslide' : 'Flood';
-  const hazardLower = isLandslide ? 'landslide' : 'flood';
+  const hazardName = isLandslide ? 'Landslide' : (activeModelName || 'Flood');
+  const hazardLower = isLandslide ? 'landslide' : (activeModelName?.toLowerCase() || 'flood');
 
   const effectiveBasemap = (theme === 'light' && basemap === 'dark') ? 'light' : basemap;
   const bm = BASEMAP_URLS[effectiveBasemap] || BASEMAP_URLS.dark;

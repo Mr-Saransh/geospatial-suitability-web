@@ -567,21 +567,6 @@ export const INITIAL_LAYERS: Layer[] = [
     date: '2026',
     description: 'Valid criteria count raster (8 to 11 criteria present per pixel).',
   },
-  {
-    id: 'flood_11_factor_v1_missing_criteria_bitmask',
-    name: 'Missing Criteria',
-    group: 'quality',
-    groupLabel: 'Quality & Coverage',
-    subgroup: 'QUALITY & COVERAGE',
-    layerType: 'QUALITY',
-    visible: false,
-    opacity: 80,
-    unit: 'bitmask',
-    source: 'Quality Control Bitmask',
-    resolution: '30 m',
-    date: '2026',
-    description: 'Bitmask raster encoding valid/missing status per criterion (2047: all valid).',
-  },
 ];
 
 export const INITIAL_CRITERIA: CriterionRow[] = [

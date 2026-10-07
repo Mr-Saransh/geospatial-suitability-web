@@ -22,6 +22,7 @@ interface Props {
   onBasemap: (b: string) => void;
   onSelectLocation?: (loc: { lat: number; lng: number }) => void;
   modelName?: string;
+  onModelChange?: (m: string) => void;
   activeModelId?: string;
   onRefresh?: () => void;
 }
@@ -36,12 +37,13 @@ export default function Sidebar({
   basemap,
   onBasemap,
   onSelectLocation,
-  modelName = '11-Factor Flood Susceptibility AHP',
+  modelName = 'Flood',
+  onModelChange,
   activeModelId,
   onRefresh,
 }: Props) {
   const isLandslide = (activeModelId?.includes('landslide') || modelName.toLowerCase().includes('landslide')) ?? false;
-  const hazardName = isLandslide ? 'Landslide' : 'Flood';
+  const hazardName = isLandslide ? 'Landslide' : (modelName || 'Flood');
 
   const [section, setSection] = useState<Record<string, boolean>>({
     analysis: true, layers: true, legend: true, filters: false, basemap: false, options: false,
@@ -74,7 +76,7 @@ export default function Sidebar({
   const factorCount = layers.filter(l => l.layerType === 'FACTOR' || (!l.id.includes('rating') && !l.id.includes('suitability') && !l.id.includes('criteria'))).length;
   const ratingCount = layers.filter(l => l.layerType === 'RATING' || l.id.includes('rating')).length;
   const resultCount = layers.filter(l => l.layerType === 'RESULT' || l.id.includes('suitability')).length;
-  const qualityCount = layers.filter(l => l.layerType === 'QUALITY' || l.id.includes('criteria')).length;
+  const qualityCount = layers.filter(l => (l.layerType === 'QUALITY' || l.id.includes('criteria')) && !l.id.includes('bitmask')).length;
 
   // Canonical results order
   const RESULT_ORDER = [
@@ -153,8 +155,8 @@ export default function Sidebar({
     {
       id: 'quality',
       label: 'Quality & Coverage',
-      badge: 'Masks',
-      layers: layers.filter(l => l.group === 'quality' || l.layerType === 'QUALITY' || l.id.includes('criteria')),
+      badge: 'Coverage',
+      layers: layers.filter(l => (l.group === 'quality' || l.layerType === 'QUALITY' || l.id.includes('criteria')) && !l.id.includes('bitmask')),
     },
   ];
 
@@ -203,8 +205,15 @@ export default function Sidebar({
                 </Field>
               </div>
               <Field label="Susceptibility Model">
-                <select className="w-full" value={modelName} disabled>
-                  <option>{modelName}</option>
+                <select
+                  className="w-full"
+                  value={modelName}
+                  onChange={e => onModelChange?.(e.target.value)}
+                >
+                  <option value="Flood">Flood</option>
+                  <option value="Landslide">Landslide</option>
+                  <option value="Cyclone">Cyclone</option>
+                  <option value="Drought">Drought</option>
                 </select>
               </Field>
               <div className="flex gap-2 mt-1">
@@ -247,26 +256,37 @@ export default function Sidebar({
               <span>{qualityCount} Quality</span>
             </div>
 
-            <div className="pb-3">
-              {SECTIONS.map(s => {
-                if (!s.layers.length) return null;
-                return (
-                  <LayerGroup key={s.id} label={s.label} badge={s.badge}>
-                    {s.layers.map(l => (
-                      <LayerRow
-                        key={l.id}
-                        layer={l}
-                        isActive={activeLayerId === l.id}
-                        onToggle={toggleLayer}
-                        onSelect={onSelectLayer}
-                        onOpacity={setOpacity}
-                        onInfo={onLayerEvidence}
-                      />
-                    ))}
-                  </LayerGroup>
-                );
-              })}
-            </div>
+            {layers.length === 0 ? (
+              <div className="px-4 py-8 text-center flex flex-col items-center gap-2">
+                <span className="text-xs font-semibold" style={{ color: 'var(--c-text2)' }}>
+                  {modelName} Model in Preparation
+                </span>
+                <span className="text-[11px] leading-relaxed" style={{ color: 'var(--c-text3)' }}>
+                  Spatial factor layers and analysis results for {modelName} will be available in an upcoming release.
+                </span>
+              </div>
+            ) : (
+              <div className="pb-3">
+                {SECTIONS.map(s => {
+                  if (!s.layers.length) return null;
+                  return (
+                    <LayerGroup key={s.id} label={s.label} badge={s.badge}>
+                      {s.layers.map(l => (
+                        <LayerRow
+                          key={l.id}
+                          layer={l}
+                          isActive={activeLayerId === l.id}
+                          onToggle={toggleLayer}
+                          onSelect={onSelectLayer}
+                          onOpacity={setOpacity}
+                          onInfo={onLayerEvidence}
+                        />
+                      ))}
+                    </LayerGroup>
+                  );
+                })}
+              </div>
+            )}
           </SideSection>
 
           {/* Legend */}
@@ -335,7 +355,7 @@ export default function Sidebar({
             <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
               <Pill color="#00b4d8">Himachal Pradesh</Pill>
               <Pill color="#00c896">Data Verified</Pill>
-              <Pill color="#374f6a">11 Criteria</Pill>
+              <Pill color="#374f6a">{isLandslide ? '14 Criteria' : layers.length > 0 ? '11 Criteria' : 'MCDA'}</Pill>
             </div>
             <div className="text-[10px]" style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>
               Statewide 30 m Spatial Analysis · v1.0
@@ -369,7 +389,7 @@ function SideSection({ label, open, onToggle, children, actions }: {
 }
 
 function LayerGroup({ label, badge, children }: { label: string; badge?: string; children: ReactNode }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   return (
     <div className="mb-1">
       <button onClick={() => setOpen(v => !v)}

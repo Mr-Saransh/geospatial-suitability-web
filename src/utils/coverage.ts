@@ -31,11 +31,13 @@ export function getCoverageInfo(
   evidenceCount?: number | null,
   evidenceTotal: number = 11
 ): CoverageInfo {
+  const minThreshold = evidenceTotal >= 14 ? 10 : 8;
+
   // Check unavailable conditions first
   if (
     finalStatus === 'OUTSIDE_ANALYSIS_AREA' ||
     finalStatus === 'NODATA' ||
-    (evidenceCount !== undefined && evidenceCount !== null && evidenceCount < 8)
+    (evidenceCount !== undefined && evidenceCount !== null && evidenceCount < minThreshold)
   ) {
     return {
       status: 'UNAVAILABLE',
@@ -45,7 +47,7 @@ export function getCoverageInfo(
     };
   }
 
-  // Complete (full 11 criteria)
+  // Complete (full criteria)
   if (
     finalStatus === 'VALID' ||
     (evidenceCount !== undefined && evidenceCount !== null && evidenceCount >= evidenceTotal)
@@ -58,7 +60,7 @@ export function getCoverageInfo(
     };
   }
 
-  // Partial (8 to 10 criteria)
+  // Partial
   return {
     status: 'PARTIAL',
     label: 'Partial',

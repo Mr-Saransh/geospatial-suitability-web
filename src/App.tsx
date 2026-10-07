@@ -42,7 +42,7 @@ export default function App() {
   // Backend state
   const [models, setModels]             = useState<ModelSummary[]>([]);
   const [activeModelId, setActiveModelId] = useState('flood_11_factor_v1');
-  const [activeModelName, setActiveModelName] = useState('11-Factor Flood Susceptibility AHP');
+  const [activeModelName, setActiveModelName] = useState('Flood');
   const [modelDetail, setModelDetail]   = useState<ModelDetail | null>(null);
   const [statistics, setStatistics]     = useState<AnalysisStatistics | null>(null);
 
@@ -83,6 +83,14 @@ export default function App() {
   // NOTE: activeLayerId is deliberately excluded from dependencies to ensure switching
   // layers NEVER reloads the backend or overwrites the user's selectedMapCoordinate!
   const loadBackend = useCallback(async () => {
+    if (activeModelId === 'cyclone' || activeModelId === 'drought') {
+      setLayers([]);
+      setActiveLayerId('');
+      setModelDetail(null);
+      setStatistics(null);
+      setSelectedZone(null);
+      return;
+    }
     try {
       // Fetch models
       const modelsRes = await api.getModels().catch(() => []);
@@ -90,8 +98,9 @@ export default function App() {
         setModels(modelsRes);
         const currentValid = modelsRes.some(m => m.model_id === activeModelId);
         if (!currentValid) {
-          setActiveModelId(modelsRes[0].model_id);
-          setActiveModelName(modelsRes[0].name);
+          const defaultId = modelsRes[0].model_id;
+          setActiveModelId(defaultId);
+          setActiveModelName(defaultId.includes('landslide') ? 'Landslide' : 'Flood');
         }
       }
 
@@ -110,16 +119,21 @@ export default function App() {
       // Fetch real canonical layers for active model
       const layersRes = await api.getLayers(activeModelId).catch(() => []);
       if (layersRes.length > 0) {
-        const defaultClassifiedId = layersRes.find(
+        // Filter out internal bitmask raster from public layers
+        const publicLayersRes = layersRes.filter(
+          (l: LayerInfo) => !l.product_id.includes('bitmask') && !l.layer_name?.includes('bitmask')
+        );
+
+        const defaultClassifiedId = publicLayersRes.find(
           l => l.type === 'RESULT' && l.product_id.includes('classified')
         )?.product_id;
 
         setActiveLayerId(prev => {
-          const currentActiveStillValid = layersRes.some(l => l.product_id === prev);
-          return currentActiveStillValid ? prev : (defaultClassifiedId || layersRes[0].product_id);
+          const currentActiveStillValid = publicLayersRes.some(l => l.product_id === prev);
+          return currentActiveStillValid ? prev : (defaultClassifiedId || publicLayersRes[0].product_id);
         });
 
-        const mappedLayers: Layer[] = layersRes.map((l: LayerInfo) => {
+        const mappedLayers: Layer[] = publicLayersRes.map((l: LayerInfo) => {
           const isResult = l.type === 'RESULT' || l.layer_type === 'result_raster';
           const isQuality = l.type === 'QUALITY' || l.layer_type === 'quality_mask';
           const critKey = l.criterion_id || '';
@@ -269,6 +283,12 @@ export default function App() {
     // Instantly set canonical coordinate single source of truth
     setSelectedMapCoordinate({ lat, lon });
     selectedMapCoordinateRef.current = { lat, lon };
+
+    if (activeModelId === 'cyclone' || activeModelId === 'drought') {
+      // Placeholder model: do not make API calls or fabricate fake data
+      return;
+    }
+
     setLoadingInspection(true);
     try {
       const pt = await api.inspectPoint(activeModelId, lat, lon);
@@ -320,12 +340,35 @@ export default function App() {
   };
 
   const handleModelChange = (modelName: string) => {
-    setActiveModelName(modelName);
-    const found = models.find(m => m.name === modelName || m.model_id === modelName);
-    if (found) {
-      setActiveModelId(found.model_id);
-      setActiveModelName(found.name);
+    const lower = modelName.toLowerCase();
+    if (lower.includes('cyclone')) {
+      setActiveModelName('Cyclone');
+      setActiveModelId('cyclone');
+      setLayers([]);
+      setActiveLayerId('');
+      setModelDetail(null);
+      setStatistics(null);
+      setSelectedZone(null);
+      return;
     }
+    if (lower.includes('drought')) {
+      setActiveModelName('Drought');
+      setActiveModelId('drought');
+      setLayers([]);
+      setActiveLayerId('');
+      setModelDetail(null);
+      setStatistics(null);
+      setSelectedZone(null);
+      return;
+    }
+    if (lower.includes('landslide')) {
+      setActiveModelName('Landslide');
+      setActiveModelId('landslide_14_factor_v1');
+      return;
+    }
+    // Default to Flood
+    setActiveModelName('Flood');
+    setActiveModelId('flood_11_factor_v1');
   };
 
   const handleLocationFly = (loc: { lat: number; lng: number }) => {
@@ -379,6 +422,7 @@ export default function App() {
           onBasemap={setBasemap}
           onSelectLocation={handleLocationFly}
           modelName={activeModelName}
+          onModelChange={handleModelChange}
           activeModelId={activeModelId}
           onRefresh={loadBackend}
         />
