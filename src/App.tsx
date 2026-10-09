@@ -466,12 +466,12 @@ export default function App() {
 
           {/* Map floating controls */}
           <div className="absolute bottom-4 left-4 z-10 flex items-center gap-2 pointer-events-auto">
-            <div className="px-2.5 py-1 rounded text-[11px] font-mono flex items-center gap-2"
+            <div className="px-3 py-1.5 rounded text-[12px] font-mono flex items-center gap-2"
               style={{ background: 'var(--c-panel)', border: '1px solid var(--c-border)', color: 'var(--c-text2)', boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
               <span className="w-2 h-2 rounded-full bg-[#00b4d8] animate-pulse" />
               <span>{activeLayer ? activeLayer.name : 'No Layer Active'}</span>
               <span className="opacity-40">|</span>
-              <span className="text-[10px] opacity-75">{coord}</span>
+              <span className="text-[11px] opacity-75">{coord}</span>
             </div>
           </div>
         </div>

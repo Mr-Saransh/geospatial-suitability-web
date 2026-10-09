@@ -274,20 +274,20 @@ export default function MapCanvas({
           >
             {selectedZone && (
               <Popup className="mcgse-leaflet-popup">
-                <div style={{ background: '#0c1424', color: '#c4d4e8', padding: '6px 10px', borderRadius: '6px', fontSize: '11px', border: '1px solid #1c2e48' }}>
-                  <div style={{ fontWeight: 600, color: activeColor }}>
+                <div style={{ background: '#0c1424', color: '#c4d4e8', padding: '7px 11px', borderRadius: '6px', fontSize: '12px', border: '1px solid #1c2e48' }}>
+                  <div style={{ fontWeight: 600, color: activeColor, fontSize: '13px' }}>
                     {selectedZone.district || 'Inspected Point'}
                   </div>
-                  <div style={{ color: '#c4d4e8', fontSize: '10px' }}>
+                  <div style={{ color: '#c4d4e8', fontSize: '11px', marginTop: '2px' }}>
                     Susceptibility Score: <strong style={{ color: activeColor }}>{selectedZone.score !== null && selectedZone.score !== undefined ? `${selectedZone.score.toFixed(2)} / 5.00` : 'N/A'}</strong>
                   </div>
-                  <div style={{ color: '#647d9a', fontSize: '10px' }}>
+                  <div style={{ color: '#647d9a', fontSize: '11px' }}>
                     Class: {selectedZone.classifiedValue ? `Class ${selectedZone.classifiedValue} / 5 — ` : ''}{SUIT_META[selectedZone.cls]?.label}
                   </div>
-                  <div style={{ color: '#00b4d8', fontSize: '9px', marginTop: '2px', fontStyle: 'italic' }}>
+                  <div style={{ color: '#00b4d8', fontSize: '10px', marginTop: '3px', fontStyle: 'italic' }}>
                     Modeled susceptibility index (not a {hazardLower} prediction)
                   </div>
-                  <div style={{ color: '#374f6a', fontSize: '9px', fontFamily: 'monospace', marginTop: '2px' }}>
+                  <div style={{ color: '#374f6a', fontSize: '10px', fontFamily: 'monospace', marginTop: '2px' }}>
                     {markerCoord.lat.toFixed(4)}°N, {markerCoord.lon.toFixed(4)}°E
                   </div>
                 </div>
@@ -316,13 +316,13 @@ export default function MapCanvas({
             ? <div key={i} className="h-px mx-1" style={{ background: 'var(--c-border)' }} />
             : (
               <button key={btn.title} onClick={btn.onClick} title={btn.title}
-                className="w-7 h-7 flex items-center justify-center rounded transition-all backdrop-blur-sm shadow-md"
+                className="w-8 h-8 flex items-center justify-center rounded transition-all backdrop-blur-sm shadow-md"
                 style={{
                   background: btn.active ? 'rgba(0,180,216,0.2)' : 'var(--c-chip-bg)',
                   border: `1px solid ${btn.active ? 'rgba(0,180,216,0.5)' : 'var(--c-border)'}`,
                   color: btn.active ? '#00b4d8' : 'var(--c-text2)',
                 }}>
-                <btn.Icon size={13} />
+                <btn.Icon size={14} />
               </button>
             )
         )}
@@ -330,7 +330,7 @@ export default function MapCanvas({
 
       {/* Layer legend badge */}
       <div className="absolute top-3 left-3 z-[1000]">
-        <div className="flex items-center gap-2 px-2.5 py-1.5 rounded text-[11px] backdrop-blur-md shadow-lg"
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded text-[12px] backdrop-blur-md shadow-lg"
           style={{ background: 'var(--c-chip-bg)', border: '1px solid var(--c-border)', fontFamily: 'var(--font-mono)', color: 'var(--c-text)' }}>
           <div className="w-2 h-2 rounded-full" style={{ background: '#00c896' }} />
           <span className="font-semibold text-[#00b4d8]">Himachal Pradesh</span>
@@ -339,22 +339,22 @@ export default function MapCanvas({
             {activeLayer ? activeLayer.name : `${hazardName} Susceptibility`}
           </span>
           <span style={{ color: 'var(--c-text3)' }}>·</span>
-          <span className="text-[10px]" style={{ color: 'var(--c-text3)' }}>30 m EPSG:4326</span>
+          <span className="text-[11px]" style={{ color: 'var(--c-text3)' }}>30 m EPSG:4326</span>
         </div>
       </div>
 
       {/* Status bar */}
       <div className="absolute bottom-0 left-0 right-0 flex items-center gap-4 px-3 py-1.5 z-[1000] backdrop-blur-sm"
         style={{ background: 'var(--c-chip-bg)', borderTop: '1px solid var(--c-border)' }}>
-        <span className="text-[10px]" style={{ color: '#00b4d8', fontFamily: 'var(--font-mono)' }}>
+        <span className="text-[11px]" style={{ color: '#00b4d8', fontFamily: 'var(--font-mono)' }}>
           {coord.lat.toFixed(5)}°N  {coord.lng.toFixed(5)}°E
         </span>
-        <span className="text-[10px]" style={{ color: 'var(--c-border)' }}>|</span>
-        <span className="text-[10px]" style={{ color: 'var(--c-text2)', fontFamily: 'var(--font-mono)' }}>
+        <span className="text-[11px]" style={{ color: 'var(--c-border)' }}>|</span>
+        <span className="text-[11px]" style={{ color: 'var(--c-text2)', fontFamily: 'var(--font-mono)' }}>
           Zoom {zoom}  ·  {activeModelName || `${hazardName} Model`}
         </span>
-        <span className="text-[10px]" style={{ color: 'var(--c-border)' }}>|</span>
-        <span className="text-[10px]" style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>EPSG:4326 / EPSG:32643 UTM 43N</span>
+        <span className="text-[11px]" style={{ color: 'var(--c-border)' }}>|</span>
+        <span className="text-[11px]" style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>EPSG:4326 / EPSG:32643 UTM 43N</span>
         <div className="flex-1" />
         {/* Scale bar */}
         <div className="flex items-center gap-1.5">
@@ -365,9 +365,9 @@ export default function MapCanvas({
               <div className="w-px h-2" style={{ background: 'var(--c-text3)' }} />
             </div>
           </div>
-          <span className="text-[10px]" style={{ color: 'var(--c-text2)', fontFamily: 'var(--font-mono)' }}>10 km</span>
+          <span className="text-[11px]" style={{ color: 'var(--c-text2)', fontFamily: 'var(--font-mono)' }}>10 km</span>
         </div>
-        <span className="text-[10px]" style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>
+        <span className="text-[11px]" style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>
           © SRTM · CHIRPS · ESA WorldCover · HydroRIVERS
         </span>
       </div>

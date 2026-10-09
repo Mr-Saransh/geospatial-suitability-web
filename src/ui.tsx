@@ -4,9 +4,9 @@ import { SUIT_META } from './data';
 /* ── Suitability badge ─────────────────────────────────────────── */
 export function SuitBadge({ cls, size = 'sm' }: { cls: SuitClass; size?: 'xs' | 'sm' }) {
   const m = SUIT_META[cls];
-  const px = size === 'xs' ? 'px-1.5 py-px text-[10px]' : 'px-2 py-0.5 text-xs';
+  const px = size === 'xs' ? 'px-1.5 py-0.5 text-[11px] font-semibold' : 'px-2 py-0.5 text-xs font-semibold';
   return (
-    <span className={`inline-flex items-center gap-1 rounded font-medium ${px}`}
+    <span className={`inline-flex items-center gap-1.5 rounded ${px}`}
       style={{ color: m.color, background: m.bg }}>
       <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: m.color }} />
       {m.label}
@@ -26,7 +26,7 @@ export function ScoreBar({ value, color, height = 3 }: { value: number; color: s
 /* ── Section divider with label ────────────────────────────────── */
 export function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="text-[10px] font-medium tracking-[0.1em] uppercase mb-2 mt-1"
+    <div className="text-[11px] font-semibold tracking-[0.08em] uppercase mb-2 mt-1"
       style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>
       {children}
     </div>
@@ -77,7 +77,7 @@ export function TabBar({ tabs, active, onChange }: {
     <div className="flex" style={{ borderBottom: '1px solid var(--c-border)' }}>
       {tabs.map(t => (
         <button key={t.id} onClick={() => onChange(t.id)}
-          className="flex-1 py-2 text-[11px] font-medium capitalize transition-colors"
+          className="flex-1 py-2 text-xs font-semibold capitalize transition-colors"
           style={{
             color: active === t.id ? '#00b4d8' : 'var(--c-text3)',
             borderBottom: active === t.id ? '2px solid #00b4d8' : '2px solid transparent',
@@ -93,7 +93,7 @@ export function TabBar({ tabs, active, onChange }: {
 /* ── Mono value ────────────────────────────────────────────────── */
 export function Mono({ children, color }: { children: React.ReactNode; color?: string }) {
   return (
-    <span style={{ fontFamily: 'var(--font-mono)', color: color || 'var(--c-text)', fontSize: 12 }}>
+    <span style={{ fontFamily: 'var(--font-mono)', color: color || 'var(--c-text)', fontSize: 13 }}>
       {children}
     </span>
   );
@@ -105,9 +105,9 @@ export function StatTile({ label, value, sub, accent }: {
 }) {
   return (
     <div className="p-3 rounded" style={{ background: 'var(--c-panel)', border: '1px solid var(--c-border)' }}>
-      <div className="text-[10px] mb-1" style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>{label}</div>
-      <div className="text-base font-semibold" style={{ fontFamily: 'var(--font-mono)', color: accent || 'var(--c-text)' }}>{value}</div>
-      {sub && <div className="text-[10px] mt-0.5" style={{ color: 'var(--c-text3)' }}>{sub}</div>}
+      <div className="text-[11px] mb-1" style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>{label}</div>
+      <div className="text-lg font-semibold" style={{ fontFamily: 'var(--font-mono)', color: accent || 'var(--c-text)' }}>{value}</div>
+      {sub && <div className="text-[11px] mt-0.5" style={{ color: 'var(--c-text3)' }}>{sub}</div>}
     </div>
   );
 }
@@ -115,7 +115,7 @@ export function StatTile({ label, value, sub, accent }: {
 /* ── Pill tag ──────────────────────────────────────────────────── */
 export function Pill({ children, color = '#00b4d8' }: { children: React.ReactNode; color?: string }) {
   return (
-    <span className="inline-flex text-[10px] px-1.5 py-px rounded font-medium"
+    <span className="inline-flex text-[11px] px-2 py-0.5 rounded font-medium"
       style={{ color, background: `${color}18` }}>
       {children}
     </span>
@@ -125,12 +125,13 @@ export function Pill({ children, color = '#00b4d8' }: { children: React.ReactNod
 /* ── Kbd ───────────────────────────────────────────────────────── */
 export function Kbd({ children }: { children: React.ReactNode }) {
   return (
-    <kbd className="inline-flex items-center px-1.5 py-px text-[10px] rounded"
+    <kbd className="inline-flex items-center px-1.5 py-0.5 text-[11px] rounded"
       style={{ background: 'var(--c-panel)', color: 'var(--c-text3)', border: '1px solid var(--c-border)', fontFamily: 'var(--font-mono)' }}>
       {children}
     </kbd>
   );
 }
+
 
 /* ── Modal shell ───────────────────────────────────────────────── */
 export function Modal({ children, onClose, title, width = 560 }: {

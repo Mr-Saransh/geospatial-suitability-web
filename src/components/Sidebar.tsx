@@ -72,11 +72,8 @@ export default function Sidebar({
     }
   };
 
-  // Dynamic layer counts derived from actual layer catalog
-  const factorCount = layers.filter(l => l.layerType === 'FACTOR' || (!l.id.includes('rating') && !l.id.includes('suitability') && !l.id.includes('criteria'))).length;
-  const ratingCount = layers.filter(l => l.layerType === 'RATING' || l.id.includes('rating')).length;
+  // Dynamic result count derived from actual layer catalog
   const resultCount = layers.filter(l => l.layerType === 'RESULT' || l.id.includes('suitability')).length;
-  const qualityCount = layers.filter(l => (l.layerType === 'QUALITY' || l.id.includes('criteria')) && !l.id.includes('bitmask')).length;
 
   // Canonical results order
   const RESULT_ORDER = [
@@ -162,15 +159,15 @@ export default function Sidebar({
 
   return (
     <aside className="flex-shrink-0 flex flex-col overflow-hidden transition-all duration-300 z-20"
-      style={{ width: open ? 320 : 0, minWidth: open ? 320 : 0, background: 'var(--c-surface)', borderRight: '1px solid var(--c-border)' }}>
+      style={{ width: open ? 330 : 0, minWidth: open ? 330 : 0, background: 'var(--c-surface)', borderRight: '1px solid var(--c-border)' }}>
       {open && (
-        <div className="flex flex-col h-full overflow-y-auto" style={{ minWidth: 320 }}>
+        <div className="flex flex-col h-full overflow-y-auto" style={{ minWidth: 330 }}>
 
           {/* Panel header */}
           <div className="flex items-center justify-between px-4 py-2.5 flex-shrink-0"
             style={{ background: 'var(--c-panel)', borderBottom: '1px solid var(--c-border)' }}>
             <div className="text-xs font-semibold" style={{ fontFamily: 'var(--font-mono)', color: '#00b4d8', letterSpacing: '0.08em' }}>
-              GIS CONTROL PANEL
+              CONTROL PANEL
             </div>
             <div className="flex items-center gap-1">
               <Btn title="Refresh Layer Catalog" onClick={onRefresh} className="w-6 h-6"><IconRefresh size={11} /></Btn>
@@ -186,24 +183,17 @@ export default function Sidebar({
                   <option>Himachal Pradesh, India</option>
                 </select>
               </Field>
-              <div className="grid grid-cols-2 gap-2">
-                <Field label="District / Focus Area">
-                  <select
-                    className="w-full"
-                    value={selectedDistrict}
-                    onChange={e => handleDistrictChange(e.target.value)}
-                  >
-                    {HIMACHAL_LOCATIONS.map(loc => (
-                      <option key={loc.name} value={loc.name}>{loc.name}</option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label="Spatial Extent">
-                  <select className="w-full" disabled>
-                    <option>Statewide (135M px)</option>
-                  </select>
-                </Field>
-              </div>
+              <Field label="District / Focus Area">
+                <select
+                  className="w-full"
+                  value={selectedDistrict}
+                  onChange={e => handleDistrictChange(e.target.value)}
+                >
+                  {HIMACHAL_LOCATIONS.map(loc => (
+                    <option key={loc.name} value={loc.name}>{loc.name}</option>
+                  ))}
+                </select>
+              </Field>
               <Field label="Susceptibility Model">
                 <select
                   className="w-full"
@@ -219,13 +209,13 @@ export default function Sidebar({
               <div className="flex gap-2 mt-1">
                 <button
                   onClick={() => handleDistrictChange(selectedDistrict)}
-                  className="flex-1 h-7 rounded text-xs font-medium transition-colors hover:brightness-110"
+                  className="flex-1 h-8 rounded text-[13px] font-medium transition-colors hover:brightness-110"
                   style={{ background: 'rgba(0,180,216,0.15)', color: '#00b4d8', border: '1px solid rgba(0,180,216,0.35)' }}>
                   Locate Area
                 </button>
                 <button
                   onClick={() => handleDistrictChange('Shimla')}
-                  className="h-7 px-3 rounded text-xs transition-colors hover:opacity-80"
+                  className="h-8 px-3 rounded text-[13px] transition-colors hover:opacity-80"
                   style={{ color: 'var(--c-text2)', border: '1px solid var(--c-border)', background: 'var(--c-panel)' }}>
                   Reset
                 </button>
@@ -240,33 +230,21 @@ export default function Sidebar({
             onToggle={() => toggle('layers')}
             actions={
               <div className="flex items-center gap-1">
-                <button onClick={showAll} className="text-[10px] px-1.5 py-0.5 rounded" style={{ color: '#00b4d8', border: '1px solid rgba(0,180,216,0.25)' }}>All</button>
-                <button onClick={hideAll} className="text-[10px] px-1.5 py-0.5 rounded" style={{ color: 'var(--c-text2)', border: '1px solid var(--c-border)' }}>None</button>
+                <button onClick={showAll} className="text-[11px] px-2 py-0.5 rounded" style={{ color: '#00b4d8', border: '1px solid rgba(0,180,216,0.25)' }}>All</button>
+                <button onClick={hideAll} className="text-[11px] px-2 py-0.5 rounded" style={{ color: 'var(--c-text2)', border: '1px solid var(--c-border)' }}>None</button>
               </div>
             }>
-            {/* Dynamic catalog inventory breakdown */}
-            <div className="px-4 py-1.5 mb-1.5 text-[9px] flex items-center justify-between"
-              style={{ background: 'rgba(0,180,216,0.05)', borderBottom: '1px solid var(--c-border)', color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>
-              <span>{factorCount} Factors</span>
-              <span>·</span>
-              <span>{ratingCount} Ratings</span>
-              <span>·</span>
-              <span>{resultCount} Results</span>
-              <span>·</span>
-              <span>{qualityCount} Quality</span>
-            </div>
-
             {layers.length === 0 ? (
               <div className="px-4 py-8 text-center flex flex-col items-center gap-2">
-                <span className="text-xs font-semibold" style={{ color: 'var(--c-text2)' }}>
+                <span className="text-[13px] font-semibold" style={{ color: 'var(--c-text2)' }}>
                   {modelName} Model in Preparation
                 </span>
-                <span className="text-[11px] leading-relaxed" style={{ color: 'var(--c-text3)' }}>
+                <span className="text-xs leading-relaxed" style={{ color: 'var(--c-text3)' }}>
                   Spatial factor layers and analysis results for {modelName} will be available in an upcoming release.
                 </span>
               </div>
             ) : (
-              <div className="pb-3">
+              <div className="pb-3 pt-1">
                 {SECTIONS.map(s => {
                   if (!s.layers.length) return null;
                   return (
@@ -292,7 +270,7 @@ export default function Sidebar({
           {/* Legend */}
           <SideSection label="Susceptibility Legend" open={section.legend} onToggle={() => toggle('legend')}>
             <div className="px-4 pb-4">
-              <div className="text-[10px] mb-2" style={{ color: 'var(--c-text2)', fontFamily: 'var(--font-mono)' }}>
+              <div className="text-[11px] mb-2" style={{ color: 'var(--c-text2)', fontFamily: 'var(--font-mono)' }}>
                 {modelName} (Classes 1–5)
               </div>
               <div className="flex flex-col gap-1.5 mb-3">
@@ -300,23 +278,23 @@ export default function Sidebar({
                   const m = SUIT_META[cls];
                   return (
                     <div key={cls} className="flex items-center gap-2.5">
-                      <div className="w-7 h-3 rounded-sm flex-shrink-0" style={{ background: m.color, opacity: 0.9 }} />
-                      <div className="flex-1 text-xs" style={{ color: 'var(--c-text)' }}>{m.label}</div>
-                      <div className="text-[10px]" style={{ color: 'var(--c-text2)', fontFamily: 'var(--font-mono)' }}>{m.range}</div>
+                      <div className="w-7 h-3.5 rounded-sm flex-shrink-0" style={{ background: m.color, opacity: 0.9 }} />
+                      <div className="flex-1 text-[13px]" style={{ color: 'var(--c-text)' }}>{m.label}</div>
+                      <div className="text-[11px]" style={{ color: 'var(--c-text2)', fontFamily: 'var(--font-mono)' }}>{m.range}</div>
                     </div>
                   );
                 })}
               </div>
               {/* Gradient bar */}
-              <div className="h-2.5 rounded-sm mb-1" style={{ background: 'linear-gradient(to right, #00c896, #4ade80, #fbbf24, #f97316, #ef4444)' }} />
-              <div className="flex justify-between text-[9px] mb-1.5" style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>
+              <div className="h-2.5 rounded-sm mb-1.5" style={{ background: 'linear-gradient(to right, #00c896, #4ade80, #fbbf24, #f97316, #ef4444)' }} />
+              <div className="flex justify-between text-[10px] mb-1.5" style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>
                 <span style={{ color: '#00c896', fontWeight: 600 }}>1 (Very Low)</span>
                 <span>2</span>
                 <span>3</span>
                 <span>4</span>
                 <span style={{ color: '#ef4444', fontWeight: 600 }}>5 (Very High)</span>
               </div>
-              <div className="flex justify-between items-center text-[9px] px-2 py-1 rounded mb-2" style={{ background: 'var(--c-panel)', border: '1px solid var(--c-border)', fontFamily: 'var(--font-mono)' }}>
+              <div className="flex justify-between items-center text-[10px] px-2 py-1 rounded mb-2" style={{ background: 'var(--c-panel)', border: '1px solid var(--c-border)', fontFamily: 'var(--font-mono)' }}>
                 <span className="flex items-center gap-1" style={{ color: '#00c896', fontWeight: 600 }}>
                   <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#00c896' }} />
                   GREEN: Lower Hazard
@@ -326,7 +304,7 @@ export default function Sidebar({
                   <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#ef4444' }} />
                 </span>
               </div>
-              <div className="mt-2 pt-2 border-t border-[var(--c-border)] text-[10px] leading-relaxed" style={{ color: 'var(--c-text3)' }}>
+              <div className="mt-2 pt-2 border-t border-[var(--c-border)] text-[11px] leading-relaxed" style={{ color: 'var(--c-text3)' }}>
                 <em>{hazardName} susceptibility indicates environmental susceptibility under this model. It is NOT a {hazardName.toLowerCase()} probability or prediction.</em>
               </div>
             </div>
@@ -337,13 +315,13 @@ export default function Sidebar({
             <div className="px-4 pb-4 grid grid-cols-2 gap-2">
               {BASEMAPS.map(b => (
                 <button key={b.id} onClick={() => onBasemap(b.id)}
-                  className="h-14 rounded text-xs font-medium transition-all flex flex-col items-center justify-center gap-1"
+                  className="h-14 rounded text-[13px] font-medium transition-all flex flex-col items-center justify-center gap-1"
                   style={{
                     background: 'var(--c-panel)', color: 'var(--c-text)',
                     border: basemap === b.id ? '2px solid #00b4d8' : '1px solid var(--c-border)',
                     boxShadow: basemap === b.id ? '0 0 0 1px rgba(0,180,216,0.3)' : 'none',
                   }}>
-                  <IconGlobe size={14} style={{ color: basemap === b.id ? '#00b4d8' : 'var(--c-text2)' }} />
+                  <IconGlobe size={15} style={{ color: basemap === b.id ? '#00b4d8' : 'var(--c-text2)' }} />
                   {b.label}
                 </button>
               ))}
@@ -357,7 +335,7 @@ export default function Sidebar({
               <Pill color="#00c896">Data Verified</Pill>
               <Pill color="#374f6a">{isLandslide ? '14 Criteria' : layers.length > 0 ? '11 Criteria' : 'MCDA'}</Pill>
             </div>
-            <div className="text-[10px]" style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>
+            <div className="text-[11px]" style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>
               Statewide 30 m Spatial Analysis · v1.0
             </div>
           </div>
@@ -376,7 +354,7 @@ function SideSection({ label, open, onToggle, children, actions }: {
         onClick={onToggle}
         className="flex items-center w-full px-4 py-2.5 transition-colors hover:opacity-80 cursor-pointer select-none"
         style={{ color: 'var(--c-text2)' }}>
-        <span className="flex-1 text-left text-[10px] font-semibold tracking-[0.08em] uppercase"
+        <span className="flex-1 text-left text-[11px] font-semibold tracking-[0.08em] uppercase"
           style={{ fontFamily: 'var(--font-mono)' }}>{label}</span>
         {actions && <span onClick={e => e.stopPropagation()} className="cursor-default">{actions}</span>}
         <span className="ml-2 flex-shrink-0 transition-transform duration-200" style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)' }}>
@@ -390,20 +368,62 @@ function SideSection({ label, open, onToggle, children, actions }: {
 
 function LayerGroup({ label, badge, children }: { label: string; badge?: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
+
+  const getBadgeStyle = (b: string) => {
+    const lower = b.toLowerCase();
+    if (lower === 'raw') {
+      return {
+        color: '#38bdf8',
+        background: 'rgba(56, 189, 248, 0.08)',
+        border: '1px solid rgba(56, 189, 248, 0.25)',
+      };
+    }
+    if (lower.includes('1–5') || lower.includes('1-5')) {
+      return {
+        color: '#34d399',
+        background: 'rgba(52, 211, 153, 0.08)',
+        border: '1px solid rgba(52, 211, 153, 0.25)',
+      };
+    }
+    if (lower === 'coverage') {
+      return {
+        color: '#818cf8',
+        background: 'rgba(129, 140, 248, 0.08)',
+        border: '1px solid rgba(129, 140, 248, 0.25)',
+      };
+    }
+    if (!isNaN(Number(b))) {
+      return {
+        color: '#00b4d8',
+        background: 'rgba(0, 180, 216, 0.1)',
+        border: '1px solid rgba(0, 180, 216, 0.25)',
+      };
+    }
+    return {
+      color: 'var(--c-text3)',
+      background: 'var(--c-panel)',
+      border: '1px solid var(--c-border)',
+    };
+  };
+
   return (
-    <div className="mb-1">
-      <button onClick={() => setOpen(v => !v)}
-        className="w-full flex items-center justify-between px-4 py-1 text-[10px] font-semibold"
-        style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em' }}>
-        <div className="flex items-center gap-1.5">
-          <span className="flex-shrink-0" style={{ transform: open ? 'rotate(90deg)' : 'rotate(0)' }}>
+    <div className="mb-0.5">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between px-3.5 py-1.5 text-[10.5px] font-semibold transition-colors hover:bg-[rgba(255,255,255,0.02)] select-none text-left"
+        style={{ color: 'var(--c-text2)', fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}
+      >
+        <div className="flex items-center gap-1.5 min-w-0 flex-1 mr-2 overflow-hidden">
+          <span className="flex-shrink-0 transition-transform duration-150" style={{ transform: open ? 'rotate(90deg)' : 'rotate(0)' }}>
             <IconChevronR size={9} />
           </span>
-          <span>{label.toUpperCase()}</span>
+          <span className="truncate whitespace-nowrap">{label.toUpperCase()}</span>
         </div>
         {badge && (
-          <span className="text-[9px] px-1.5 py-0.2 rounded font-normal opacity-70"
-            style={{ background: 'var(--c-panel)', border: '1px solid var(--c-border)' }}>
+          <span
+            className="text-[9px] px-1.5 py-[1.5px] rounded font-medium flex-shrink-0 whitespace-nowrap leading-none tracking-wide"
+            style={getBadgeStyle(badge)}
+          >
             {badge}
           </span>
         )}
@@ -428,15 +448,15 @@ function LayerRow({ layer, isActive, onToggle, onSelect, onOpacity, onInfo }: {
         background: isActive ? 'rgba(0,180,216,0.1)' : expanded ? 'var(--c-panel)' : 'transparent',
         border: isActive ? '1px solid rgba(0,180,216,0.3)' : '1px solid transparent',
       }}>
-      <div className="flex items-center gap-1 py-1.5">
+      <div className="flex items-center gap-1.5 py-1.5">
         <button
           onClick={() => onToggle(layer.id)}
           className="flex-shrink-0 transition-opacity w-5 h-5 flex items-center justify-center"
           style={{ color: layer.visible ? '#00b4d8' : 'var(--c-text3)' }}>
-          {layer.visible ? <IconEye size={12} /> : <IconEyeOff size={12} />}
+          {layer.visible ? <IconEye size={13} /> : <IconEyeOff size={13} />}
         </button>
         <span
-          className="flex-1 text-xs truncate cursor-pointer select-none"
+          className="flex-1 text-[13px] truncate cursor-pointer select-none"
           style={{ color: layer.visible ? 'var(--c-text)' : 'var(--c-text2)', fontWeight: isActive ? 600 : 400 }}
           onClick={() => {
             onSelect(layer.id);
@@ -446,18 +466,18 @@ function LayerRow({ layer, isActive, onToggle, onSelect, onOpacity, onInfo }: {
           }}
           title={layer.name}>
           {layer.name}
-          {layer.unit && <span className="ml-1 text-[9px] opacity-75" style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>({layer.unit})</span>}
+          {layer.unit && <span className="ml-1 text-[10px] opacity-75" style={{ color: 'var(--c-text3)', fontFamily: 'var(--font-mono)' }}>({layer.unit})</span>}
         </span>
         <button onClick={() => onInfo(layer.id)} title="Layer info"
           className="w-5 h-5 flex items-center justify-center rounded transition-opacity opacity-40 hover:opacity-100"
           style={{ color: 'var(--c-text2)' }}>
-          <IconInfo size={11} />
+          <IconInfo size={12} />
         </button>
         <button onClick={() => setExpanded(v => !v)}
           className="w-4 h-4 flex items-center justify-center opacity-40 hover:opacity-100 transition-opacity"
           style={{ color: 'var(--c-text2)' }}>
           <span style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block' }}>
-            <IconChevronD size={9} />
+            <IconChevronD size={10} />
           </span>
         </button>
       </div>
@@ -465,7 +485,7 @@ function LayerRow({ layer, isActive, onToggle, onSelect, onOpacity, onInfo }: {
       {/* Expanded controls */}
       {expanded && (
         <div className="pb-2 pt-1 px-1 border-t flex flex-col gap-1.5" style={{ borderColor: 'var(--c-border)' }}>
-          <div className="flex items-center justify-between text-[10px]" style={{ color: 'var(--c-text3)' }}>
+          <div className="flex items-center justify-between text-[11px]" style={{ color: 'var(--c-text3)' }}>
             <span>Opacity</span>
             <span style={{ fontFamily: 'var(--font-mono)' }}>{layer.opacity}%</span>
           </div>
@@ -478,7 +498,7 @@ function LayerRow({ layer, isActive, onToggle, onSelect, onOpacity, onInfo }: {
             className="w-full h-1 accent-[#00b4d8] cursor-pointer"
           />
           {layer.description && (
-            <div className="text-[10px] leading-relaxed pt-1" style={{ color: 'var(--c-text2)' }}>
+            <div className="text-[11px] leading-relaxed pt-1" style={{ color: 'var(--c-text2)' }}>
               {layer.description}
             </div>
           )}
@@ -491,7 +511,7 @@ function LayerRow({ layer, isActive, onToggle, onSelect, onOpacity, onInfo }: {
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[10px] font-medium" style={{ color: 'var(--c-text2)' }}>{label}</label>
+      <label className="text-[11px] font-medium" style={{ color: 'var(--c-text2)' }}>{label}</label>
       {children}
     </div>
   );

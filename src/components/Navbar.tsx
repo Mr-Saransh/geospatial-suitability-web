@@ -62,7 +62,7 @@ export default function Navbar({
   };
 
   return (
-    <header className="flex-shrink-0 z-[1200] relative" style={{ background: '#080d18', borderBottom: '1px solid #1c2e48', height: 44 }}>
+    <header className="flex-shrink-0 z-[1200] relative" style={{ background: '#080d18', borderBottom: '1px solid #1c2e48', height: 46 }}>
       <div className="flex items-center h-full px-3 gap-2">
 
         {/* Logo */}
@@ -77,9 +77,8 @@ export default function Navbar({
             </svg>
           </div>
           <div className="hidden sm:block leading-none">
-            <div className="text-sm font-semibold tracking-tight"
-              style={{ fontFamily: 'var(--font-display)', color: 'var(--c-text)' }}>MCGSE Web-GIS</div>
-            <div className="text-[9px]" style={{ color: '#00b4d8', fontFamily: 'var(--font-mono)' }}>HIMACHAL SPATIAL ENGINE</div>
+            <div className="text-[15px] font-semibold tracking-tight"
+              style={{ fontFamily: 'var(--font-display)', color: 'var(--c-text)' }}>MCGSE</div>
           </div>
           <div className="hidden lg:flex items-center gap-1 ml-1">
             <IconSidebar size={13} style={{ color: sidebarOpen ? '#00b4d8' : 'var(--c-text3)' }} />
@@ -89,14 +88,14 @@ export default function Navbar({
         <div className="w-px h-5 mx-1 flex-shrink-0" style={{ background: 'var(--c-border)' }} />
 
         {/* Search */}
-        <form onSubmit={handleSearch} className="flex items-center gap-2 flex-1 max-w-72 h-7 px-2.5 rounded"
+        <form onSubmit={handleSearch} className="flex items-center gap-2 flex-1 max-w-72 h-8 px-2.5 rounded"
           style={{ background: 'var(--c-panel)', border: '1px solid var(--c-border)' }}>
-          <IconSearch size={12} style={{ color: 'var(--c-text3)', flexShrink: 0 }} />
+          <IconSearch size={13} style={{ color: 'var(--c-text3)', flexShrink: 0 }} />
           <input
             placeholder="Search Shimla, Manali, 31.1, 77.2…"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="flex-1 bg-transparent text-xs outline-none"
+            className="flex-1 bg-transparent text-[13px] outline-none"
             style={{ color: 'var(--c-text)' }} />
           <Mono color="var(--c-text3)">↵</Mono>
         </form>
@@ -104,7 +103,7 @@ export default function Navbar({
         {/* Model selector */}
         <div className="relative hidden md:block z-[1210]">
           <button onClick={() => setModelOpen(v => !v)}
-            className="flex items-center gap-2 h-7 px-3 rounded text-xs transition-colors"
+            className="flex items-center gap-2 h-8 px-3 rounded text-[13px] transition-colors"
             style={{
               background: 'var(--c-panel)',
               border: `1px solid ${modelOpen ? '#00b4d8' : 'var(--c-border)'}`,
@@ -114,7 +113,7 @@ export default function Navbar({
             <div className="w-1.5 h-1.5 rounded-full flex-shrink-0"
               style={{ background: (model === 'Cyclone' || model === 'Drought') ? '#f59e0b' : '#00c896' }} />
             <span className="font-medium" style={{ fontFamily: 'var(--font-body)' }}>{model}</span>
-            <IconChevronD size={10} style={{ color: 'var(--c-text2)', flexShrink: 0, transform: modelOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s ease' }} />
+            <IconChevronD size={11} style={{ color: 'var(--c-text2)', flexShrink: 0, transform: modelOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s ease' }} />
           </button>
           {modelOpen && (
             <div className="absolute left-0 top-full mt-1.5 z-[1220] rounded-lg py-1.5 shadow-2xl min-w-[210px]"
@@ -123,7 +122,7 @@ export default function Navbar({
                 border: '1px solid var(--c-border)',
                 boxShadow: '0 16px 36px rgba(0,0,0,0.7), 0 2px 8px rgba(0,0,0,0.4)',
               }}>
-              <div className="px-3 py-1 text-[10px] uppercase tracking-wider font-semibold border-b mb-1"
+              <div className="px-3 py-1 text-[11px] uppercase tracking-wider font-semibold border-b mb-1"
                 style={{ color: 'var(--c-text3)', borderColor: 'var(--c-border)', fontFamily: 'var(--font-mono)' }}>
                 Susceptibility Model
               </div>
@@ -132,7 +131,7 @@ export default function Navbar({
                 const isPlaceholder = m === 'Cyclone' || m === 'Drought';
                 return (
                   <button key={m} onClick={() => { onModel(m); setModelOpen(false); }}
-                    className="w-full text-left px-3 py-2 text-xs flex items-center justify-between gap-3 transition-colors"
+                    className="w-full text-left px-3 py-2 text-[13px] flex items-center justify-between gap-3 transition-colors"
                     style={{
                       color: isSelected ? '#00b4d8' : 'var(--c-text)',
                       background: isSelected ? 'rgba(0,180,216,0.12)' : 'transparent',
@@ -151,7 +150,7 @@ export default function Navbar({
                     {isSelected ? (
                       <span className="text-xs font-bold flex-shrink-0" style={{ color: '#00b4d8' }}>✓</span>
                     ) : (
-                      <span className="text-[10px] opacity-40 uppercase flex-shrink-0 font-mono">Select</span>
+                      <span className="text-[11px] opacity-40 uppercase flex-shrink-0 font-mono">Select</span>
                     )}
                   </button>
                 );
@@ -163,7 +162,7 @@ export default function Navbar({
         <div className="flex-1" />
 
         {/* Coordinate readout */}
-        <div className="hidden xl:flex items-center gap-1.5 h-6 px-2 rounded text-[10px]"
+        <div className="hidden xl:flex items-center gap-1.5 h-7 px-2.5 rounded text-[11px]"
           style={{ background: 'var(--c-panel)', border: '1px solid var(--c-border)', fontFamily: 'var(--font-mono)', color: '#00b4d8' }}>
           <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
             <circle cx="4" cy="4" r="3" stroke="#00b4d8" strokeWidth="1"/>
@@ -173,7 +172,7 @@ export default function Navbar({
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-1">
           <NavBtn label="Analytics" Icon={IconChart} active={rightOpen} onClick={onRight} />
           <NavBtn label="Compare" Icon={IconCompare} active={compareOpen} onClick={onCompare} />
           <NavBtn label="AI Assistant" Icon={IconBot} active={aiOpen} onClick={onAI} accent />
@@ -184,19 +183,19 @@ export default function Navbar({
           <button
             onClick={onToggleTheme}
             title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-            className="flex items-center gap-1.5 h-7 px-2 rounded text-[11px] font-medium transition-all ml-1"
+            className="flex items-center gap-1.5 h-8 px-2.5 rounded text-[12px] font-medium transition-all ml-1"
             style={{
               color: theme === 'light' ? '#0284c7' : '#f59e0b',
               background: theme === 'light' ? 'rgba(2,132,199,0.1)' : 'rgba(245,158,11,0.1)',
               border: `1px solid ${theme === 'light' ? 'rgba(2,132,199,0.35)' : 'rgba(245,158,11,0.35)'}`,
             }}
           >
-            {theme === 'dark' ? <IconSun size={13} style={{ color: '#f59e0b' }} /> : <IconMoon size={13} style={{ color: '#0284c7' }} />}
+            {theme === 'dark' ? <IconSun size={14} style={{ color: '#f59e0b' }} /> : <IconMoon size={14} style={{ color: '#0284c7' }} />}
             <span className="hidden md:inline font-semibold">{theme === 'dark' ? 'Light' : 'Dark'}</span>
           </button>
 
           <div className="w-px h-5 mx-1" style={{ background: 'var(--c-border)' }} />
-          <div className="px-2 py-0.5 rounded text-[10px] font-semibold"
+          <div className="px-2.5 py-1 rounded text-[11px] font-semibold"
             style={{ background: 'rgba(0,200,150,0.15)', color: '#00c896', border: '1px solid rgba(0,200,150,0.3)', fontFamily: 'var(--font-mono)' }}>
             ONLINE
           </div>
@@ -215,13 +214,13 @@ function NavBtn({ label, Icon, active, onClick, accent }: {
 }) {
   return (
     <button onClick={onClick} title={label}
-      className="flex items-center gap-1.5 h-7 px-2 rounded text-[11px] font-medium transition-all"
+      className="flex items-center gap-1.5 h-8 px-2.5 rounded text-[12px] font-medium transition-all"
       style={{
         color: active ? (accent ? '#00b4d8' : 'var(--c-text)') : 'var(--c-text2)',
         background: active ? (accent ? 'rgba(0,180,216,0.1)' : 'var(--c-panel)') : 'transparent',
         border: active ? `1px solid ${accent ? 'rgba(0,180,216,0.3)' : 'var(--c-border)'}` : '1px solid transparent',
       }}>
-      <Icon size={13} />
+      <Icon size={14} />
       <span className="hidden lg:inline">{label}</span>
     </button>
   );
