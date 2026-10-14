@@ -63,6 +63,7 @@ export default function App() {
   const [layersOpen, setLayersOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [modal, setModal] = useState<AppModal>(null);
+  const [helpSection, setHelpSection] = useState<"guide" | "data-models">("guide");
 
   // Auto-close overlay drawers when switching to small screens
   useEffect(() => {
@@ -473,7 +474,10 @@ export default function App() {
         compareOpen={compareOpen}
         onCompare={() => setCompareOpen((v) => !v)}
         onExport={() => setModal("export")}
-        onHelp={() => setModal("help")}
+        onHelp={() => {
+          setHelpSection("guide");
+          setModal("help");
+        }}
         model={activeModelName}
         onModel={handleModelChange}
         modelsList={models}
@@ -621,6 +625,10 @@ export default function App() {
                   onTabChange={setRightTab}
                   onClose={() => setRightOpen(false)}
                   onSelectLayer={handleSelectLayer}
+                  onOpenHelp={(sec) => {
+                    setHelpSection(sec || "guide");
+                    setModal("help");
+                  }}
                 />
               </div>
             )
@@ -657,6 +665,10 @@ export default function App() {
                     onTabChange={setRightTab}
                     onClose={() => setRightOpen(false)}
                     onSelectLayer={handleSelectLayer}
+                    onOpenHelp={(sec) => {
+                      setHelpSection(sec || "guide");
+                      setModal("help");
+                    }}
                   />
                 </div>
               </div>
@@ -679,6 +691,10 @@ export default function App() {
                     onTabChange={setRightTab}
                     onClose={() => setRightOpen(false)}
                     onSelectLayer={handleSelectLayer}
+                    onOpenHelp={(sec) => {
+                      setHelpSection(sec || "guide");
+                      setModal("help");
+                    }}
                   />
                 </div>
               </div>
@@ -788,6 +804,7 @@ export default function App() {
           modelDetail={modelDetail}
           activeModelId={activeModelId}
           activeModelName={activeModelName}
+          defaultSection={helpSection}
         />
       )}
     </div>

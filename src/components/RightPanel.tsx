@@ -18,6 +18,7 @@ interface Props {
   onTabChange?: (t: RightTab) => void;
   onClose?: () => void;
   onSelectLayer?: (id: string) => void;
+  onOpenHelp?: (section?: "guide" | "data-models") => void;
 }
 
 // Plain-language user-friendly tab definitions (Location Details only)
@@ -39,6 +40,7 @@ export default function RightPanel({
   onTabChange,
   onClose,
   onSelectLayer,
+  onOpenHelp,
 }: Props) {
   const [internalTab, setInternalTab] = useState<RightTab>(
     activeTab || (zone ? "overview" : "statistics"),
@@ -187,7 +189,12 @@ export default function RightPanel({
 
           {tab === "evidence" &&
             (zone ? (
-              <CoverageTab zone={zone} onEvidence={onLayerEvidence} isLandslide={isLandslide} />
+              <CoverageTab
+                zone={zone}
+                onEvidence={onLayerEvidence}
+                isLandslide={isLandslide}
+                onOpenHelp={onOpenHelp}
+              />
             ) : (
               <EmptyState
                 icon={<IconInfo size={20} />}
@@ -670,10 +677,12 @@ function CoverageTab({
   zone,
   onEvidence: _onEvidence,
   isLandslide = false,
+  onOpenHelp,
 }: {
   zone: Zone;
   onEvidence: (id: string) => void;
   isLandslide?: boolean;
+  onOpenHelp?: (section?: "guide" | "data-models") => void;
 }) {
   const coverage = getCoverageInfo(zone.finalStatus, zone.evidenceCount, zone.evidenceTotal);
   const criteria = zone.criteria || [];
@@ -748,7 +757,18 @@ function CoverageTab({
           border: "1px solid var(--c-border)",
         }}
       >
-        <span className="text-xs font-semibold text-[var(--c-text)]">Data Sources & Integrity</span>
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-[var(--c-text)]">Data Sources & Integrity</span>
+          {onOpenHelp && (
+            <button
+              onClick={() => onOpenHelp("data-models")}
+              className="text-[11px] font-medium text-[var(--c-accent)] hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              <span>View Specifications</span>
+              <span>→</span>
+            </button>
+          )}
+        </div>
         <p className="text-xs text-[var(--c-text2)] leading-relaxed m-0">
           Evaluated criteria are derived from verified spatial products including SRTM DEM, CHIRPS
           precipitation, ESA WorldCover, and SoilGrids at 30-meter ground resolution.
