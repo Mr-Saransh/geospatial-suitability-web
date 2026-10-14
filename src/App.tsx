@@ -128,8 +128,20 @@ export default function App() {
       return;
     }
     try {
-      // Fetch models
-      const modelsRes = await api.getModels().catch(() => []);
+      const currentTarget = selectedMapCoordinateRef.current || {
+        lat: 31.8645,
+        lon: 76.792,
+      };
+
+      // Fetch models, model details, statistics, layers, and point inspection in parallel for rapid fast load
+      const [modelsRes, detailRes, statsRes, layersRes, ptRes] = await Promise.all([
+        api.getModels().catch(() => []),
+        api.getModel(activeModelId).catch(() => null),
+        api.getStatistics(activeModelId).catch(() => null),
+        api.getLayers(activeModelId).catch(() => []),
+        api.inspectPoint(activeModelId, currentTarget.lat, currentTarget.lon).catch(() => null),
+      ]);
+
       if (modelsRes.length > 0) {
         setModels(modelsRes);
         const currentValid = modelsRes.some((m) => m.model_id === activeModelId);
@@ -140,20 +152,14 @@ export default function App() {
         }
       }
 
-      // Fetch model details
-      const detailRes = await api.getModel(activeModelId).catch(() => null);
       if (detailRes) {
         setModelDetail(detailRes);
       }
 
-      // Fetch statistics
-      const statsRes = await api.getStatistics(activeModelId).catch(() => null);
       if (statsRes) {
         setStatistics(statsRes);
       }
 
-      // Fetch real canonical layers for active model
-      const layersRes = await api.getLayers(activeModelId).catch(() => []);
       if (layersRes.length > 0) {
         // Filter out internal bitmask raster from public layers
         const publicLayersRes = layersRes.filter(
@@ -227,14 +233,6 @@ export default function App() {
         setLayers(mappedLayers);
       }
 
-      // Query point inspection at currently selected canonical map coordinate
-      const currentTarget = selectedMapCoordinateRef.current || {
-        lat: 31.8645,
-        lon: 76.792,
-      };
-      const ptRes = await api
-        .inspectPoint(activeModelId, currentTarget.lat, currentTarget.lon)
-        .catch(() => null);
       if (ptRes) {
         handlePointInspectionResult(ptRes, currentTarget.lat, currentTarget.lon);
       }

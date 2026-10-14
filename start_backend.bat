@@ -1,4 +1,5 @@
 @echo off
+setlocal
 title MCGSE Backend + Ngrok Static Tunnel
 color 0A
 
@@ -6,9 +7,6 @@ echo.
 echo  =====================================================
 echo   MCGSE Web-GIS  ^|  Permanent 1-Click Launcher
 echo  =====================================================
-echo.
-echo  Starting FastAPI backend on port 8000...
-echo  Starting Ngrok permanent static tunnel...
 echo.
 echo  Live Frontend : https://geospatial-suitability-web.dssintern1.workers.dev
 echo  Permanent API : https://outreach-freely-causal.ngrok-free.dev
@@ -19,19 +17,46 @@ echo  Press Ctrl+C to stop both backend and tunnel.
 echo  =====================================================
 echo.
 
+:: Clean up any leftover processes on port 8000 first
+echo  [1/3] Preparing environment...
+taskkill /FI "WINDOWTITLE eq MCGSE Backend*" /T /F >nul 2>&1
+
 :: Start the backend in a new minimized window
-start "MCGSE Backend" /min cmd /c "cd /d \"C:\Users\ADMIN\Desktop\Private\Saransh project\project\code climate frontend\MCGSE Web-GIS Application Design\backend\" && C:\gee_env\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+echo  [2/3] Starting FastAPI backend on port 8000...
+pushd "%~dp0backend"
+start "MCGSE Backend" /min C:\gee_env\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+popd
 
-:: Wait for backend to be ready
-timeout /t 3 /nobreak >nul
+:: Wait for backend to be ready and healthy
+echo  Waiting for backend health check (http://127.0.0.1:8000/api/v1/health)...
+set READY=0
+for /L %%I in (1,1,15) do (
+    curl.exe -s http://127.0.0.1:8000/api/v1/health >nul 2>&1
+    if not errorlevel 1 (
+        set READY=1
+        goto :backend_ready
+    )
+    timeout /t 1 /nobreak >nul
+)
 
-:: Start ngrok with your permanent static domain
-echo  [NGROK] Connecting to https://outreach-freely-causal.ngrok-free.dev...
+:backend_ready
+if "%READY%"=="0" (
+    echo.
+    echo  [ERROR] Backend failed to start on port 8000 within 15 seconds!
+    echo  Please check C:\gee_env\python.exe and database paths.
+    pause
+    exit /b 1
+)
+
+echo  [SUCCESS] FastAPI backend is live and healthy (200 OK)!
+echo.
+
+:: Start ngrok with permanent static domain
+echo  [3/3] [NGROK] Connecting to https://outreach-freely-causal.ngrok-free.dev...
 echo.
 "C:\Users\ADMIN\Desktop\Private\ngrok.exe" http 8000 --url https://outreach-freely-causal.ngrok-free.dev
 
 echo.
 echo  Tunnel stopped. Closing backend...
-taskkill /FI "WINDOWTITLE eq MCGSE Backend" >nul 2>&1
+taskkill /FI "WINDOWTITLE eq MCGSE Backend*" /T /F >nul 2>&1
 pause
-
