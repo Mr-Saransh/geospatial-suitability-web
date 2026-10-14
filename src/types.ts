@@ -1,7 +1,7 @@
 export type SuitClass = "very-high" | "high" | "moderate" | "low" | "very-low";
-export type RightTab = "overview" | "criteria" | "statistics" | "evidence" | "metadata";
+export type RightTab = "overview" | "criteria" | "statistics" | "evidence" | "metadata" | "ai";
 export type MobileSheet = "layers" | "analyze" | "ai" | "export" | "more" | null;
-export type AppModal = "export" | null;
+export type AppModal = "export" | "help" | null;
 export type BasemapId = "dark" | "satellite" | "topo" | "streets";
 
 export interface Layer {

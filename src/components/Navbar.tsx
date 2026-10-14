@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { HIMACHAL_LOCATIONS } from "../data";
 import type { ModelSummary } from "../lib/api/types";
 import {
   IconSearch,
   IconCompare,
+  IconLayers,
   IconExport,
   IconBot,
   IconHelp,
@@ -12,12 +13,15 @@ import {
   IconSun,
   IconMoon,
   IconChart,
+  IconX,
 } from "../icons";
-import { Mono } from "../ui";
 
 interface Props {
   sidebarOpen: boolean;
   onSidebar: () => void;
+  layersOpen: boolean;
+  onLayers: () => void;
+  layerCount?: number;
   rightOpen: boolean;
   onRight: () => void;
   aiOpen: boolean;
@@ -25,18 +29,58 @@ interface Props {
   compareOpen: boolean;
   onCompare: () => void;
   onExport: () => void;
+  onHelp?: () => void;
   model: string;
   onModel: (m: string) => void;
   modelsList?: ModelSummary[];
-  coord: string;
+  coord?: string;
   onSearchLocation?: (loc: { lat: number; lng: number }) => void;
   theme: "dark" | "light";
   onToggleTheme: () => void;
 }
 
+interface SearchSuggestion {
+  id: string;
+  title: string;
+  subtitle: string;
+  lat: number;
+  lng: number;
+  type: "coordinate" | "place" | "external";
+  isOutsideHp?: boolean;
+}
+
+// Bounding box for Himachal Pradesh roughly 30.3 to 33.3 N, 75.5 to 79.1 E
+function isWithinHimachal(lat: number, lng: number): boolean {
+  return lat >= 30.3 && lat <= 33.3 && lng >= 75.5 && lng <= 79.1;
+}
+
+// Coordinate parser handling various formats
+function parseCoordinates(input: string): { lat: number; lng: number } | null {
+  const clean = input.trim().replace(/[°NSEWnsew]/g, "");
+  // Matches "31.1048, 77.1734" or "31.1048 77.1734" or "31.1048; 77.1734"
+  const match = clean.match(/^(-?\d+(?:\.\d+)?)[,\s;]+(-?\d+(?:\.\d+)?)$/);
+  if (match) {
+    let lat = parseFloat(match[1]);
+    let lng = parseFloat(match[2]);
+    // If user inverted lon/lat (e.g. 77.17, 31.10), auto-correct for India coordinates
+    if (lat > 65 && lat < 90 && lng > 20 && lng < 40) {
+      const temp = lat;
+      lat = lng;
+      lng = temp;
+    }
+    if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+      return { lat, lng };
+    }
+  }
+  return null;
+}
+
 export default function Navbar({
   sidebarOpen,
   onSidebar,
+  layersOpen,
+  onLayers,
+  layerCount,
   rightOpen,
   onRight,
   aiOpen,
@@ -44,291 +88,540 @@ export default function Navbar({
   compareOpen,
   onCompare,
   onExport,
+  onHelp,
   model,
   onModel,
   modelsList: _modelsList,
-  coord,
+  coord: _coord,
   onSearchLocation,
   theme,
   onToggleTheme,
 }: Props) {
   const [modelOpen, setModelOpen] = useState(false);
+  const [overflowOpen, setOverflowOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [isSearchingExternal, setIsSearchingExternal] = useState(false);
 
+  const searchContainerRef = useRef<HTMLDivElement>(null);
   const publicModels = ["Flood", "Landslide", "Cyclone", "Drought"] as const;
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery.trim() || !onSearchLocation) return;
-
-    // Check if query is lat, lon format e.g. "31.1, 77.2"
-    const coordMatch = searchQuery.match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/);
-    if (coordMatch) {
-      const lat = parseFloat(coordMatch[1]);
-      const lng = parseFloat(coordMatch[2]);
-      if (!isNaN(lat) && !isNaN(lng)) {
-        onSearchLocation({ lat, lng });
-        return;
-      }
+  // Search suggestions generator
+  const updateSuggestions = useCallback((query: string) => {
+    const q = query.trim().toLowerCase();
+    if (!q) {
+      setSuggestions([]);
+      setSelectedIndex(-1);
+      return;
     }
 
-    // Check for Himachal location match
-    const loc = HIMACHAL_LOCATIONS.find(
-      (l) =>
-        l.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        l.district.toLowerCase().includes(searchQuery.toLowerCase()),
+    const results: SearchSuggestion[] = [];
+
+    // 1. Direct coordinate parsing
+    const parsed = parseCoordinates(query);
+    if (parsed) {
+      const within = isWithinHimachal(parsed.lat, parsed.lng);
+      results.push({
+        id: `coord-${parsed.lat}-${parsed.lng}`,
+        title: `${parsed.lat.toFixed(4)}°N, ${parsed.lng.toFixed(4)}°E`,
+        subtitle: within
+          ? "Parsed Geographic Coordinates (Himachal Pradesh)"
+          : "Coordinates outside Himachal Pradesh analysis boundary",
+        lat: parsed.lat,
+        lng: parsed.lng,
+        type: "coordinate",
+        isOutsideHp: !within,
+      });
+    }
+
+    // 2. Match local Himachal locations
+    const localMatches = HIMACHAL_LOCATIONS.filter(
+      (loc) => loc.name.toLowerCase().includes(q) || loc.district.toLowerCase().includes(q),
     );
-    if (loc) {
-      onSearchLocation({ lat: loc.lat, lng: loc.lng });
+
+    for (const loc of localMatches) {
+      results.push({
+        id: `loc-${loc.name}`,
+        title: loc.name,
+        subtitle: `${loc.district} District · ${loc.lat.toFixed(4)}°N, ${loc.lng.toFixed(4)}°E`,
+        lat: loc.lat,
+        lng: loc.lng,
+        type: "place",
+      });
     }
+
+    setSuggestions(results);
+    setSelectedIndex(-1);
+  }, []);
+
+  // Debounced search query handler
+  useEffect(() => {
+    updateSuggestions(searchQuery);
+
+    const q = searchQuery.trim();
+    if (q.length >= 3 && !parseCoordinates(q)) {
+      setIsSearchingExternal(true);
+      const timer = setTimeout(() => {
+        // Safe OpenStreetMap Nominatim query prioritizing Himachal Pradesh viewbox
+        fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+            q + " Himachal Pradesh",
+          )}&viewbox=75.5,33.3,79.1,30.3&bounded=0&limit=3`,
+        )
+          .then((res) => (res.ok ? res.json() : []))
+          .then(
+            (data: Array<{ place_id: number; display_name: string; lat: string; lon: string }>) => {
+              if (Array.isArray(data) && data.length > 0) {
+                setSuggestions((prev) => {
+                  const existingIds = new Set(prev.map((s) => s.id));
+                  const newItems: SearchSuggestion[] = [];
+                  for (const item of data) {
+                    const lat = parseFloat(item.lat);
+                    const lng = parseFloat(item.lon);
+                    const id = `osm-${item.place_id}`;
+                    if (!existingIds.has(id) && !isNaN(lat) && !isNaN(lng)) {
+                      newItems.push({
+                        id,
+                        title: item.display_name.split(",")[0],
+                        subtitle: item.display_name.split(",").slice(1, 3).join(",").trim(),
+                        lat,
+                        lng,
+                        type: "external",
+                        isOutsideHp: !isWithinHimachal(lat, lng),
+                      });
+                    }
+                  }
+                  return [...prev, ...newItems].slice(0, 6);
+                });
+              }
+            },
+          )
+          .catch(() => {
+            // Silently fallback to local suggestions
+          })
+          .finally(() => {
+            setIsSearchingExternal(false);
+          });
+      }, 350);
+      return () => clearTimeout(timer);
+    } else {
+      setIsSearchingExternal(false);
+    }
+  }, [searchQuery, updateSuggestions]);
+
+  // Click outside listener for search suggestions
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectSuggestion = (s: SearchSuggestion) => {
+    setSearchQuery(s.title);
+    setShowSuggestions(false);
+    onSearchLocation?.({ lat: s.lat, lng: s.lng });
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!showSuggestions || suggestions.length === 0) {
+      if (e.key === "Enter" && searchQuery.trim()) {
+        e.preventDefault();
+        const parsed = parseCoordinates(searchQuery);
+        if (parsed) {
+          onSearchLocation?.(parsed);
+          setShowSuggestions(false);
+          return;
+        }
+        const firstMatch = HIMACHAL_LOCATIONS.find((l) =>
+          l.name.toLowerCase().includes(searchQuery.toLowerCase()),
+        );
+        if (firstMatch) {
+          onSearchLocation?.({ lat: firstMatch.lat, lng: firstMatch.lng });
+          setShowSuggestions(false);
+        }
+      }
+      return;
+    }
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev < suggestions.length - 1 ? prev + 1 : 0));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : suggestions.length - 1));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
+        selectSuggestion(suggestions[selectedIndex]);
+      } else if (suggestions.length > 0) {
+        selectSuggestion(suggestions[0]);
+      }
+    } else if (e.key === "Escape") {
+      setShowSuggestions(false);
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchQuery("");
+    setSuggestions([]);
+    setShowSuggestions(false);
   };
 
   return (
     <header
       className="flex-shrink-0 z-[1200] relative"
       style={{
-        background: "#080d18",
-        borderBottom: "1px solid #1c2e48",
-        height: 46,
+        background: "var(--c-surface)",
+        borderBottom: "1px solid var(--c-border)",
+        height: 48,
       }}
     >
-      <div className="flex items-center h-full px-3 gap-2">
-        {/* Logo */}
-        <button
-          onClick={onSidebar}
-          className="flex items-center gap-2.5 flex-shrink-0 group"
-          title="Toggle sidebar"
-        >
-          <div
-            className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0 shadow-md"
-            style={{
-              background: "linear-gradient(145deg,#00b4d8 0%,#0096c7 40%,#023e8a 100%)",
-            }}
+      <div className="flex items-center h-full px-3 gap-2 justify-between">
+        {/* Left: Brand + Sidebar toggle */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={onSidebar}
+            className="flex items-center gap-2 p-1.5 rounded transition-colors hover:bg-[rgba(255,255,255,0.05)] text-[var(--c-text)] focus:outline-none"
+            title="Toggle Explore Map Panel"
+            aria-label="Toggle Explore Map Panel"
           >
-            <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
-              <polygon
-                points="10,1 19,6 19,14 10,19 1,14 1,6"
-                stroke="white"
-                strokeWidth="1.4"
-                fill="none"
-              />
-              <circle cx="10" cy="10" r="2.5" fill="white" />
-              <line x1="10" y1="3.5" x2="10" y2="7" stroke="white" strokeWidth="1" />
-              <line x1="10" y1="13" x2="10" y2="16.5" stroke="white" strokeWidth="1" />
-            </svg>
-          </div>
-          <div className="hidden sm:block leading-none">
             <div
-              className="text-[15px] font-semibold tracking-tight"
+              className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0 shadow-sm"
               style={{
-                fontFamily: "var(--font-display)",
+                background: "linear-gradient(135deg, #88B59A 0%, #457358 100%)",
+              }}
+            >
+              <svg width="15" height="15" viewBox="0 0 20 20" fill="none">
+                <polygon
+                  points="10,1 19,6 19,14 10,19 1,14 1,6"
+                  stroke="white"
+                  strokeWidth="1.4"
+                  fill="none"
+                />
+                <circle cx="10" cy="10" r="2.5" fill="white" />
+                <line x1="10" y1="3.5" x2="10" y2="7" stroke="white" strokeWidth="1" />
+                <line x1="10" y1="13" x2="10" y2="16.5" stroke="white" strokeWidth="1" />
+              </svg>
+            </div>
+            <div className="hidden sm:flex flex-col text-left leading-none">
+              <span
+                className="text-[14px] font-semibold tracking-tight text-[var(--c-text)]"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
+                MCGSE
+              </span>
+              <span className="text-[10px] text-[var(--c-text3)] font-mono">Web-GIS</span>
+            </div>
+            <IconSidebar size={13} style={{ color: sidebarOpen ? "var(--c-accent)" : "var(--c-text3)" }} />
+          </button>
+
+          {/* Model selector dropdown */}
+          <div className="relative z-[1210]">
+            <button
+              onClick={() => setModelOpen((v) => !v)}
+              className="flex items-center gap-1.5 h-8 px-2.5 rounded text-xs transition-colors hover:border-[var(--c-border2)] cursor-pointer"
+              style={{
+                background: "var(--c-panel)",
+                border: `1px solid ${modelOpen ? "var(--c-accent)" : "var(--c-border)"}`,
                 color: "var(--c-text)",
               }}
+              title="Select Hazard Model"
             >
-              MCGSE
-            </div>
-          </div>
-          <div className="hidden lg:flex items-center gap-1 ml-1">
-            <IconSidebar size={13} style={{ color: sidebarOpen ? "#00b4d8" : "var(--c-text3)" }} />
-          </div>
-        </button>
-
-        <div className="w-px h-5 mx-1 flex-shrink-0" style={{ background: "var(--c-border)" }} />
-
-        {/* Search */}
-        <form
-          onSubmit={handleSearch}
-          className="flex items-center gap-2 flex-1 max-w-72 h-8 px-2.5 rounded"
-          style={{
-            background: "var(--c-panel)",
-            border: "1px solid var(--c-border)",
-          }}
-        >
-          <IconSearch size={13} style={{ color: "var(--c-text3)", flexShrink: 0 }} />
-          <input
-            placeholder="Search Shimla, Manali, 31.1, 77.2…"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 bg-transparent text-[13px] outline-none"
-            style={{ color: "var(--c-text)" }}
-          />
-          <Mono color="var(--c-text3)">↵</Mono>
-        </form>
-
-        {/* Model selector */}
-        <div className="relative hidden md:block z-[1210]">
-          <button
-            onClick={() => setModelOpen((v) => !v)}
-            className="flex items-center gap-2 h-8 px-3 rounded text-[13px] transition-colors"
-            style={{
-              background: "var(--c-panel)",
-              border: `1px solid ${modelOpen ? "#00b4d8" : "var(--c-border)"}`,
-              color: "var(--c-text)",
-              boxShadow: modelOpen ? "0 0 0 1px rgba(0,180,216,0.3)" : "none",
-            }}
-          >
-            <div
-              className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-              style={{
-                background: model === "Cyclone" || model === "Drought" ? "#f59e0b" : "#00c896",
-              }}
-            />
-            <span className="font-medium" style={{ fontFamily: "var(--font-body)" }}>
-              {model}
-            </span>
-            <IconChevronD
-              size={11}
-              style={{
-                color: "var(--c-text2)",
-                flexShrink: 0,
-                transform: modelOpen ? "rotate(180deg)" : "none",
-                transition: "transform 0.15s ease",
-              }}
-            />
-          </button>
-          {modelOpen && (
-            <div
-              className="absolute left-0 top-full mt-1.5 z-[1220] rounded-lg py-1.5 shadow-2xl min-w-[210px]"
-              style={{
-                background: "var(--c-surface)",
-                border: "1px solid var(--c-border)",
-                boxShadow: "0 16px 36px rgba(0,0,0,0.7), 0 2px 8px rgba(0,0,0,0.4)",
-              }}
-            >
-              <div
-                className="px-3 py-1 text-[11px] uppercase tracking-wider font-semibold border-b mb-1"
+              <span
+                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
                 style={{
-                  color: "var(--c-text3)",
-                  borderColor: "var(--c-border)",
-                  fontFamily: "var(--font-mono)",
+                  background: model === "Cyclone" || model === "Drought" ? "var(--c-sand)" : "var(--c-accent)",
+                }}
+              />
+              <span className="font-medium">{model}</span>
+              <IconChevronD
+                size={10}
+                style={{
+                  color: "var(--c-text2)",
+                  transform: modelOpen ? "rotate(180deg)" : "none",
+                  transition: "transform 0.15s ease",
+                }}
+              />
+            </button>
+            {modelOpen && (
+              <div
+                className="absolute left-0 top-full mt-1.5 z-[1220] rounded-lg py-1 shadow-2xl min-w-[190px]"
+                style={{
+                  background: "var(--c-surface)",
+                  border: "1px solid var(--c-border)",
+                  boxShadow: "0 12px 32px rgba(0,0,0,0.5)",
                 }}
               >
-                Susceptibility Model
+                <div
+                  className="px-3 py-1 text-[10px] uppercase tracking-wider font-semibold border-b text-[var(--c-text3)] font-mono"
+                  style={{ borderColor: "var(--c-border)" }}
+                >
+                  Susceptibility Model
+                </div>
+                {publicModels.map((m) => {
+                  const isSelected = m === model;
+                  const isPlaceholder = m === "Cyclone" || m === "Drought";
+                  return (
+                    <button
+                      key={m}
+                      onClick={() => {
+                        onModel(m);
+                        setModelOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-1.5 text-xs flex items-center justify-between gap-2 transition-colors hover:bg-[rgba(255,255,255,0.04)] cursor-pointer"
+                      style={{
+                        color: isSelected ? "var(--c-accent)" : "var(--c-text)",
+                        background: isSelected ? "var(--c-accent-dim)" : "transparent",
+                      }}
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <span
+                          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                          style={{
+                            background: isSelected
+                              ? "var(--c-accent)"
+                              : isPlaceholder
+                                ? "var(--c-text3)"
+                                : "var(--c-accent)",
+                          }}
+                        />
+                        <span className="font-medium">{m}</span>
+                      </div>
+                      {isSelected && (
+                        <span className="text-[11px] font-bold text-[var(--c-accent)]">✓</span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
-              {publicModels.map((m) => {
-                const isSelected = m === model;
-                const isPlaceholder = m === "Cyclone" || m === "Drought";
-                return (
-                  <button
-                    key={m}
-                    onClick={() => {
-                      onModel(m);
-                      setModelOpen(false);
-                    }}
-                    className="w-full text-left px-3 py-2 text-[13px] flex items-center justify-between gap-3 transition-colors"
-                    style={{
-                      color: isSelected ? "#00b4d8" : "var(--c-text)",
-                      background: isSelected ? "rgba(0,180,216,0.12)" : "transparent",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isSelected)
-                        (e.currentTarget as HTMLElement).style.background =
-                          "rgba(255,255,255,0.04)";
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isSelected)
-                        (e.currentTarget as HTMLElement).style.background = "transparent";
-                    }}
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      <span
-                        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                        style={{
-                          background: isSelected
-                            ? "#00b4d8"
-                            : isPlaceholder
-                              ? "var(--c-text3)"
-                              : "#00c896",
-                        }}
-                      />
-                      <span className="truncate font-medium">{m}</span>
-                    </div>
-                    {isSelected ? (
-                      <span
-                        className="text-xs font-bold flex-shrink-0"
-                        style={{ color: "#00b4d8" }}
-                      >
-                        ✓
-                      </span>
-                    ) : (
-                      <span className="text-[11px] opacity-40 uppercase flex-shrink-0 font-mono">
-                        Select
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+            )}
+          </div>
+        </div>
+
+        {/* Center: Search input + Map Tools beside it */}
+        <div className="flex items-center gap-1.5 flex-1 max-w-[560px] mx-1 sm:mx-2">
+          {/* Global Location Search */}
+          <div className="relative flex-1 min-w-0" ref={searchContainerRef}>
+            <div
+              className="flex items-center gap-2 h-8 px-2.5 rounded transition-all"
+              style={{
+                background: "var(--c-panel)",
+                border: `1px solid ${showSuggestions && suggestions.length > 0 ? "var(--c-accent)" : "var(--c-border)"}`,
+              }}
+            >
+              <IconSearch size={13} style={{ color: "var(--c-text3)", flexShrink: 0 }} />
+              <input
+                placeholder="Search place or coordinates…"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowSuggestions(true);
+                }}
+                onFocus={() => {
+                  if (searchQuery.trim()) setShowSuggestions(true);
+                }}
+                onKeyDown={handleKeyDown}
+                className="flex-1 bg-transparent text-xs outline-none text-[var(--c-text)] placeholder:text-[var(--c-text3)] min-w-0"
+              />
+              {isSearchingExternal && (
+                <span className="w-2.5 h-2.5 rounded-full border border-[var(--c-accent)] border-t-transparent animate-spin flex-shrink-0" />
+              )}
+              {searchQuery && (
+                <button
+                  onClick={clearSearch}
+                  className="w-4 h-4 flex items-center justify-center rounded text-[var(--c-text3)] hover:text-[var(--c-text)] transition-colors cursor-pointer"
+                  title="Clear search"
+                >
+                  <IconX size={11} />
+                </button>
+              )}
             </div>
-          )}
+
+            {/* Search suggestions dropdown */}
+            {showSuggestions && suggestions.length > 0 && (
+              <div
+                className="absolute left-0 right-0 top-full mt-1.5 z-[1300] rounded-lg py-1 shadow-2xl overflow-hidden max-h-72 overflow-y-auto"
+                style={{
+                  background: "var(--c-surface)",
+                  border: "1px solid var(--c-border)",
+                  boxShadow: "0 16px 40px rgba(0,0,0,0.6)",
+                }}
+              >
+                <div className="px-3 py-1 text-[10px] uppercase font-mono tracking-wider text-[var(--c-text3)] border-b border-[var(--c-border)]">
+                  Suggested Locations & Coordinates
+                </div>
+                {suggestions.map((s, idx) => (
+                  <button
+                    key={s.id}
+                    onClick={() => selectSuggestion(s)}
+                    className="w-full text-left px-3 py-2 flex items-center justify-between gap-2 transition-colors cursor-pointer"
+                    style={{
+                      background: selectedIndex === idx ? "var(--c-accent-dim)" : "transparent",
+                    }}
+                    onMouseEnter={() => setSelectedIndex(idx)}
+                  >
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-xs font-semibold text-[var(--c-text)] truncate">
+                        {s.title}
+                      </span>
+                      <span className="text-[11px] text-[var(--c-text2)] truncate">{s.subtitle}</span>
+                    </div>
+                    <span
+                      className="text-[9px] px-1.5 py-0.5 rounded font-mono flex-shrink-0"
+                      style={{
+                        background: s.isOutsideHp ? "rgba(239,68,68,0.15)" : "var(--c-panel)",
+                        color: s.isOutsideHp ? "#ef4444" : "var(--c-text3)",
+                        border: "1px solid var(--c-border)",
+                      }}
+                    >
+                      {s.isOutsideHp ? "Outside HP" : s.type === "coordinate" ? "Coords" : "Location"}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Map Layers Action Button (Beside Search) */}
+          <button
+            onClick={onLayers}
+            title="Map Layers (Toggle Floating Panel)"
+            className="flex items-center gap-1.5 h-8 px-2.5 rounded text-xs font-medium transition-all cursor-pointer flex-shrink-0"
+            style={{
+              background: layersOpen ? "var(--c-accent-dim)" : "var(--c-panel)",
+              border: `1px solid ${layersOpen ? "var(--c-accent)" : "var(--c-border)"}`,
+              color: layersOpen ? "var(--c-accent)" : "var(--c-text)",
+            }}
+          >
+            <IconLayers size={13} style={{ color: layersOpen ? "var(--c-accent)" : "var(--c-text2)" }} />
+            <span className="hidden sm:inline">Layers</span>
+            {layerCount !== undefined && (
+              <span
+                className="text-[10px] font-mono px-1 py-0.2 rounded"
+                style={{
+                  background: layersOpen ? "var(--c-accent)" : "var(--c-border2)",
+                  color: layersOpen ? "var(--c-base)" : "var(--c-text2)",
+                }}
+              >
+                {layerCount}
+              </span>
+            )}
+          </button>
+
+          {/* Compare Layers Action Button (Beside Search) */}
+          <button
+            onClick={onCompare}
+            title="Compare Layers"
+            className="flex items-center gap-1.5 h-8 px-2.5 rounded text-xs font-medium transition-all cursor-pointer flex-shrink-0"
+            style={{
+              background: compareOpen ? "var(--c-accent-dim)" : "var(--c-panel)",
+              border: `1px solid ${compareOpen ? "var(--c-accent)" : "var(--c-border)"}`,
+              color: compareOpen ? "var(--c-accent)" : "var(--c-text2)",
+            }}
+          >
+            <IconCompare size={13} style={{ color: compareOpen ? "var(--c-accent)" : "var(--c-text2)" }} />
+            <span className="hidden md:inline">Compare</span>
+          </button>
         </div>
 
-        <div className="flex-1" />
+        {/* Right: Actions */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {/* Analytics — hidden on mobile (available in bottom nav) */}
+          <div className="hidden md:flex">
+            <NavBtn label="Analytics" Icon={IconChart} active={rightOpen} onClick={onRight} />
+          </div>
 
-        {/* Coordinate readout */}
-        <div
-          className="hidden xl:flex items-center gap-1.5 h-7 px-2.5 rounded text-[11px]"
-          style={{
-            background: "var(--c-panel)",
-            border: "1px solid var(--c-border)",
-            fontFamily: "var(--font-mono)",
-            color: "#00b4d8",
-          }}
-        >
-          <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-            <circle cx="4" cy="4" r="3" stroke="#00b4d8" strokeWidth="1" />
-            <circle cx="4" cy="4" r="1" fill="#00b4d8" />
-          </svg>
-          {coord}
-        </div>
+          {/* AI Assistant — hidden on mobile (available in bottom nav) */}
+          <div className="hidden md:flex">
+            <NavBtn label="AI Assistant" Icon={IconBot} active={aiOpen} onClick={onAI} />
+          </div>
 
-        {/* Action buttons */}
-        <div className="flex items-center gap-1">
-          <NavBtn label="Analytics" Icon={IconChart} active={rightOpen} onClick={onRight} />
-          <NavBtn label="Compare" Icon={IconCompare} active={compareOpen} onClick={onCompare} />
-          <NavBtn label="AI Assistant" Icon={IconBot} active={aiOpen} onClick={onAI} accent />
-          <NavBtn label="Export" Icon={IconExport} onClick={onExport} />
-          <NavBtn label="Help" Icon={IconHelp} />
+          {/* Secondary actions (Desktop) */}
+          <div className="hidden lg:flex items-center gap-1">
+            <NavBtn label="Export" Icon={IconExport} onClick={onExport} />
+            <NavBtn label="Help" Icon={IconHelp} onClick={onHelp} />
+          </div>
 
-          {/* Light / Dark Mode Toggle Switch */}
+          {/* Theme Switcher */}
           <button
             onClick={onToggleTheme}
             title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            className="flex items-center gap-1.5 h-8 px-2.5 rounded text-[12px] font-medium transition-all ml-1"
-            style={{
-              color: theme === "light" ? "#0284c7" : "#f59e0b",
-              background: theme === "light" ? "rgba(2,132,199,0.1)" : "rgba(245,158,11,0.1)",
-              border: `1px solid ${
-                theme === "light" ? "rgba(2,132,199,0.35)" : "rgba(245,158,11,0.35)"
-              }`,
-            }}
+            className="w-8 h-8 flex items-center justify-center rounded text-xs transition-colors hover:bg-[rgba(255,255,255,0.05)]"
+            style={{ color: theme === "dark" ? "#f59e0b" : "#0284c7" }}
           >
-            {theme === "dark" ? (
-              <IconSun size={14} style={{ color: "#f59e0b" }} />
-            ) : (
-              <IconMoon size={14} style={{ color: "#0284c7" }} />
-            )}
-            <span className="hidden md:inline font-semibold">
-              {theme === "dark" ? "Light" : "Dark"}
-            </span>
+            {theme === "dark" ? <IconSun size={14} /> : <IconMoon size={14} />}
           </button>
 
-          <div className="w-px h-5 mx-1" style={{ background: "var(--c-border)" }} />
-          <div
-            className="px-2.5 py-1 rounded text-[11px] font-semibold"
-            style={{
-              background: "rgba(0,200,150,0.15)",
-              color: "#00c896",
-              border: "1px solid rgba(0,200,150,0.3)",
-              fontFamily: "var(--font-mono)",
-            }}
-          >
-            ONLINE
+          {/* Overflow Menu for smaller screens */}
+          <div className="relative lg:hidden">
+            <button
+              onClick={() => setOverflowOpen((v) => !v)}
+              className="w-8 h-8 flex items-center justify-center rounded text-xs transition-colors hover:bg-[rgba(255,255,255,0.05)] text-[var(--c-text2)]"
+              title="More actions"
+            >
+              •••
+            </button>
+            {overflowOpen && (
+              <div
+                className="absolute right-0 top-full mt-1.5 z-[1220] rounded-lg py-1 shadow-2xl min-w-[160px]"
+                style={{
+                  background: "var(--c-surface)",
+                  border: "1px solid var(--c-border)",
+                  boxShadow: "0 12px 32px rgba(0,0,0,0.5)",
+                }}
+              >
+                <button
+                  onClick={() => {
+                    onCompare();
+                    setOverflowOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs flex items-center gap-2.5 hover:bg-[rgba(255,255,255,0.04)] text-[var(--c-text)]"
+                >
+                  <IconCompare size={13} />
+                  <span>Compare Layers</span>
+                </button>
+                <button
+                  onClick={() => {
+                    onExport();
+                    setOverflowOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs flex items-center gap-2.5 hover:bg-[rgba(255,255,255,0.04)] text-[var(--c-text)]"
+                >
+                  <IconExport size={13} />
+                  <span>Export Data</span>
+                </button>
+                <button
+                  onClick={() => {
+                    onHelp?.();
+                    setOverflowOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs flex items-center gap-2.5 hover:bg-[rgba(255,255,255,0.04)] text-[var(--c-text)]"
+                >
+                  <IconHelp size={13} />
+                  <span>Help & Guide</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Close model dropdown backdrop */}
-      {modelOpen && <div className="fixed inset-0 z-[1200]" onClick={() => setModelOpen(false)} />}
+      {/* Backdrop for dropdowns */}
+      {(modelOpen || overflowOpen) && (
+        <div
+          className="fixed inset-0 z-[1200]"
+          onClick={() => {
+            setModelOpen(false);
+            setOverflowOpen(false);
+          }}
+        />
+      )}
     </header>
   );
 }
@@ -338,29 +631,25 @@ function NavBtn({
   Icon,
   active,
   onClick,
-  accent,
 }: {
   label: string;
   Icon: (p: { size?: number; style?: React.CSSProperties }) => React.ReactNode;
   active?: boolean;
   onClick?: () => void;
-  accent?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
       title={label}
-      className="flex items-center gap-1.5 h-8 px-2.5 rounded text-[12px] font-medium transition-all"
+      className="flex items-center gap-1.5 h-8 px-2.5 rounded text-xs font-medium transition-all cursor-pointer"
       style={{
-        color: active ? (accent ? "#00b4d8" : "var(--c-text)") : "var(--c-text2)",
-        background: active ? (accent ? "rgba(0,180,216,0.1)" : "var(--c-panel)") : "transparent",
-        border: active
-          ? `1px solid ${accent ? "rgba(0,180,216,0.3)" : "var(--c-border)"}`
-          : "1px solid transparent",
+        color: active ? "var(--c-accent)" : "var(--c-text2)",
+        background: active ? "var(--c-accent-dim)" : "transparent",
+        border: active ? "1px solid var(--c-accent)" : "1px solid transparent",
       }}
     >
-      <Icon size={14} />
-      <span className="hidden lg:inline">{label}</span>
+      <Icon size={13} style={{ color: active ? "var(--c-accent)" : "currentColor" }} />
+      <span className="hidden xl:inline">{label}</span>
     </button>
   );
 }

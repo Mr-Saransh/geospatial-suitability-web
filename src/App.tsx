@@ -3,10 +3,11 @@ import Navbar from "./components/Navbar";
 import Sidebar from "./components/Sidebar";
 import MapCanvas from "./components/MapCanvas";
 import RightPanel from "./components/RightPanel";
+import MapLayersPanel from "./components/MapLayersPanel";
 import AIPanel from "./components/AIPanel";
 import ExportCenter from "./components/ExportCenter";
+import HelpModal from "./components/HelpModal";
 import ResultPopup from "./components/ResultPopup";
-import MobileApp from "./components/MobileApp";
 import {
   INITIAL_LAYERS,
   INITIAL_ZONE,
@@ -25,26 +26,50 @@ import type {
   CriterionSample,
 } from "./lib/api/types";
 import { getCoverageInfo } from "./utils/coverage";
+import { IconMap, IconLayers, IconAnalyze, IconChart, IconBot } from "./icons";
 
-function useIsMobile() {
-  const [mobile, setMobile] = useState(window.innerWidth < 640);
+function useViewport() {
+  const [viewport, setViewport] = useState({
+    isMobile: typeof window !== "undefined" ? window.innerWidth < 768 : false,
+    isTablet:
+      typeof window !== "undefined" ? window.innerWidth >= 768 && window.innerWidth < 1024 : false,
+    isDesktop: typeof window !== "undefined" ? window.innerWidth >= 1024 : true,
+  });
+
   useEffect(() => {
-    const h = () => setMobile(window.innerWidth < 640);
-    window.addEventListener("resize", h);
-    return () => window.removeEventListener("resize", h);
+    const handleResize = () => {
+      const w = window.innerWidth;
+      setViewport({
+        isMobile: w < 768,
+        isTablet: w >= 768 && w < 1024,
+        isDesktop: w >= 1024,
+      });
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
-  return mobile;
+
+  return viewport;
 }
 
 export default function App() {
-  const isMobile = useIsMobile();
+  const { isMobile, isTablet: _isTablet, isDesktop } = useViewport();
 
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // On smaller screens, start with panels closed so the map is primary
+  const [sidebarOpen, setSidebarOpen] = useState(isDesktop);
   const [rightOpen, setRightOpen] = useState(false);
   const [rightTab, setRightTab] = useState<RightTab>("overview");
-  const [aiOpen, setAiOpen] = useState(false);
   const [compareOpen, setCompareOpen] = useState(false);
+  const [layersOpen, setLayersOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const [modal, setModal] = useState<AppModal>(null);
+
+  // Auto-close overlay drawers when switching to small screens
+  useEffect(() => {
+    if (!isDesktop) {
+      setSidebarOpen(false);
+    }
+  }, [isDesktop]);
 
   // Backend state
   const [models, setModels] = useState<ModelSummary[]>([]);
@@ -59,10 +84,7 @@ export default function App() {
     "flood_11_factor_v1_available_evidence_suitability_classified",
   );
 
-  // ── 2. SINGLE SOURCE OF TRUTH FOR MAP LOCATION ────────────────────────────────
-  // There is ONE selected coordinate for the entire map (WGS84 EPSG:4326).
-  // It belongs to the MAP, not to any raster layer.
-  // Switching between Continuous and Classified raster layers must NEVER change this.
+  // ── SINGLE SOURCE OF TRUTH FOR MAP LOCATION ────────────────────────────────
   const [selectedMapCoordinate, setSelectedMapCoordinate] = useState<{
     lat: number;
     lon: number;
@@ -94,9 +116,7 @@ export default function App() {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
-  // ── 1. Fetch backend models, layers, stats, and metadata on load ─────────────────
-  // NOTE: activeLayerId is deliberately excluded from dependencies to ensure switching
-  // layers NEVER reloads the backend or overwrites the user's selectedMapCoordinate!
+  // ── Fetch backend models, layers, stats, and metadata on load ─────────────────
   const loadBackend = useCallback(async () => {
     if (activeModelId === "cyclone" || activeModelId === "drought") {
       setLayers([]);
@@ -228,12 +248,6 @@ export default function App() {
 
   // Transform backend point inspection response to Zone structure
   const handlePointInspectionResult = (pt: PointInspectionResponse, lat: number, lon: number) => {
-    if (import.meta.env?.DEV) {
-      console.log(
-        `[Canonical Map Point Sync] lat=${lat}, lon=${lon}, continuous_score=${pt.continuous_score}, classified_value=${pt.classified_value}`,
-      );
-    }
-
     const rawScore =
       pt.continuous_score !== null && pt.continuous_score !== undefined ? pt.continuous_score : 0;
     const classifiedVal =
@@ -249,7 +263,6 @@ export default function App() {
               : 1);
     const cls = classValueToSuitClass(classifiedVal);
 
-    // Support both Array and Object criteria from backend
     type CriterionEntry = CriterionSample & { [key: string]: unknown };
     const rawCriteria: CriterionEntry[] = Array.isArray(pt.criteria)
       ? (pt.criteria as CriterionEntry[])
@@ -328,15 +341,13 @@ export default function App() {
     setSelectedZone(newZone);
   };
 
-  // ── 2. Handle map point click (Live Backend Inspection) ──────────────────────
+  // ── Handle map point click (Live Backend Inspection) ──────────────────────
   const handlePointClick = useCallback(
     async (lat: number, lon: number) => {
-      // Instantly set canonical coordinate single source of truth
       setSelectedMapCoordinate({ lat, lon });
       selectedMapCoordinateRef.current = { lat, lon };
 
       if (activeModelId === "cyclone" || activeModelId === "drought") {
-        // Placeholder model: do not make API calls or fabricate fake data
         return;
       }
 
@@ -344,12 +355,10 @@ export default function App() {
       try {
         const pt = await api.inspectPoint(activeModelId, lat, lon);
         handlePointInspectionResult(pt, lat, lon);
-        // Auto open right panel on inspection overview
         setRightTab("overview");
         setRightOpen(true);
       } catch (err) {
         console.error("Point inspection failed:", err);
-        // Fallback preserves clicked geographic coordinates
         setSelectedZone({
           id: `pt-${lat.toFixed(4)}-${lon.toFixed(4)}`,
           label: `${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E`,
@@ -374,8 +383,6 @@ export default function App() {
     [activeModelId],
   );
 
-  // ── 3. Handle layer selection for map rendering ──────────────────────────────
-  // Switching between Continuous and Classified NEVER changes selectedMapCoordinate!
   const handleSelectLayer = (id: string) => {
     setActiveLayerId(id);
     setLayers((prev) =>
@@ -423,7 +430,6 @@ export default function App() {
       setActiveModelId("landslide_14_factor_v1");
       return;
     }
-    // Default to Flood
     setActiveModelName("Flood");
     setActiveModelId("flood_11_factor_v1");
   };
@@ -444,24 +450,30 @@ export default function App() {
     }
   };
 
+  const handleToggleAI = () => {
+    setAiOpen((v) => !v);
+  };
+
   const activeLayer =
     layers.find((l) => l.id === activeLayerId) || layers.find((l) => l.visible) || null;
 
-  if (isMobile) return <MobileApp />;
-
   return (
     <div className="flex flex-col h-full overflow-hidden" style={{ background: "var(--c-base)" }}>
-      {/* Navbar */}
+      {/* Navbar with simplified navigation and functional search & help */}
       <Navbar
         sidebarOpen={sidebarOpen}
         onSidebar={() => setSidebarOpen((v) => !v)}
-        rightOpen={rightOpen}
+        layersOpen={layersOpen}
+        onLayers={() => setLayersOpen((v) => !v)}
+        layerCount={layers.filter((l) => l.visible).length}
+        rightOpen={rightOpen && rightTab === "statistics"}
         onRight={handleToggleAnalytics}
         aiOpen={aiOpen}
-        onAI={() => setAiOpen((v) => !v)}
+        onAI={handleToggleAI}
         compareOpen={compareOpen}
         onCompare={() => setCompareOpen((v) => !v)}
         onExport={() => setModal("export")}
+        onHelp={() => setModal("help")}
         model={activeModelName}
         onModel={handleModelChange}
         modelsList={models}
@@ -471,26 +483,60 @@ export default function App() {
         onToggleTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
       />
 
-      {/* Body */}
+      {/* Main Workspace Body */}
       <div className="flex flex-1 overflow-hidden relative z-0">
-        {/* Left sidebar */}
-        <Sidebar
-          open={sidebarOpen}
-          layers={layers}
-          setLayers={setLayers}
-          activeLayerId={activeLayerId}
-          onSelectLayer={handleSelectLayer}
-          onLayerEvidence={handleLayerEvidence}
-          basemap={basemap}
-          onBasemap={setBasemap}
-          onSelectLocation={handleLocationFly}
-          modelName={activeModelName}
-          onModelChange={handleModelChange}
-          activeModelId={activeModelId}
-          onRefresh={loadBackend}
-        />
+        {/* Left Sidebar (Desktop: Flex column, Tablet/Mobile: Slide-over Drawer) */}
+        {isDesktop ? (
+          <Sidebar
+            open={sidebarOpen}
+            layers={layers}
+            setLayers={setLayers}
+            activeLayerId={activeLayerId}
+            onSelectLayer={handleSelectLayer}
+            onLayerEvidence={handleLayerEvidence}
+            basemap={basemap}
+            onBasemap={setBasemap}
+            onSelectLocation={handleLocationFly}
+            modelName={activeModelName}
+            onModelChange={handleModelChange}
+            activeModelId={activeModelId}
+            onRefresh={loadBackend}
+            onCollapse={() => setSidebarOpen(false)}
+          />
+        ) : (
+          sidebarOpen && (
+            <div className="fixed inset-x-0 top-12 bottom-14 z-[1250] flex pointer-events-none">
+              <div
+                className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity pointer-events-auto"
+                onClick={() => setSidebarOpen(false)}
+              />
+              <div className="relative z-10 w-[265px] max-w-[75vw] h-full shadow-2xl flex flex-col overflow-hidden pointer-events-auto border-r border-[var(--c-border)]">
+                <Sidebar
+                  open={true}
+                  isMobile={true}
+                  layers={layers}
+                  setLayers={setLayers}
+                  activeLayerId={activeLayerId}
+                  onSelectLayer={handleSelectLayer}
+                  onLayerEvidence={handleLayerEvidence}
+                  basemap={basemap}
+                  onBasemap={setBasemap}
+                  onSelectLocation={(loc) => {
+                    handleLocationFly(loc);
+                    setSidebarOpen(false);
+                  }}
+                  modelName={activeModelName}
+                  onModelChange={handleModelChange}
+                  activeModelId={activeModelId}
+                  onRefresh={loadBackend}
+                  onCollapse={() => setSidebarOpen(false)}
+                />
+              </div>
+            </div>
+          )
+        )}
 
-        {/* Map + popup */}
+        {/* Map Canvas (Dominant centerpiece) */}
         <div className="relative flex-1 overflow-hidden">
           <MapCanvas
             selectedZone={selectedZone}
@@ -499,6 +545,8 @@ export default function App() {
             activeLayer={activeLayer}
             compareMode={compareOpen}
             onCompare={() => setCompareOpen((v) => !v)}
+            layersOpen={layersOpen}
+            onToggleLayers={() => setLayersOpen((v) => !v)}
             basemap={basemap}
             onCoordChange={setCoord}
             centerTarget={centerTarget}
@@ -506,6 +554,33 @@ export default function App() {
             activeModelId={activeModelId}
             activeModelName={activeModelName}
           />
+
+          {/* Floating Map Layers Panel */}
+          <MapLayersPanel
+            open={layersOpen}
+            onClose={() => setLayersOpen(false)}
+            layers={layers}
+            setLayers={setLayers}
+            activeLayerId={activeLayerId}
+            onSelectLayer={handleSelectLayer}
+            onLayerEvidence={handleLayerEvidence}
+            modelName={activeModelName}
+            isMobile={isMobile}
+          />
+
+          {/* Independent Floating AI Assistant Panel */}
+          {aiOpen && (
+            <AIPanel
+              zone={selectedZone}
+              activeLayer={activeLayer}
+              onClose={() => setAiOpen(false)}
+              onLayerEvidence={handleLayerEvidence}
+              onSelectLayer={handleSelectLayer}
+              activeModelId={activeModelId}
+              activeModelName={activeModelName}
+              isMobile={isMobile}
+            />
+          )}
 
           {/* Quick Floating inspection result chip if right panel closed */}
           {selectedZone && !rightOpen && (
@@ -526,55 +601,175 @@ export default function App() {
               loading={loadingInspection}
             />
           )}
-
-          {/* Map floating controls */}
-          <div className="absolute bottom-4 left-4 z-10 flex items-center gap-2 pointer-events-auto">
-            <div
-              className="px-3 py-1.5 rounded text-[12px] font-mono flex items-center gap-2"
-              style={{
-                background: "var(--c-panel)",
-                border: "1px solid var(--c-border)",
-                color: "var(--c-text2)",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
-              }}
-            >
-              <span className="w-2 h-2 rounded-full bg-[#00b4d8] animate-pulse" />
-              <span>{activeLayer ? activeLayer.name : "No Layer Active"}</span>
-              <span className="opacity-40">|</span>
-              <span className="text-[11px] opacity-75">{coord}</span>
-            </div>
-          </div>
         </div>
 
-        {/* Right side analytical inspector */}
-        {rightOpen && (
-          <RightPanel
-            zone={selectedZone}
-            onLayerEvidence={handleLayerEvidence}
-            statistics={statistics}
-            modelDetail={modelDetail}
-            activeModelId={activeModelId}
-            activeModelName={activeModelName}
-            activeTab={rightTab}
-            onTabChange={setRightTab}
-            onClose={() => setRightOpen(false)}
-          />
-        )}
-
-        {/* AI copilot floating panel */}
-        {aiOpen && (
-          <AIPanel
-            open={aiOpen}
-            onClose={() => setAiOpen(false)}
-            zone={selectedZone}
-            activeLayer={activeLayer}
-            onSelectLayer={handleSelectLayer}
-            onLayerEvidence={handleLayerEvidence}
-            activeModelId={activeModelId}
-            activeModelName={activeModelName}
-          />
-        )}
+        {/* Unified Right-Side Workspace */}
+        {/* Desktop: Inline flex panel */}
+        {/* Tablet: Side-over drawer from right */}
+        {/* Mobile: Bottom sheet sliding up */}
+        {isDesktop
+          ? rightOpen && (
+              <div style={{ borderLeft: "1px solid var(--c-border)" }}>
+                <RightPanel
+                  zone={selectedZone}
+                  onLayerEvidence={handleLayerEvidence}
+                  statistics={statistics}
+                  modelDetail={modelDetail}
+                  activeModelId={activeModelId}
+                  activeModelName={activeModelName}
+                  activeTab={rightTab}
+                  onTabChange={setRightTab}
+                  onClose={() => setRightOpen(false)}
+                  onSelectLayer={handleSelectLayer}
+                />
+              </div>
+            )
+          : rightOpen &&
+            (isMobile ? (
+              /* ── Mobile Bottom Sheet (docked above bottom nav, fully scrollable) ── */
+              <div className="fixed inset-x-0 top-0 bottom-14 z-[1250] flex flex-col justify-end pointer-events-none">
+                <div
+                  className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity pointer-events-auto"
+                  onClick={() => setRightOpen(false)}
+                />
+                <div
+                  className="relative z-10 flex flex-col shadow-2xl bottom-sheet-enter mobile-bottom-sheet overflow-hidden pointer-events-auto"
+                  style={{
+                    background: "var(--c-surface)",
+                    borderRadius: "16px 16px 0 0",
+                    height: "75vh",
+                    maxHeight: "calc(100dvh - 120px)",
+                    minHeight: "45vh",
+                    border: "1px solid var(--c-border)",
+                    borderBottom: "none",
+                  }}
+                >
+                  {/* Drag handle */}
+                  <div className="drag-handle flex-shrink-0" />
+                  <RightPanel
+                    zone={selectedZone}
+                    onLayerEvidence={handleLayerEvidence}
+                    statistics={statistics}
+                    modelDetail={modelDetail}
+                    activeModelId={activeModelId}
+                    activeModelName={activeModelName}
+                    activeTab={rightTab}
+                    onTabChange={setRightTab}
+                    onClose={() => setRightOpen(false)}
+                    onSelectLayer={handleSelectLayer}
+                  />
+                </div>
+              </div>
+            ) : (
+              /* ── Tablet Side Drawer ── */
+              <div className="fixed inset-0 z-[1250] flex justify-end">
+                <div
+                  className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+                  onClick={() => setRightOpen(false)}
+                />
+                <div className="relative z-10 w-[420px] max-w-[85vw] h-full shadow-2xl flex flex-col">
+                  <RightPanel
+                    zone={selectedZone}
+                    onLayerEvidence={handleLayerEvidence}
+                    statistics={statistics}
+                    modelDetail={modelDetail}
+                    activeModelId={activeModelId}
+                    activeModelName={activeModelName}
+                    activeTab={rightTab}
+                    onTabChange={setRightTab}
+                    onClose={() => setRightOpen(false)}
+                    onSelectLayer={handleSelectLayer}
+                  />
+                </div>
+              </div>
+            ))}
       </div>
+
+      {/* Mobile Bottom Navigation Bar (< 768px) — Touch Friendly */}
+      {isMobile && (
+        <nav
+          className="mobile-bottom-nav flex-shrink-0 z-[1200] flex items-stretch h-14 border-t select-none"
+          style={{
+            background: "var(--c-surface)",
+            borderColor: "var(--c-border)",
+          }}
+        >
+          {[
+            {
+              id: "map",
+              label: "Map",
+              Icon: IconMap,
+              active: !sidebarOpen && !rightOpen,
+              onClick: () => {
+                setSidebarOpen(false);
+                setRightOpen(false);
+              },
+            },
+            {
+              id: "layers",
+              label: "Layers",
+              Icon: IconLayers,
+              active: layersOpen,
+              onClick: () => {
+                setRightOpen(false);
+                setAiOpen(false);
+                setLayersOpen((v) => !v);
+              },
+            },
+            {
+              id: "location",
+              label: "Location",
+              Icon: IconAnalyze,
+              active: rightOpen && rightTab === "overview",
+              onClick: () => {
+                setSidebarOpen(false);
+                setLayersOpen(false);
+                setAiOpen(false);
+                setRightTab("overview");
+                setRightOpen(true);
+              },
+            },
+            {
+              id: "summary",
+              label: "Summary",
+              Icon: IconChart,
+              active: rightOpen && rightTab === "statistics",
+              onClick: () => {
+                setSidebarOpen(false);
+                setLayersOpen(false);
+                setAiOpen(false);
+                setRightTab("statistics");
+                setRightOpen(true);
+              },
+            },
+            {
+              id: "ai",
+              label: "AI",
+              Icon: IconBot,
+              active: aiOpen,
+              onClick: () => {
+                setSidebarOpen(false);
+                setLayersOpen(false);
+                setRightOpen(false);
+                setAiOpen((v) => !v);
+              },
+            },
+          ].map((item) => (
+            <button
+              key={item.id}
+              onClick={item.onClick}
+              className={`relative flex flex-col items-center justify-center flex-1 gap-0.5 transition-colors ${item.active ? "mobile-nav-active" : ""}`}
+              style={{
+                color: item.active ? "var(--c-accent)" : "var(--c-text3)",
+                minHeight: 48,
+              }}
+            >
+              <item.Icon size={18} />
+              <span className="text-[10px] font-medium leading-tight">{item.label}</span>
+            </button>
+          ))}
+        </nav>
+      )}
 
       {/* Export modal dialog */}
       {modal === "export" && (
@@ -583,6 +778,16 @@ export default function App() {
           zone={selectedZone}
           layers={layers}
           activeLayer={activeLayer}
+        />
+      )}
+
+      {/* Help modal dialog with full model details */}
+      {modal === "help" && (
+        <HelpModal
+          onClose={() => setModal(null)}
+          modelDetail={modelDetail}
+          activeModelId={activeModelId}
+          activeModelName={activeModelName}
         />
       )}
     </div>

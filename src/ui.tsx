@@ -136,15 +136,15 @@ export function TabBar({
   onChange: (id: string) => void;
 }) {
   return (
-    <div className="flex" style={{ borderBottom: "1px solid var(--c-border)" }}>
+    <div className="flex flex-shrink-0" style={{ borderBottom: "1px solid var(--c-border)" }}>
       {tabs.map((t) => (
         <button
           key={t.id}
           onClick={() => onChange(t.id)}
-          className="flex-1 py-2 text-xs font-semibold capitalize transition-colors"
+          className="flex-1 py-2 text-xs font-semibold capitalize transition-colors cursor-pointer"
           style={{
-            color: active === t.id ? "#00b4d8" : "var(--c-text3)",
-            borderBottom: active === t.id ? "2px solid #00b4d8" : "2px solid transparent",
+            color: active === t.id ? "var(--c-accent)" : "var(--c-text3)",
+            borderBottom: active === t.id ? "2px solid var(--c-accent)" : "2px solid transparent",
             fontFamily: "var(--font-body)",
           }}
         >

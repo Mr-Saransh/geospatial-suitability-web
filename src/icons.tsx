@@ -439,3 +439,43 @@ export const IconSun = (p: P) => (
 export const IconMoon = (p: P) => (
   <I {...p} d={<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />} />
 );
+
+export const IconSatellite = (p: P) => (
+  <I
+    {...p}
+    d={
+      <>
+        <circle cx="12" cy="12" r="3" />
+        <path d="M4.93 4.93a10 10 0 0 1 14.14 0" />
+        <path d="M7.76 7.76a6 6 0 0 1 8.48 0" />
+        <path d="M19.07 19.07a10 10 0 0 1-14.14 0" />
+        <path d="M16.24 16.24a6 6 0 0 1-8.48 0" />
+      </>
+    }
+  />
+);
+
+export const IconMountain = (p: P) => (
+  <I
+    {...p}
+    d={
+      <>
+        <path d="M8 3l4 8 5-5 5 13H2L8 3z" />
+      </>
+    }
+  />
+);
+
+export const IconRoadMap = (p: P) => (
+  <I
+    {...p}
+    d={
+      <>
+        <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21 3 6" />
+        <line x1="9" y1="3" x2="9" y2="18" />
+        <line x1="15" y1="6" x2="15" y2="21" />
+      </>
+    }
+  />
+);
+

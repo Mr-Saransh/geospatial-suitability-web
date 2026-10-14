@@ -1,14 +1,14 @@
 import { SUIT_META } from "../data";
 import type { Zone } from "../types";
 import { SuitBadge, ScoreBar, Pill } from "../ui";
-import { IconX, IconBot, IconInfo } from "../icons";
+import { IconX, IconBot } from "../icons";
 
 interface Props {
   zone: Zone;
   onClose: () => void;
   onDetails: () => void;
   onAsk: () => void;
-  onWhy: () => void;
+  onWhy?: () => void;
   loading?: boolean;
 }
 
@@ -17,7 +17,7 @@ export default function ResultPopup({
   onClose,
   onDetails,
   onAsk,
-  onWhy,
+  onWhy: _onWhy,
   loading: _loading,
 }: Props) {
   const m = SUIT_META[zone.cls] || SUIT_META["low"];
@@ -127,7 +127,7 @@ export default function ResultPopup({
               − {c.name.split(" ")[0]}
             </Pill>
           ))}
-          <Pill color="#00b4d8">
+          <Pill color="var(--c-accent)">
             {zone.lat.toFixed(3)}°, {zone.lng.toFixed(3)}°
           </Pill>
         </div>
@@ -137,36 +137,24 @@ export default function ResultPopup({
       <div className="flex px-3 pb-3 gap-1.5">
         <button
           onClick={onDetails}
-          className="flex-1 h-8 rounded text-[13px] font-medium transition-colors hover:brightness-110"
+          className="flex-1 h-8 rounded text-xs font-semibold transition-colors hover:bg-[var(--c-accent-hover)] cursor-pointer"
           style={{
-            background: "rgba(0,180,216,0.15)",
-            color: "#00b4d8",
-            border: "1px solid rgba(0,180,216,0.35)",
+            background: "var(--c-accent)",
+            color: "var(--c-base)",
           }}
         >
-          View Full Inspection
-        </button>
-        <button
-          onClick={onWhy}
-          className="h-8 px-3 rounded text-[13px] flex items-center gap-1 transition-colors hover:opacity-80"
-          style={{
-            color: "var(--c-text)",
-            border: "1px solid var(--c-border)",
-            background: "var(--c-panel)",
-          }}
-        >
-          <IconInfo size={11} /> Why?
+          Location Details
         </button>
         <button
           onClick={onAsk}
-          className="h-8 px-3 rounded text-[13px] flex items-center gap-1 transition-colors hover:opacity-80"
+          className="h-8 px-3 rounded text-xs flex items-center gap-1.5 transition-colors hover:bg-[var(--c-accent-dim)] cursor-pointer"
           style={{
-            color: "#00b4d8",
-            border: "1px solid rgba(0,180,216,0.3)",
+            color: "var(--c-accent)",
+            border: "1px solid var(--c-border2)",
             background: "var(--c-panel)",
           }}
         >
-          <IconBot size={11} /> Ask AI
+          <IconBot size={12} /> Ask AI
         </button>
       </div>
     </div>

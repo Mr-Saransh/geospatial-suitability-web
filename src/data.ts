@@ -70,12 +70,22 @@ export const HIMACHAL_LOCATIONS = [
   { name: "Kullu", lat: 31.9579, lng: 77.1095, district: "Kullu" },
   { name: "Manali", lat: 32.2432, lng: 77.1892, district: "Kullu" },
   { name: "Dharamshala", lat: 32.219, lng: 76.3234, district: "Kangra" },
+  { name: "Kangra", lat: 32.0998, lng: 76.2691, district: "Kangra" },
+  { name: "Palampur", lat: 32.1109, lng: 76.5363, district: "Kangra" },
   { name: "Mandi", lat: 31.7087, lng: 76.932, district: "Mandi" },
+  { name: "Sundernagar", lat: 31.5332, lng: 76.8928, district: "Mandi" },
   { name: "Solan", lat: 30.9045, lng: 77.0967, district: "Solan" },
+  { name: "Kasauli", lat: 30.9013, lng: 76.9649, district: "Solan" },
   { name: "Bilaspur", lat: 31.326, lng: 76.757, district: "Bilaspur" },
   { name: "Hamirpur", lat: 31.6862, lng: 76.5213, district: "Hamirpur" },
   { name: "Una", lat: 31.4685, lng: 76.2708, district: "Una" },
   { name: "Chamba", lat: 32.5534, lng: 76.1258, district: "Chamba" },
+  { name: "Dalhousie", lat: 32.5387, lng: 75.971, district: "Chamba" },
+  { name: "Nahan", lat: 30.5599, lng: 77.2955, district: "Sirmaur" },
+  { name: "Paonta Sahib", lat: 30.4373, lng: 77.6253, district: "Sirmaur" },
+  { name: "Keylong", lat: 32.571, lng: 77.032, district: "Lahaul & Spiti" },
+  { name: "Reckong Peo", lat: 31.5404, lng: 78.2743, district: "Kinnaur" },
+  { name: "Rampur Bushahr", lat: 31.4485, lng: 77.6322, district: "Shimla" },
 ];
 
 export const CRITERIA_INFO: Record<

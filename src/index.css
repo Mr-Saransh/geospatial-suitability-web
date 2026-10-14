@@ -8,28 +8,37 @@
   --font-body: "Source Sans 3", system-ui, sans-serif;
   --font-mono: "DM Mono", monospace;
 
-  /* Ground */
-  --c-base: #080d18;
-  --c-surface: #0c1424;
-  --c-panel: #0e1828;
-  --c-raised: #111d33;
-  --c-overlay: #162038;
+  /* Forest Graphite Ground & Surfaces */
+  --c-base: #19231F;
+  --c-surface: #222E27;
+  --c-panel: #26342C;
+  --c-raised: #2C3930;
+  --c-overlay: #344439;
 
-  /* Borders */
-  --c-border: #1c2e48;
-  --c-border2: #243852;
+  /* Borders & Separators */
+  --c-border: #38493D;
+  --c-border2: #405045;
 
-  /* Text */
-  --c-text: #c4d4e8;
-  --c-text2: #647d9a;
-  --c-text3: #374f6a;
+  /* Natural Neutral Typography */
+  --c-text: #F0EEE5;
+  --c-text2: #B8C3B7;
+  --c-text3: #94A194;
 
-  /* Accents */
-  --c-blue: #2d9cdb;
-  --c-cyan: #00b4d8;
-  --c-teal: #00c896;
+  /* Primary Accent: Sage */
+  --c-accent: #88B59A;
+  --c-accent-hover: #9ec2ad;
+  --c-accent-dim: rgba(136, 181, 154, 0.15);
 
-  /* Susceptibility hazard scale: Green (low) to Red (high) */
+  /* Secondary Accent: Warm Sand */
+  --c-sand: #D0A86F;
+  --c-sand-dim: rgba(208, 168, 111, 0.15);
+
+  /* Neutralized legacy aliases mapped to Sage / Sand */
+  --c-blue: #88B59A;
+  --c-cyan: #88B59A;
+  --c-teal: #88B59A;
+
+  /* Canonical Susceptibility Hazard Scale (PRESERVED - DO NOT ALTER) */
   --c-vh: #ef4444;
   --c-h: #f97316;
   --c-m: #fbbf24;
@@ -38,47 +47,57 @@
 
   /* Status */
   --c-success: #10b981;
-  --c-warn: #f59e0b;
+  --c-warn: #D0A86F;
   --c-error: #ef4444;
 }
 
 :root,
 [data-theme="dark"] {
-  --c-base: #080d18;
-  --c-surface: #0c1424;
-  --c-panel: #0e1828;
-  --c-raised: #111d33;
-  --c-overlay: #162038;
+  --c-base: #19231F;
+  --c-surface: #222E27;
+  --c-panel: #26342C;
+  --c-raised: #2C3930;
+  --c-overlay: #344439;
 
-  --c-card-bg: #0e1828;
-  --c-chip-bg: rgba(12, 20, 36, 0.92);
-  --c-track: #1c2e48;
+  --c-card-bg: #26342C;
+  --c-chip-bg: rgba(34, 46, 39, 0.94);
+  --c-track: #35453A;
 
-  --c-border: #1c2e48;
-  --c-border2: #243852;
+  --c-border: #38493D;
+  --c-border2: #405045;
 
-  --c-text: #c4d4e8;
-  --c-text2: #647d9a;
-  --c-text3: #374f6a;
+  --c-text: #F0EEE5;
+  --c-text2: #B8C3B7;
+  --c-text3: #94A194;
+
+  --c-accent: #88B59A;
+  --c-accent-dim: rgba(136, 181, 154, 0.15);
+  --c-sand: #D0A86F;
+  --c-sand-dim: rgba(208, 168, 111, 0.15);
 }
 
 [data-theme="light"] {
-  --c-base: #f8fafc;
-  --c-surface: #ffffff;
-  --c-panel: #f1f5f9;
-  --c-raised: #ffffff;
-  --c-overlay: #e2e8f0;
+  --c-base: #F4F6F4;
+  --c-surface: #FFFFFF;
+  --c-panel: #EDF1ED;
+  --c-raised: #FFFFFF;
+  --c-overlay: #E1E8E1;
 
-  --c-card-bg: #ffffff;
-  --c-chip-bg: rgba(255, 255, 255, 0.95);
-  --c-track: #e2e8f0;
+  --c-card-bg: #FFFFFF;
+  --c-chip-bg: rgba(255, 255, 255, 0.96);
+  --c-track: #DFE6DF;
 
-  --c-border: #e2e8f0;
-  --c-border2: #cbd5e1;
+  --c-border: #D5DDD5;
+  --c-border2: #BCC8BC;
 
-  --c-text: #0f172a;
-  --c-text2: #475569;
-  --c-text3: #64748b;
+  --c-text: #19231F;
+  --c-text2: #3E4D42;
+  --c-text3: #6E7F72;
+
+  --c-accent: #457358;
+  --c-accent-dim: rgba(69, 115, 88, 0.12);
+  --c-sand: #A0783F;
+  --c-sand-dim: rgba(160, 120, 63, 0.12);
 }
 
 html,
@@ -138,63 +157,73 @@ body,
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #ffffff;
-  border: 2px solid #00b4d8;
+  background: var(--c-text);
+  border: 2px solid var(--c-accent);
   box-shadow:
-    0 0 6px rgba(0, 180, 216, 0.6),
-    0 1px 3px rgba(0, 0, 0, 0.3);
+    0 1px 4px rgba(0, 0, 0, 0.4);
   cursor: pointer;
   transition:
     transform 0.1s ease,
-    box-shadow 0.1s ease;
+    border-color 0.1s ease;
 }
 
 .opacity-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-  box-shadow:
-    0 0 10px rgba(0, 180, 216, 0.9),
-    0 2px 5px rgba(0, 0, 0, 0.4);
+  transform: scale(1.15);
+  border-color: var(--c-accent-hover);
 }
 
 .opacity-slider::-moz-range-thumb {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: #ffffff;
-  border: 2px solid #00b4d8;
-  box-shadow: 0 0 6px rgba(0, 180, 216, 0.6);
+  background: var(--c-text);
+  border: 2px solid var(--c-accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
   cursor: pointer;
 }
 
 /* Checkbox */
 input[type="checkbox"] {
-  accent-color: var(--c-cyan);
+  accent-color: var(--c-accent);
 }
 
 /* Select */
 select {
   appearance: none;
   -webkit-appearance: none;
-  background: var(--c-surface);
+  background: var(--c-panel);
   border: 1px solid var(--c-border);
   color: var(--c-text);
   font-family: var(--font-body);
   font-size: 13px;
-  border-radius: 4px;
-  padding: 5px 24px 5px 9px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23647d9a'/%3E%3C/svg%3E");
+  font-weight: 500;
+  border-radius: 6px;
+  padding: 8px 28px 8px 10px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394A194'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 8px center;
+  background-position: right 10px center;
   cursor: pointer;
   outline: none;
+  transition: border-color 0.15s ease;
 }
 select:focus {
-  border-color: var(--c-cyan);
+  border-color: var(--c-accent);
 }
 select:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
+
+/* Sidebar icon-prefixed selects */
+.sidebar-select-wrapper select {
+  padding-left: 32px;
+}
+
+/* Sidebar locate button hover */
+.sidebar-locate-btn:hover {
+  filter: brightness(1.1);
+}
+
 
 /* Transitions */
 .fade {
@@ -299,4 +328,100 @@ select:disabled {
 [data-theme="light"] select option {
   background: #ffffff !important;
   color: #0f172a !important;
+}
+
+/* ─── Mobile Bottom Sheet Animation ─── */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0%);
+  }
+}
+
+@keyframes slide-down {
+  from {
+    transform: translateY(0%);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+.bottom-sheet-enter {
+  animation: slide-up 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+
+/* ─── Mobile Safe Area Support (notched phones) ─── */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .mobile-bottom-nav {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .mobile-bottom-sheet {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* ─── Mobile-specific overrides ─── */
+@media (max-width: 767px) {
+  /* Larger touch targets */
+  button {
+    min-height: 36px;
+  }
+
+  /* Better scrolling on mobile */
+  .overflow-y-auto {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+  }
+
+  .mobile-bottom-sheet {
+    touch-action: pan-y;
+    overscroll-behavior-y: contain;
+  }
+
+  /* Hide Leaflet zoom controls on mobile (using map buttons instead) */
+  .leaflet-control-zoom {
+    display: none !important;
+  }
+
+  /* Compact attribution on mobile */
+  .leaflet-control-attribution {
+    font-size: 8px !important;
+    max-width: 150px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* Tablet adjustments */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .leaflet-control-zoom {
+    transform: scale(0.85);
+    transform-origin: top left;
+  }
+}
+
+/* ─── Bottom Nav Active Indicator ─── */
+.mobile-nav-active::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 25%;
+  right: 25%;
+  height: 2px;
+  background: var(--c-accent);
+  border-radius: 0 0 2px 2px;
+}
+
+/* ─── Drag Handle for Bottom Sheet ─── */
+.drag-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--c-border2);
+  margin: 8px auto 4px;
 }

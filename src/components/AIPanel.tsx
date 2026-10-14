@@ -13,6 +13,7 @@ interface Props {
   onSelectLayer?: (id: string) => void;
   activeModelId?: string;
   activeModelName?: string;
+  isMobile?: boolean;
 }
 
 function formatText(text: string): string {
@@ -28,6 +29,7 @@ export default function AIPanel({
   onLayerEvidence,
   activeModelId,
   activeModelName,
+  isMobile = false,
 }: Props) {
   const isLandslide =
     (activeModelId?.includes("landslide") ||
@@ -50,6 +52,17 @@ export default function AIPanel({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Support Escape to close
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
 
   const send = (q: string) => {
     if (!q.trim() || loading) return;
@@ -81,22 +94,15 @@ export default function AIPanel({
       }
       setMessages((m) => [...m, { role: "assistant", text: replyText, actions: ans.actions }]);
       setLoading(false);
-    }, 700);
+    }, 600);
   };
 
   const contextPresets = AI_PRESETS.filter(
     (p) => !p.context || p.context === "model" || (p.context === "zone" && zone),
   );
 
-  return (
-    <div
-      className="flex flex-col z-20"
-      style={{
-        width: 340,
-        background: "var(--c-surface)",
-        borderLeft: "1px solid var(--c-border)",
-      }}
-    >
+  const panelContent = (
+    <div className="flex flex-col flex-1 min-h-0 h-full overflow-hidden select-none">
       {/* Header */}
       <div
         className="flex items-center justify-between px-4 py-3 flex-shrink-0"
@@ -107,14 +113,14 @@ export default function AIPanel({
       >
         <div className="flex items-center gap-2">
           <div
-            className="w-6 h-6 rounded flex items-center justify-center"
+            className="w-7 h-7 rounded flex items-center justify-center"
             style={{
-              background: "rgba(0,180,216,0.12)",
-              border: "1px solid rgba(0,180,216,0.3)",
-              color: "#00b4d8",
+              background: "var(--c-accent-dim)",
+              border: "1px solid var(--c-accent)",
+              color: "var(--c-accent)",
             }}
           >
-            <IconBot size={12} />
+            <IconBot size={14} />
           </div>
           <div>
             <div
@@ -128,46 +134,49 @@ export default function AIPanel({
             </div>
             <div
               className="text-[10px]"
-              style={{ color: "#00b4d8", fontFamily: "var(--font-mono)" }}
+              style={{ color: "var(--c-accent)", fontFamily: "var(--font-mono)" }}
             >
               Himachal Spatial Context · {hazardName} Engine
             </div>
           </div>
         </div>
-        <Btn onClick={onClose} className="w-7 h-7" title="Close">
+        <Btn onClick={onClose} className="w-7 h-7" title="Close assistant (Esc)">
           <IconX size={13} />
         </Btn>
       </div>
 
       {/* Context bar */}
       <div
-        className="px-4 py-2 flex-shrink-0 flex items-center gap-2 flex-wrap"
+        className="px-4 py-2 flex-shrink-0 flex items-center gap-2 flex-wrap text-xs"
         style={{
           background: "var(--c-panel)",
           borderBottom: "1px solid var(--c-border)",
         }}
       >
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#00c896" }} />
-          <Mono color="#00b4d8">{isLandslide ? "Landslide MCDA v1.0" : "Flood AHP v1.0"}</Mono>
+          <Mono color="var(--c-accent)">{isLandslide ? "Landslide MCDA v1.0" : "Flood AHP v1.0"}</Mono>
         </div>
         {zone ? (
           <>
-            <span style={{ color: "var(--c-border)" }}>·</span>
-            <Pill color="#00b4d8">
+            <span style={{ color: "var(--c-border2)" }}>·</span>
+            <Pill color="var(--c-accent)">
               {zone.district || `${zone.lat.toFixed(2)}°N`} · Score {zone.score.toFixed(2)}
             </Pill>
           </>
         ) : (
           <>
-            <span style={{ color: "var(--c-border)" }}>·</span>
+            <span style={{ color: "var(--c-border2)" }}>·</span>
             <Mono color="var(--c-text2)">Statewide Coverage</Mono>
           </>
         )}
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-3">
+      <div
+        className="flex-1 min-h-0 overflow-y-auto px-4 py-3 flex flex-col gap-3 overscroll-contain"
+        style={{ WebkitOverflowScrolling: "touch" }}
+      >
         {messages.map((msg, i) => (
           <div
             key={i}
@@ -177,9 +186,9 @@ export default function AIPanel({
               <div
                 className="w-5 h-5 rounded flex-shrink-0 mt-0.5 flex items-center justify-center"
                 style={{
-                  background: "rgba(0,180,216,0.12)",
-                  border: "1px solid rgba(0,180,216,0.25)",
-                  color: "#00b4d8",
+                  background: "var(--c-accent-dim)",
+                  border: "1px solid var(--c-accent)",
+                  color: "var(--c-accent)",
                 }}
               >
                 <IconBot size={11} />
@@ -187,12 +196,12 @@ export default function AIPanel({
             )}
             <div className="flex flex-col gap-1.5 max-w-[88%]">
               <div
-                className="px-3 py-2.5 rounded-lg text-[11px] leading-relaxed"
+                className="px-3 py-2.5 rounded-lg text-xs leading-relaxed"
                 style={{
-                  background: msg.role === "user" ? "rgba(0,180,216,0.1)" : "var(--c-panel)",
-                  color: msg.role === "user" ? "#00b4d8" : "var(--c-text)",
+                  background: msg.role === "user" ? "var(--c-accent-dim)" : "var(--c-panel)",
+                  color: msg.role === "user" ? "var(--c-text)" : "var(--c-text)",
                   border: `1px solid ${
-                    msg.role === "user" ? "rgba(0,180,216,0.25)" : "var(--c-border)"
+                    msg.role === "user" ? "var(--c-accent)" : "var(--c-border)"
                   }`,
                 }}
               >
@@ -209,11 +218,11 @@ export default function AIPanel({
                     <button
                       key={a.label}
                       onClick={() => a.type === "layer" && onLayerEvidence(a.target)}
-                      className="text-[10px] px-2 py-0.5 rounded flex items-center gap-1 transition-colors hover:bg-[#00b4d822]"
+                      className="text-[10px] px-2 py-0.5 rounded flex items-center gap-1 transition-colors hover:bg-[var(--c-accent-dim)]"
                       style={{
-                        color: "#00b4d8",
-                        border: "1px solid rgba(0,180,216,0.25)",
-                        background: "rgba(0,180,216,0.06)",
+                        color: "var(--c-accent)",
+                        border: "1px solid var(--c-border2)",
+                        background: "var(--c-panel)",
                       }}
                     >
                       {a.type === "layer" && "⊞ "}
@@ -234,15 +243,15 @@ export default function AIPanel({
             <div
               className="w-5 h-5 rounded flex items-center justify-center"
               style={{
-                background: "rgba(0,180,216,0.12)",
-                border: "1px solid rgba(0,180,216,0.25)",
-                color: "#00b4d8",
+                background: "var(--c-accent-dim)",
+                border: "1px solid var(--c-accent)",
+                color: "var(--c-accent)",
               }}
             >
               <IconBot size={11} />
             </div>
             <div
-              className="flex items-center gap-1 px-3 py-2 rounded-lg"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg"
               style={{
                 background: "var(--c-panel)",
                 border: "1px solid var(--c-border)",
@@ -253,10 +262,10 @@ export default function AIPanel({
                   key={i}
                   className="w-1.5 h-1.5 rounded-full"
                   style={{
-                    background: "#00b4d8",
+                    background: "var(--c-accent)",
                     animation: "pulse 1.2s ease-in-out infinite",
                     animationDelay: `${i * 0.2}s`,
-                    opacity: 0.5,
+                    opacity: 0.6,
                   }}
                 />
               ))}
@@ -276,11 +285,11 @@ export default function AIPanel({
             SUGGESTED QUESTIONS
           </div>
           <div className="flex flex-col gap-1">
-            {contextPresets.slice(0, 4).map((p) => (
+            {contextPresets.slice(0, 3).map((p) => (
               <button
                 key={p.q}
                 onClick={() => send(p.q)}
-                className="text-left text-[11px] px-2.5 py-1.5 rounded transition-colors hover:opacity-80"
+                className="text-left text-xs px-2.5 py-1.5 rounded transition-colors hover:bg-[var(--c-accent-dim)]"
                 style={{
                   color: "var(--c-text)",
                   background: "var(--c-panel)",
@@ -301,7 +310,7 @@ export default function AIPanel({
           style={{
             background: "var(--c-panel)",
             border: "1px solid var(--c-border)",
-            height: 36,
+            height: 38,
           }}
         >
           <input
@@ -315,19 +324,57 @@ export default function AIPanel({
           <button
             onClick={() => send(input)}
             disabled={!input.trim() || loading}
-            className="flex-shrink-0 transition-opacity disabled:opacity-30"
-            style={{ color: "#00b4d8" }}
+            className="flex-shrink-0 transition-opacity disabled:opacity-30 cursor-pointer"
+            style={{ color: "var(--c-accent)" }}
           >
-            <IconSend size={13} />
+            <IconSend size={14} />
           </button>
         </div>
         <div className="flex items-center gap-1 mt-1.5">
-          <IconInfo size={9} style={{ color: "var(--c-text3)" }} />
-          <span className="text-[9px]" style={{ color: "var(--c-text2)" }}>
+          <IconInfo size={10} style={{ color: "var(--c-text3)" }} />
+          <span className="text-[10px]" style={{ color: "var(--c-text3)" }}>
             Connected to Himachal Pradesh Spatial Knowledge Package
           </span>
         </div>
       </div>
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <div className="fixed inset-x-0 top-0 bottom-14 z-[1250] flex flex-col justify-end pointer-events-none">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs pointer-events-auto" onClick={onClose} />
+        <div
+          className="relative z-10 flex flex-col shadow-2xl bottom-sheet-enter mobile-bottom-sheet overflow-hidden pointer-events-auto"
+          style={{
+            background: "var(--c-surface)",
+            borderRadius: "16px 16px 0 0",
+            maxHeight: "calc(100dvh - 120px)",
+            height: "75vh",
+            minHeight: "45vh",
+            border: "1px solid var(--c-border)",
+            borderBottom: "none",
+          }}
+        >
+          <div className="drag-handle flex-shrink-0" />
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden pb-3">
+            {panelContent}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="fixed right-3 bottom-3 top-14 z-[1200] w-[370px] max-w-[calc(100vw-24px)] flex flex-col rounded-xl shadow-2xl overflow-hidden backdrop-blur-md"
+      style={{
+        background: "var(--c-surface)",
+        border: "1px solid var(--c-border)",
+        boxShadow: "0 18px 48px rgba(0,0,0,0.6)",
+      }}
+    >
+      {panelContent}
     </div>
   );
 }

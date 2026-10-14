@@ -9,9 +9,8 @@ import {
   IconZoomOut,
   IconLocate,
   IconMaximize,
-  IconMeasure,
+  IconLayers,
   IconBookmark,
-  IconCompare,
   IconPrint,
 } from "../icons";
 
@@ -22,6 +21,8 @@ interface Props {
   activeLayer: Layer | null;
   compareMode: boolean;
   onCompare: () => void;
+  layersOpen?: boolean;
+  onToggleLayers?: () => void;
   basemap: string;
   onCoordChange?: (coordStr: string) => void;
   centerTarget?: { lat: number; lng: number } | null;
@@ -31,13 +32,13 @@ interface Props {
 }
 
 // Custom neon pin icon for selected inspection point
-const createInspectorIcon = (color: string = "#00b4d8") => {
+const createInspectorIcon = (color: string = "#88B59A") => {
   return L.divIcon({
     className: "custom-inspector-marker",
     html: `
       <div style="position: relative; width: 24px; height: 24px; transform: translate(-12px, -12px);">
         <div style="position: absolute; inset: 0; border-radius: 50%; background: ${color}; opacity: 0.35; animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
-        <div style="position: absolute; inset: 4px; border-radius: 50%; background: #0c1424; border: 2px solid ${color}; display: flex; items-center; justify-content: center;">
+        <div style="position: absolute; inset: 4px; border-radius: 50%; background: #19231F; border: 2px solid ${color}; display: flex; items-center; justify-content: center;">
           <div style="width: 6px; height: 6px; border-radius: 50%; background: ${color};"></div>
         </div>
       </div>
@@ -89,7 +90,7 @@ function StateBoundaryLayer({ data }: { data: GeoJSON.GeoJsonObject }) {
     try {
       const layer = L.geoJSON(data, {
         style: {
-          color: "#00b4d8",
+          color: "#88B59A",
           weight: 1.8,
           dashArray: "5, 4",
           fillColor: "transparent",
@@ -168,8 +169,10 @@ export default function MapCanvas({
   selectedMapCoordinate,
   onPointClick,
   activeLayer,
-  compareMode,
-  onCompare,
+  compareMode: _compareMode,
+  onCompare: _onCompare,
+  layersOpen,
+  onToggleLayers,
   basemap,
   onCoordChange,
   centerTarget,
@@ -352,7 +355,7 @@ export default function MapCanvas({
                   </div>
                   <div
                     style={{
-                      color: "#00b4d8",
+                      color: "var(--c-accent)",
                       fontSize: "10px",
                       marginTop: "3px",
                       fontStyle: "italic",
@@ -379,137 +382,120 @@ export default function MapCanvas({
       </MapContainer>
 
       {/* Map controls — right side */}
-      <div className="absolute right-3 top-3 flex flex-col gap-1 z-[1000]">
+      <div className="absolute right-2 sm:right-3 top-2 sm:top-3 flex flex-col gap-1 z-[1000]">
         {[
           {
             Icon: IconZoomIn,
             title: "Zoom in",
             onClick: () => setZoomAction("in"),
+            essential: true,
           },
           {
             Icon: IconZoomOut,
             title: "Zoom out",
             onClick: () => setZoomAction("out"),
+            essential: true,
           },
           null,
           {
             Icon: IconLocate,
             title: "Reset to Himachal Pradesh",
             onClick: () => setZoomAction("reset"),
+            essential: true,
           },
           {
             Icon: IconMaximize,
             title: "Fullscreen",
             onClick: toggleFullscreen,
+            essential: true,
           },
-          null,
-          { Icon: IconMeasure, title: "Measure distance / area" },
-          { Icon: IconBookmark, title: "Saved locations" },
           {
-            Icon: IconCompare,
-            title: "Compare layers",
-            onClick: onCompare,
-            active: compareMode,
+            Icon: IconLayers,
+            title: "Map layers",
+            onClick: onToggleLayers,
+            active: layersOpen,
+            essential: true,
           },
           null,
-          { Icon: IconPrint, title: "Print / Export raster view" },
-        ].map((btn, i) =>
-          btn === null ? (
-            <div key={i} className="h-px mx-1" style={{ background: "var(--c-border)" }} />
-          ) : (
+          { Icon: IconBookmark, title: "Saved locations", essential: false },
+          null,
+          { Icon: IconPrint, title: "Print / Export raster view", essential: false },
+        ].map((btn, i) => {
+          if (btn === null) {
+            return (
+              <div
+                key={i}
+                className="h-px mx-1 hidden sm:block"
+                style={{ background: "var(--c-border)" }}
+              />
+            );
+          }
+          return (
             <button
               key={btn.title}
               onClick={btn.onClick}
               title={btn.title}
-              className="w-8 h-8 flex items-center justify-center rounded transition-all backdrop-blur-sm shadow-md"
+              className={`w-8 h-8 sm:w-8 sm:h-8 flex items-center justify-center rounded transition-all backdrop-blur-sm shadow-md ${!btn.essential ? "hidden sm:flex" : ""}`}
               style={{
-                background: btn.active ? "rgba(0,180,216,0.2)" : "var(--c-chip-bg)",
-                border: `1px solid ${btn.active ? "rgba(0,180,216,0.5)" : "var(--c-border)"}`,
-                color: btn.active ? "#00b4d8" : "var(--c-text2)",
+                background: btn.active ? "var(--c-accent-dim)" : "var(--c-chip-bg)",
+                border: `1px solid ${btn.active ? "var(--c-accent)" : "var(--c-border)"}`,
+                color: btn.active ? "var(--c-accent)" : "var(--c-text2)",
               }}
             >
               <btn.Icon size={14} />
             </button>
-          ),
-        )}
+          );
+        })}
       </div>
 
-      {/* Layer legend badge */}
-      <div className="absolute top-3 left-3 z-[1000]">
+      {/* Active Layer Pill (Top Left) */}
+      <div className="absolute top-2 sm:top-3 left-2 sm:left-3 z-[1000]">
         <div
-          className="flex items-center gap-2 px-3 py-1.5 rounded text-[12px] backdrop-blur-md shadow-lg"
+          className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-[11px] sm:text-xs backdrop-blur-md shadow-md max-w-[200px] sm:max-w-none"
           style={{
             background: "var(--c-chip-bg)",
             border: "1px solid var(--c-border)",
-            fontFamily: "var(--font-mono)",
             color: "var(--c-text)",
           }}
         >
-          <div className="w-2 h-2 rounded-full" style={{ background: "#00c896" }} />
-          <span className="font-semibold text-[#00b4d8]">Himachal Pradesh</span>
-          <span style={{ color: "var(--c-text3)" }}>·</span>
-          <span style={{ color: "var(--c-text2)" }}>
+          <span className="w-2 h-2 rounded-full bg-[#00c896] flex-shrink-0" />
+          <span className="font-medium text-[var(--c-text)] truncate">
             {activeLayer ? activeLayer.name : `${hazardName} Susceptibility`}
           </span>
-          <span style={{ color: "var(--c-text3)" }}>·</span>
-          <span className="text-[11px]" style={{ color: "var(--c-text3)" }}>
-            30 m EPSG:4326
-          </span>
+          <span className="text-[var(--c-text3)] hidden sm:inline">·</span>
+          <span className="text-[11px] font-mono text-[var(--c-text2)] hidden sm:inline">30m</span>
         </div>
       </div>
 
-      {/* Status bar */}
+
+      {/* Clean Bottom Status Bar */}
       <div
-        className="absolute bottom-0 left-0 right-0 flex items-center gap-4 px-3 py-1.5 z-[1000] backdrop-blur-sm"
+        className="absolute bottom-0 left-0 right-0 flex items-center justify-between px-3 py-1 z-[980] backdrop-blur-sm text-[11px] font-mono text-[var(--c-text3)]"
         style={{
           background: "var(--c-chip-bg)",
           borderTop: "1px solid var(--c-border)",
         }}
       >
-        <span className="text-[11px]" style={{ color: "#00b4d8", fontFamily: "var(--font-mono)" }}>
-          {coord.lat.toFixed(5)}°N {coord.lng.toFixed(5)}°E
-        </span>
-        <span className="text-[11px]" style={{ color: "var(--c-border)" }}>
-          |
-        </span>
-        <span
-          className="text-[11px]"
-          style={{ color: "var(--c-text2)", fontFamily: "var(--font-mono)" }}
-        >
-          Zoom {zoom} · {activeModelName || `${hazardName} Model`}
-        </span>
-        <span className="text-[11px]" style={{ color: "var(--c-border)" }}>
-          |
-        </span>
-        <span
-          className="text-[11px]"
-          style={{ color: "var(--c-text3)", fontFamily: "var(--font-mono)" }}
-        >
-          EPSG:4326 / EPSG:32643 UTM 43N
-        </span>
-        <div className="flex-1" />
-        {/* Scale bar */}
-        <div className="flex items-center gap-1.5">
-          <div className="flex flex-col">
-            <div className="flex items-center h-2">
-              <div className="w-px h-2" style={{ background: "var(--c-text3)" }} />
-              <div className="flex-1 h-px" style={{ width: 40, background: "var(--c-text3)" }} />
-              <div className="w-px h-2" style={{ background: "var(--c-text3)" }} />
-            </div>
-          </div>
-          <span
-            className="text-[11px]"
-            style={{ color: "var(--c-text2)", fontFamily: "var(--font-mono)" }}
-          >
-            10 km
+        <div className="flex items-center gap-3">
+          <span className="text-[var(--c-text2)]">
+            {coord.lat.toFixed(4)}°N, {coord.lng.toFixed(4)}°E
           </span>
+          <span className="hidden sm:inline text-[var(--c-border2)]">|</span>
+          <span className="hidden sm:inline">Zoom {zoom}</span>
         </div>
-        <span
-          className="text-[11px]"
-          style={{ color: "var(--c-text3)", fontFamily: "var(--font-mono)" }}
-        >
-          © SRTM · CHIRPS · ESA WorldCover · HydroRIVERS
-        </span>
+
+        {/* Scale bar & attribution */}
+        <div className="flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-1.5">
+            <div className="flex items-center h-2">
+              <div className="w-px h-2 bg-[var(--c-text3)]" />
+              <div className="w-8 h-px bg-[var(--c-text3)]" />
+              <div className="w-px h-2 bg-[var(--c-text3)]" />
+            </div>
+            <span>10 km</span>
+          </div>
+          <span className="text-[10px] hidden lg:inline">© OpenStreetMap · SRTM · CHIRPS</span>
+        </div>
       </div>
     </div>
   );
