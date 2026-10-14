@@ -51,6 +51,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
       ...options,
       headers: {
         "Content-Type": "application/json",
+        "ngrok-skip-browser-warning": "true",
         ...options?.headers,
       },
     });
@@ -98,6 +99,6 @@ export const api = {
 
   // Tiles URL builder
   getTileUrlTemplate: (layerId: string) => {
-    return `${getApiBaseUrl()}/api/v1/tiles/${encodeURIComponent(layerId)}/{z}/{x}/{y}.png`;
+    return `${getApiBaseUrl()}/api/v1/tiles/${encodeURIComponent(layerId)}/{z}/{x}/{y}.png?ngrok-skip-browser-warning=true`;
   },
 };
