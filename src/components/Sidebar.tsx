@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { HIMACHAL_LOCATIONS } from "../data";
 import type { ModelDetail } from "../lib/api/types";
-import { IconChevronD, IconChevronR, IconGlobe, IconMoon, IconSatellite, IconMountain, IconRoadMap } from "../icons";
+import { IconChevronD, IconMoon, IconSatellite, IconMountain, IconRoadMap } from "../icons";
 
 const BASEMAPS = [
   { id: "dark", label: "Dark Canvas", Icon: IconMoon },

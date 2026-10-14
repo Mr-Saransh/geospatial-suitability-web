@@ -81,9 +81,9 @@ class SpatialKnowledgeSettings:
         if not self.cors_origins_raw or self.cors_origins_raw.strip() == "*":
             return ["*"]
         return [
-            origin.strip()
+            origin.strip().strip("'\"").rstrip("/")
             for origin in self.cors_origins_raw.split(",")
-            if origin.strip()
+            if origin.strip().strip("'\"")
         ]
 
     def get_package_root(self, model_id: str | None = None) -> Path:

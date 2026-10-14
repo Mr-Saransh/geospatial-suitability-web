@@ -3,7 +3,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { SUIT_META, INITIAL_STATS } from "../data";
 import type { Zone, RightTab } from "../types";
 import type { AnalysisStatistics, ModelDetail } from "../lib/api/types";
-import { SuitBadge, ScoreBar, TabBar, EmptyState, Mono } from "../ui";
+import { SuitBadge, ScoreBar, TabBar, EmptyState } from "../ui";
 import { IconAnalyze, IconChart, IconChevronD, IconInfo } from "../icons";
 import { getCoverageInfo } from "../utils/coverage";
 
@@ -39,7 +39,7 @@ export default function RightPanel({
   activeTab,
   onTabChange,
   onClose,
-  onSelectLayer,
+  onSelectLayer: _onSelectLayer,
   onOpenHelp,
 }: Props) {
   const [internalTab, setInternalTab] = useState<RightTab>(

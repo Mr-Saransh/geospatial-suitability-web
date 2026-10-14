@@ -1,5 +1,10 @@
 /**
  * API client for the MCGSE Web-GIS Backend
+ *
+ * Resolves the backend URL at runtime:
+ *  1. localStorage("mcgse_api_url")  — set by user via Settings
+ *  2. VITE_API_BASE_URL              — baked in at build time
+ *  3. "" (same-origin fallback)
  */
 import type {
   HealthResponse,
@@ -11,10 +16,36 @@ import type {
   PackageMetadata,
 } from "./types";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
+const STORAGE_KEY = "mcgse_api_url";
+
+/** Return the currently active backend base URL (no trailing slash). */
+export function getApiBaseUrl(): string {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) return stored.replace(/\/+$/, "");
+  } catch { /* localStorage unavailable */ }
+  return (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+}
+
+/** Persist a new backend URL (used by the settings UI). */
+export function setApiBaseUrl(url: string): void {
+  try {
+    const clean = url.trim().replace(/\/+$/, "");
+    if (clean) {
+      localStorage.setItem(STORAGE_KEY, clean);
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  } catch { /* localStorage unavailable */ }
+}
+
+/** Clear the stored override so the build-time default is used again. */
+export function resetApiBaseUrl(): void {
+  try { localStorage.removeItem(STORAGE_KEY); } catch { /* */ }
+}
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const url = `${BASE_URL}${path}`;
+  const url = `${getApiBaseUrl()}${path}`;
   try {
     const res = await fetch(url, {
       ...options,
@@ -67,6 +98,6 @@ export const api = {
 
   // Tiles URL builder
   getTileUrlTemplate: (layerId: string) => {
-    return `${BASE_URL}/api/v1/tiles/${encodeURIComponent(layerId)}/{z}/{x}/{y}.png`;
+    return `${getApiBaseUrl()}/api/v1/tiles/${encodeURIComponent(layerId)}/{z}/{x}/{y}.png`;
   },
 };

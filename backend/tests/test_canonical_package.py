@@ -45,7 +45,7 @@ class TestCanonicalSpatialKnowledge(unittest.TestCase):
         val = settings.validate()
         self.assertEqual(val["status"], "valid")
         self.assertTrue(val["packages_found"] >= 1)
-        self.assertIn("*", settings.cors_origins)
+        self.assertTrue(len(settings.cors_origins) >= 1)
 
     # 2. Local package path resolution
     def test_local_package_path_resolution(self):
@@ -318,6 +318,67 @@ class TestCanonicalSpatialKnowledge(unittest.TestCase):
         self.assertEqual(d2["classified_value"], 2)
         self.assertEqual(d2["class_label"], "Low Susceptibility")
         self.assertTrue(2.0 <= d2["continuous_score"] < 3.0)
+
+    # 20. CORS configuration validation
+    def test_cors_origins_configuration(self):
+        origins = settings.cors_origins
+        self.assertIn(
+            "https://geospatial-suitability-web.dssintern1.workers.dev", origins
+        )
+        self.assertIn("http://localhost:5173", origins)
+        for o in origins:
+            self.assertFalse(o.endswith("/"))
+
+        # Test preflight OPTIONS request from Cloudflare Worker origin
+        r = self.client.options(
+            "/api/v1/health",
+            headers={
+                "Origin": "https://geospatial-suitability-web.dssintern1.workers.dev",
+                "Access-Control-Request-Method": "GET",
+                "Access-Control-Request-Headers": "content-type",
+            },
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(
+            r.headers.get("access-control-allow-origin"),
+            "https://geospatial-suitability-web.dssintern1.workers.dev",
+        )
+        self.assertEqual(r.headers.get("access-control-allow-credentials"), "true")
+
+        # Test preflight OPTIONS request from local frontend origin
+        r_local = self.client.options(
+            "/api/v1/health",
+            headers={
+                "Origin": "http://localhost:5173",
+                "Access-Control-Request-Method": "GET",
+                "Access-Control-Request-Headers": "content-type",
+            },
+        )
+        self.assertEqual(r_local.status_code, 200)
+        self.assertEqual(
+            r_local.headers.get("access-control-allow-origin"),
+            "http://localhost:5173",
+        )
+
+        # Test GET request includes CORS headers for allowed origin
+        r_get = self.client.get(
+            "/api/v1/health",
+            headers={
+                "Origin": "https://geospatial-suitability-web.dssintern1.workers.dev"
+            },
+        )
+        self.assertEqual(r_get.status_code, 200)
+        self.assertEqual(
+            r_get.headers.get("access-control-allow-origin"),
+            "https://geospatial-suitability-web.dssintern1.workers.dev",
+        )
+
+        # Test unauthorized origin does not receive access-control-allow-origin
+        r_unauth = self.client.get(
+            "/api/v1/health",
+            headers={"Origin": "https://unauthorized-domain.com"},
+        )
+        self.assertNotIn("access-control-allow-origin", r_unauth.headers)
 
 
 if __name__ == "__main__":
