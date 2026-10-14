@@ -4,11 +4,11 @@ Spatial-package discovery and metadata service (Backward Compatibility Adapter).
 Delegates to the canonical SpatialKnowledgeRepository while preserving the original
 API surface for existing routes, tests, and callers.
 """
+
 from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
 
 from app.config import settings
 from app.services.repository import repository
@@ -53,7 +53,9 @@ class PackageService:
 
     @property
     def source_run_id(self) -> int:
-        return int(self.manifest.get("source_run_id", 56 if "flood" in self.model_id else 63))
+        return int(
+            self.manifest.get("source_run_id", 56 if "flood" in self.model_id else 63)
+        )
 
     @property
     def published_at(self) -> str:
@@ -96,21 +98,21 @@ class PackageService:
 
     @property
     def factor_count(self) -> int:
-        return len([l for l in self.layers if l.get("type") == "FACTOR"])
+        return len([layer for layer in self.layers if layer.get("type") == "FACTOR"])
 
     @property
     def rating_count(self) -> int:
-        return len([l for l in self.layers if l.get("type") == "RATING"])
+        return len([layer for layer in self.layers if layer.get("type") == "RATING"])
 
     @property
     def result_count(self) -> int:
-        return len([l for l in self.layers if l.get("type") == "RESULT"])
+        return len([layer for layer in self.layers if layer.get("type") == "RESULT"])
 
     @property
     def quality_count(self) -> int:
-        return len([l for l in self.layers if l.get("type") == "QUALITY"])
+        return len([layer for layer in self.layers if layer.get("type") == "QUALITY"])
 
-    def get_layer(self, layer_id: str) -> Optional[dict]:
+    def get_layer(self, layer_id: str) -> dict | None:
         """Lookup layer across repository with alias resolution."""
         return self.repo.get_layer(layer_id)
 
@@ -119,16 +121,16 @@ class PackageService:
         return self.repo.safe_resolve_raster_path(self.root, relative_path)
 
     def factor_layers(self) -> list[dict]:
-        return [l for l in self.layers if l.get("type") == "FACTOR"]
+        return [layer for layer in self.layers if layer.get("type") == "FACTOR"]
 
     def rating_layers(self) -> list[dict]:
-        return [l for l in self.layers if l.get("type") == "RATING"]
+        return [layer for layer in self.layers if layer.get("type") == "RATING"]
 
     def result_layers(self) -> list[dict]:
-        return [l for l in self.layers if l.get("type") == "RESULT"]
+        return [layer for layer in self.layers if layer.get("type") == "RESULT"]
 
     def quality_layers(self) -> list[dict]:
-        return [l for l in self.layers if l.get("type") == "QUALITY"]
+        return [layer for layer in self.layers if layer.get("type") == "QUALITY"]
 
 
 # Global singleton instance

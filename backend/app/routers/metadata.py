@@ -1,14 +1,14 @@
 """Package and analysis metadata endpoints."""
+
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
+from app.schemas import AnalysisMetadata, CriterionWeight, PackageMetadata
 from app.services.repository import repository
 from app.services.weights import get_model_config
-from app.schemas import PackageMetadata, AnalysisMetadata, CriterionWeight
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,10 @@ router = APIRouter(prefix="/api/v1", tags=["metadata"])
 def get_package_metadata():
     """Return full spatial package metadata for the canonical package(s)."""
     if not repository.models:
-        raise HTTPException(status_code=503, detail="Spatial Knowledge Package unavailable or uninitialized")
+        raise HTTPException(
+            status_code=503,
+            detail="Spatial Knowledge Package unavailable or uninitialized",
+        )
 
     # Use flood package if present, or first package
     pkg_dict = None
@@ -31,17 +34,19 @@ def get_package_metadata():
         pkg_dict = next(iter(repository.packages.values()))
 
     if not pkg_dict:
-        raise HTTPException(status_code=503, detail="No valid package metadata available")
+        raise HTTPException(
+            status_code=503, detail="No valid package metadata available"
+        )
 
     manifest = pkg_dict.get("manifest", {})
     metadata_files = pkg_dict.get("metadata", {})
     model_id = pkg_dict.get("model_id", "flood_11_factor_v1")
 
     model_layers = repository.get_layers_for_model(model_id)
-    f_count = len([l for l in model_layers if l.get("type") == "FACTOR"])
-    r_count = len([l for l in model_layers if l.get("type") == "RATING"])
-    res_count = len([l for l in model_layers if l.get("type") == "RESULT"])
-    q_count = len([l for l in model_layers if l.get("type") == "QUALITY"])
+    f_count = len([layer for layer in model_layers if layer.get("type") == "FACTOR"])
+    r_count = len([layer for layer in model_layers if layer.get("type") == "RATING"])
+    res_count = len([layer for layer in model_layers if layer.get("type") == "RESULT"])
+    q_count = len([layer for layer in model_layers if layer.get("type") == "QUALITY"])
     total_rasters = len(model_layers) or 28
 
     return PackageMetadata(
@@ -50,7 +55,9 @@ def get_package_metadata():
         state_name=manifest.get("state_name", "Himachal Pradesh"),
         model_id=model_id,
         models_available=list(repository.models.keys()),
-        source_run_id=int(manifest.get("source_run_id", 56 if "flood" in model_id else 63)),
+        source_run_id=int(
+            manifest.get("source_run_id", 56 if "flood" in model_id else 63)
+        ),
         published_at=str(manifest.get("published_at", "")),
         package_type=manifest.get("package_type", "Spatial Knowledge Package"),
         spec_version=str(manifest.get("spec_version", "1.0")),
@@ -84,7 +91,7 @@ def get_analysis_metadata(analysis_id: str):
         raise HTTPException(status_code=404, detail=f"Model '{analysis_id}' not found")
 
     model_layers = repository.get_layers_for_model(model.model_id)
-    result_layers = [l for l in model_layers if l.get("type") == "RESULT"]
+    result_layers = [layer for layer in model_layers if layer.get("type") == "RESULT"]
 
     crs = result_layers[0].get("crs", "EPSG:4326") if result_layers else "EPSG:4326"
     res_str = result_layers[0].get("resolution", "30 m") if result_layers else "30 m"
@@ -107,7 +114,9 @@ def get_analysis_metadata(analysis_id: str):
         resolution=res_str,
         published_at="September 2026",
         state_name="Himachal Pradesh",
-        validation_status="Validated (CR < 0.10)" if model.consistency_ratio < 0.10 else "Validated",
+        validation_status="Validated (CR < 0.10)"
+        if model.consistency_ratio < 0.10
+        else "Validated",
         scoring_modes=[
             "AVAILABLE_EVIDENCE_RENORMALIZED",
             f"STRICT_{len(model.criteria)}_OF_{len(model.criteria)}",

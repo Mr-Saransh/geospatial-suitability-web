@@ -4,7 +4,7 @@
  * COMPLETE, PARTIAL, UNAVAILABLE.
  */
 
-export type CoverageStatus = 'COMPLETE' | 'PARTIAL' | 'UNAVAILABLE';
+export type CoverageStatus = "COMPLETE" | "PARTIAL" | "UNAVAILABLE";
 
 export interface CoverageInfo {
   status: CoverageStatus;
@@ -29,43 +29,44 @@ export interface CoverageDistributionItem {
 export function getCoverageInfo(
   finalStatus?: string | null,
   evidenceCount?: number | null,
-  evidenceTotal: number = 11
+  evidenceTotal: number = 11,
 ): CoverageInfo {
   const minThreshold = evidenceTotal >= 14 ? 10 : 8;
 
   // Check unavailable conditions first
   if (
-    finalStatus === 'OUTSIDE_ANALYSIS_AREA' ||
-    finalStatus === 'NODATA' ||
+    finalStatus === "OUTSIDE_ANALYSIS_AREA" ||
+    finalStatus === "NODATA" ||
     (evidenceCount !== undefined && evidenceCount !== null && evidenceCount < minThreshold)
   ) {
     return {
-      status: 'UNAVAILABLE',
-      label: 'Unavailable',
-      badgeColor: '#ef4444',
-      tooltip: 'Unavailable: insufficient validated evidence is available for this location.',
+      status: "UNAVAILABLE",
+      label: "Unavailable",
+      badgeColor: "#ef4444",
+      tooltip: "Unavailable: insufficient validated evidence is available for this location.",
     };
   }
 
   // Complete (full criteria)
   if (
-    finalStatus === 'VALID' ||
+    finalStatus === "VALID" ||
     (evidenceCount !== undefined && evidenceCount !== null && evidenceCount >= evidenceTotal)
   ) {
     return {
-      status: 'COMPLETE',
-      label: 'Complete',
-      badgeColor: '#00c896',
-      tooltip: 'Complete: sufficient validated evidence is available for this location.',
+      status: "COMPLETE",
+      label: "Complete",
+      badgeColor: "#00c896",
+      tooltip: "Complete: sufficient validated evidence is available for this location.",
     };
   }
 
   // Partial
   return {
-    status: 'PARTIAL',
-    label: 'Partial',
-    badgeColor: '#f97316',
-    tooltip: 'Partial: the result is calculated using the valid available evidence for this location.',
+    status: "PARTIAL",
+    label: "Partial",
+    badgeColor: "#f97316",
+    tooltip:
+      "Partial: the result is calculated using the valid available evidence for this location.",
   };
 }
 
@@ -77,7 +78,7 @@ export function getCoverageInfo(
  * Percentages are calculated dynamically from data.
  */
 export function deriveCoverageDistribution(
-  evidenceDist?: Array<{ criteria_count: number; percentage: number }> | null
+  evidenceDist?: Array<{ criteria_count: number; percentage: number }> | null,
 ): CoverageDistributionItem[] {
   if (!evidenceDist || evidenceDist.length === 0) {
     return [];
@@ -100,26 +101,26 @@ export function deriveCoverageDistribution(
   // Unavailable is any explicitly reported <8 items, or residual difference if defined on evaluated pixels
   const evaluatedSum = completePct + partialPct + unavailablePct;
   const residual = Math.max(0, 100 - evaluatedSum);
-  const finalUnavailable = unavailablePct > 0 ? unavailablePct : (residual > 0.05 ? residual : 0);
+  const finalUnavailable = unavailablePct > 0 ? unavailablePct : residual > 0.05 ? residual : 0;
 
   return [
     {
-      status: 'COMPLETE',
-      label: 'Complete',
+      status: "COMPLETE",
+      label: "Complete",
       percentage: Number(completePct.toFixed(2)),
-      color: '#00c896',
+      color: "#00c896",
     },
     {
-      status: 'PARTIAL',
-      label: 'Partial',
+      status: "PARTIAL",
+      label: "Partial",
       percentage: Number(partialPct.toFixed(2)),
-      color: '#00b4d8',
+      color: "#00b4d8",
     },
     {
-      status: 'UNAVAILABLE',
-      label: 'Unavailable',
+      status: "UNAVAILABLE",
+      label: "Unavailable",
       percentage: Number(finalUnavailable.toFixed(2)),
-      color: '#ef4444',
+      color: "#ef4444",
     },
   ];
 }

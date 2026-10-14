@@ -1,0 +1,6 @@
+{
+  "include": ["backend"],
+  "extraPaths": ["backend"],
+  "venvPath": "C:\\",
+  "venv": "gee_env"
+}

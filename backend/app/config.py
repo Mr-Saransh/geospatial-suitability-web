@@ -3,11 +3,12 @@
 Supports canonical Spatial Knowledge Package path resolution for local
 development and cloud deployment without any hardcoded filesystem paths.
 """
+
 from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from dotenv import load_dotenv
 
@@ -17,7 +18,7 @@ _env_path = _backend_dir / ".env"
 load_dotenv(_env_path)
 
 
-def _clean_path(raw: Optional[str], base_dir: Path) -> Optional[Path]:
+def _clean_path(raw: str | None, base_dir: Path) -> Path | None:
     """Parse a path string into a resolved Path, handling relative paths and quotes."""
     if not raw:
         return None
@@ -41,24 +42,36 @@ class SpatialKnowledgeSettings:
         base = _backend_dir.parent
 
         # 1. Primary package root
-        self._raw_root: Optional[str] = os.getenv("SPATIAL_KNOWLEDGE_ROOT")
-        self.spatial_knowledge_root: Optional[Path] = _clean_path(self._raw_root, base)
+        self._raw_root: str | None = os.getenv("SPATIAL_KNOWLEDGE_ROOT")
+        self.spatial_knowledge_root: Path | None = _clean_path(self._raw_root, base)
 
         # 2. Model-specific package roots
-        self._raw_flood_root: Optional[str] = os.getenv("FLOOD_SPATIAL_KNOWLEDGE_ROOT")
-        self.flood_spatial_knowledge_root: Optional[Path] = _clean_path(self._raw_flood_root, base)
+        self._raw_flood_root: str | None = os.getenv("FLOOD_SPATIAL_KNOWLEDGE_ROOT")
+        self.flood_spatial_knowledge_root: Path | None = _clean_path(
+            self._raw_flood_root, base
+        )
 
-        self._raw_landslide_root: Optional[str] = os.getenv("LANDSLIDE_SPATIAL_KNOWLEDGE_ROOT")
-        self.landslide_spatial_knowledge_root: Optional[Path] = _clean_path(self._raw_landslide_root, base)
+        self._raw_landslide_root: str | None = os.getenv(
+            "LANDSLIDE_SPATIAL_KNOWLEDGE_ROOT"
+        )
+        self.landslide_spatial_knowledge_root: Path | None = _clean_path(
+            self._raw_landslide_root, base
+        )
 
     @property
-    def default_package_root(self) -> Optional[Path]:
+    def default_package_root(self) -> Path | None:
         """Default package root for generic queries."""
         if self.spatial_knowledge_root and self.spatial_knowledge_root.exists():
             return self.spatial_knowledge_root
-        if self.landslide_spatial_knowledge_root and self.landslide_spatial_knowledge_root.exists():
+        if (
+            self.landslide_spatial_knowledge_root
+            and self.landslide_spatial_knowledge_root.exists()
+        ):
             return self.landslide_spatial_knowledge_root
-        if self.flood_spatial_knowledge_root and self.flood_spatial_knowledge_root.exists():
+        if (
+            self.flood_spatial_knowledge_root
+            and self.flood_spatial_knowledge_root.exists()
+        ):
             return self.flood_spatial_knowledge_root
         return self.spatial_knowledge_root
 
@@ -67,9 +80,13 @@ class SpatialKnowledgeSettings:
         """Parsed list of allowed CORS origins."""
         if not self.cors_origins_raw or self.cors_origins_raw.strip() == "*":
             return ["*"]
-        return [origin.strip() for origin in self.cors_origins_raw.split(",") if origin.strip()]
+        return [
+            origin.strip()
+            for origin in self.cors_origins_raw.split(",")
+            if origin.strip()
+        ]
 
-    def get_package_root(self, model_id: Optional[str] = None) -> Path:
+    def get_package_root(self, model_id: str | None = None) -> Path:
         """
         Resolve the canonical package root for a specific model with fallback priority:
         1. Model-specific environment variable (FLOOD_... / LANDSLIDE_...)
@@ -79,7 +96,10 @@ class SpatialKnowledgeSettings:
         if model_id:
             m_lower = model_id.lower()
             if "flood" in m_lower:
-                if self.flood_spatial_knowledge_root and self.flood_spatial_knowledge_root.exists():
+                if (
+                    self.flood_spatial_knowledge_root
+                    and self.flood_spatial_knowledge_root.exists()
+                ):
                     return self.flood_spatial_knowledge_root
                 if self.spatial_knowledge_root and self.spatial_knowledge_root.exists():
                     return self.spatial_knowledge_root
@@ -89,7 +109,10 @@ class SpatialKnowledgeSettings:
                 )
 
             if "landslide" in m_lower:
-                if self.landslide_spatial_knowledge_root and self.landslide_spatial_knowledge_root.exists():
+                if (
+                    self.landslide_spatial_knowledge_root
+                    and self.landslide_spatial_knowledge_root.exists()
+                ):
                     return self.landslide_spatial_knowledge_root
                 if self.spatial_knowledge_root and self.spatial_knowledge_root.exists():
                     return self.spatial_knowledge_root
@@ -116,9 +139,15 @@ class SpatialKnowledgeSettings:
             return self.spatial_knowledge_root
 
         # If primary root not set, try model-specific roots if available
-        if self.landslide_spatial_knowledge_root and self.landslide_spatial_knowledge_root.exists():
+        if (
+            self.landslide_spatial_knowledge_root
+            and self.landslide_spatial_knowledge_root.exists()
+        ):
             return self.landslide_spatial_knowledge_root
-        if self.flood_spatial_knowledge_root and self.flood_spatial_knowledge_root.exists():
+        if (
+            self.flood_spatial_knowledge_root
+            and self.flood_spatial_knowledge_root.exists()
+        ):
             return self.flood_spatial_knowledge_root
 
         raise FileNotFoundError(

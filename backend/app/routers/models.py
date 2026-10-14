@@ -1,7 +1,9 @@
 """Model listing and detail endpoints."""
+
 from fastapi import APIRouter, HTTPException
+
+from app.schemas import ClassificationRange, CriterionWeight, ModelDetail, ModelSummary
 from app.services.weights import MODELS_REGISTRY, get_model_config
-from app.schemas import ModelSummary, ModelDetail, CriterionWeight, ClassificationRange
 
 router = APIRouter(prefix="/api/v1", tags=["models"])
 
@@ -31,7 +33,9 @@ def get_model(model_id: str):
         model_id=model.model_id,
         name=model.name,
         version=model.version,
-        source_run_id=model.metadata.get("source_run_id", 56 if "flood" in model.model_id else 63),
+        source_run_id=model.metadata.get(
+            "source_run_id", 56 if "flood" in model.model_id else 63
+        ),
         publication_date=model.metadata.get("publication_date", "September 2026"),
         criterion_count=len(model.criteria),
         criteria=list(model.criteria),

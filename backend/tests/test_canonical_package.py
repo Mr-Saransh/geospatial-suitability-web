@@ -20,12 +20,13 @@ Validates all 17 requirements from the Master Specification:
 16. Landslide API real data testing
 17. Tile rendering for multi-model rasters
 """
-from pathlib import Path
+
 import unittest
+
 from fastapi.testclient import TestClient  # type: ignore
 
-from app.main import app
 from app.config import settings
+from app.main import app
 from app.services.repository import repository
 
 
@@ -103,13 +104,25 @@ class TestCanonicalSpatialKnowledge(unittest.TestCase):
         self.assertEqual(data["minimum_valid_criteria"], 10)
 
         expected_14 = [
-            "slope", "lithology", "rainfall_10_year", "relative_relief",
-            "lineament_density", "drainage_density", "twi", "geomorphology",
-            "lulc", "soil", "distance_to_faults", "distance_to_roads",
-            "aspect", "ndvi"
+            "slope",
+            "lithology",
+            "rainfall_10_year",
+            "relative_relief",
+            "lineament_density",
+            "drainage_density",
+            "twi",
+            "geomorphology",
+            "lulc",
+            "soil",
+            "distance_to_faults",
+            "distance_to_roads",
+            "aspect",
+            "ndvi",
         ]
         for crit in expected_14:
-            self.assertIn(crit, data["criteria"], f"Missing landslide criterion: {crit}")
+            self.assertIn(
+                crit, data["criteria"], f"Missing landslide criterion: {crit}"
+            )
 
     # 8. Canonical raster resolution
     def test_canonical_raster_resolution(self):
@@ -119,10 +132,10 @@ class TestCanonicalSpatialKnowledge(unittest.TestCase):
         self.assertGreaterEqual(len(layers), 62)
 
         # Verify no local filesystem paths are leaked to clients
-        for l in layers:
-            self.assertNotIn("C:", l["relative_path"])
-            self.assertNotIn("\\", l["relative_path"])
-            self.assertEqual(l["status"], "published")
+        for layer in layers:
+            self.assertNotIn("C:", layer["relative_path"])
+            self.assertNotIn("\\", layer["relative_path"])
+            self.assertEqual(layer["status"], "published")
 
     # 9. Path traversal rejection
     def test_path_traversal_rejection(self):
@@ -134,7 +147,9 @@ class TestCanonicalSpatialKnowledge(unittest.TestCase):
 
     # 10. Point query: structured evidence (Phase 6 contract)
     def test_point_query_flood_full_evidence(self):
-        r = self.client.get("/api/v1/analyses/flood_11_factor_v1/point?lat=31.86450&lon=76.79195")
+        r = self.client.get(
+            "/api/v1/analyses/flood_11_factor_v1/point?lat=31.86450&lon=76.79195"
+        )
         self.assertEqual(r.status_code, 200)
         data = r.json()
 
@@ -163,7 +178,9 @@ class TestCanonicalSpatialKnowledge(unittest.TestCase):
 
     # 11. NoData point query: strict null semantics
     def test_point_query_flood_partial_evidence(self):
-        r = self.client.get("/api/v1/analyses/flood_11_factor_v1/point?lat=32.21646&lon=76.56746")
+        r = self.client.get(
+            "/api/v1/analyses/flood_11_factor_v1/point?lat=32.21646&lon=76.56746"
+        )
         self.assertEqual(r.status_code, 200)
         data = r.json()
 
@@ -178,7 +195,9 @@ class TestCanonicalSpatialKnowledge(unittest.TestCase):
 
     # 12. Coordinate bounds check: outside analysis area
     def test_point_query_outside_boundary(self):
-        r = self.client.get("/api/v1/analyses/flood_11_factor_v1/point?lat=25.0&lon=80.0")
+        r = self.client.get(
+            "/api/v1/analyses/flood_11_factor_v1/point?lat=25.0&lon=80.0"
+        )
         self.assertEqual(r.status_code, 200)
         data = r.json()
         self.assertEqual(data["final_status"], "OUTSIDE_ANALYSIS_AREA")
@@ -188,7 +207,9 @@ class TestCanonicalSpatialKnowledge(unittest.TestCase):
     # 13. CRS transformation & Landslide point query
     def test_crs_transformation_landslide(self):
         # Coordinates in Shimla (WGS84 31.1048, 77.1734) -> reprojected to UTM Zone 43N
-        r = self.client.get("/api/v1/analyses/landslide_14_factor_v1/point?lat=31.1048&lon=77.1734")
+        r = self.client.get(
+            "/api/v1/analyses/landslide_14_factor_v1/point?lat=31.1048&lon=77.1734"
+        )
         self.assertEqual(r.status_code, 200)
         data = r.json()
 
@@ -229,23 +250,32 @@ class TestCanonicalSpatialKnowledge(unittest.TestCase):
         legacy_full = "flood_11_factor_v1_full_suitability"
         r = self.client.get(f"/api/v1/layers/{legacy_full}")
         self.assertEqual(r.status_code, 200)
-        self.assertEqual(r.json()["product_id"], "flood_11_factor_v1_available_evidence_suitability")
+        self.assertEqual(
+            r.json()["product_id"], "flood_11_factor_v1_available_evidence_suitability"
+        )
 
         legacy_cls = "flood_11_factor_v1_full_suitability_classified"
         r = self.client.get(f"/api/v1/layers/{legacy_cls}")
         self.assertEqual(r.status_code, 200)
-        self.assertEqual(r.json()["product_id"], "flood_11_factor_v1_available_evidence_suitability_classified")
+        self.assertEqual(
+            r.json()["product_id"],
+            "flood_11_factor_v1_available_evidence_suitability_classified",
+        )
 
     # 17. Multi-model tile rendering
     def test_tile_rendering(self):
         # Flood tile (EPSG:4326 source)
-        r = self.client.get("/api/v1/tiles/flood_11_factor_v1_available_evidence_suitability_classified/8/182/104.png")
+        r = self.client.get(
+            "/api/v1/tiles/flood_11_factor_v1_available_evidence_suitability_classified/8/182/104.png"
+        )
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.headers["content-type"], "image/png")
         self.assertGreater(len(r.content), 1000)
 
         # Landslide tile (EPSG:32643 UTM source)
-        r2 = self.client.get("/api/v1/tiles/landslide_14_factor_v1_available_evidence_suitability_classified/8/182/104.png")
+        r2 = self.client.get(
+            "/api/v1/tiles/landslide_14_factor_v1_available_evidence_suitability_classified/8/182/104.png"
+        )
         self.assertEqual(r2.status_code, 200)
         self.assertEqual(r2.headers["content-type"], "image/png")
         self.assertGreater(len(r2.content), 1000)
@@ -254,7 +284,7 @@ class TestCanonicalSpatialKnowledge(unittest.TestCase):
     def test_security_no_paths_leaked(self):
         r = self.client.get("/api/v1/health")
         self.assertEqual(r.status_code, 200)
-        for key, val in r.json().items():
+        for val in r.json().values():
             if isinstance(val, str):
                 self.assertNotIn("C:", val)
                 self.assertNotIn("\\", val)
@@ -263,7 +293,9 @@ class TestCanonicalSpatialKnowledge(unittest.TestCase):
     # 19. Same-location validation: Continuous vs Classified synchronization
     def test_same_location_continuous_classified_sync(self):
         # Point 1: 31.8645, 76.7920
-        r1 = self.client.get("/api/v1/analyses/landslide_14_factor_v1/point?lat=31.86450&lon=76.79200")
+        r1 = self.client.get(
+            "/api/v1/analyses/landslide_14_factor_v1/point?lat=31.86450&lon=76.79200"
+        )
         self.assertEqual(r1.status_code, 200)
         d1 = r1.json()
         self.assertEqual(d1["location"]["lat"], 31.86450)
@@ -275,7 +307,9 @@ class TestCanonicalSpatialKnowledge(unittest.TestCase):
         self.assertTrue(2.0 <= d1["continuous_score"] < 3.0)
 
         # Point 2: 32.0599, 76.9306
-        r2 = self.client.get("/api/v1/analyses/landslide_14_factor_v1/point?lat=32.05990&lon=76.93060")
+        r2 = self.client.get(
+            "/api/v1/analyses/landslide_14_factor_v1/point?lat=32.05990&lon=76.93060"
+        )
         self.assertEqual(r2.status_code, 200)
         d2 = r2.json()
         self.assertEqual(d2["location"]["lat"], 32.05990)
@@ -288,4 +322,3 @@ class TestCanonicalSpatialKnowledge(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

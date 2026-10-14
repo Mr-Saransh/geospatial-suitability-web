@@ -1,13 +1,21 @@
 {
   "name": "mcdse",
-  "private": true,
   "version": "1.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "format": "oxfmt"
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
+    "typecheck": "tsc --noEmit",
+    "lint:backend": "ruff check backend",
+    "lint:backend:fix": "ruff check --fix backend",
+    "format:backend": "ruff format backend",
+    "format:backend:check": "ruff format --check backend"
   },
   "dependencies": {
     "@types/leaflet": "^1.9.22",
@@ -18,14 +26,19 @@
     "recharts": "^3.10.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@tailwindcss/vite": "^4.0.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^6.0.0",
-    "oxfmt": "^0.2.0",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^15.15.0",
+    "oxfmt": "^0.72.0",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.0",
+    "typescript-eslint": "^8.71.1",
     "vite": "^8.0.5"
   }
 }

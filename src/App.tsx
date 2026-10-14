@@ -1,30 +1,37 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import Navbar from './components/Navbar';
-import Sidebar from './components/Sidebar';
-import MapCanvas from './components/MapCanvas';
-import RightPanel from './components/RightPanel';
-import AIPanel from './components/AIPanel';
-import ExportCenter from './components/ExportCenter';
-import ResultPopup from './components/ResultPopup';
-import MobileApp from './components/MobileApp';
+import { useState, useEffect, useCallback, useRef } from "react";
+import Navbar from "./components/Navbar";
+import Sidebar from "./components/Sidebar";
+import MapCanvas from "./components/MapCanvas";
+import RightPanel from "./components/RightPanel";
+import AIPanel from "./components/AIPanel";
+import ExportCenter from "./components/ExportCenter";
+import ResultPopup from "./components/ResultPopup";
+import MobileApp from "./components/MobileApp";
 import {
   INITIAL_LAYERS,
   INITIAL_ZONE,
   INITIAL_CRITERIA,
   CRITERIA_INFO,
   classValueToSuitClass,
-} from './data';
-import type { Zone, AppModal, Layer, CriterionRow, RightTab } from './types';
-import { api } from './lib/api/client';
-import type { ModelSummary, ModelDetail, AnalysisStatistics, LayerInfo, PointInspectionResponse } from './lib/api/types';
-import { getCoverageInfo } from './utils/coverage';
+} from "./data";
+import type { Zone, AppModal, Layer, CriterionRow, RightTab } from "./types";
+import { api } from "./lib/api/client";
+import type {
+  ModelSummary,
+  ModelDetail,
+  AnalysisStatistics,
+  LayerInfo,
+  PointInspectionResponse,
+  CriterionSample,
+} from "./lib/api/types";
+import { getCoverageInfo } from "./utils/coverage";
 
 function useIsMobile() {
   const [mobile, setMobile] = useState(window.innerWidth < 640);
   useEffect(() => {
     const h = () => setMobile(window.innerWidth < 640);
-    window.addEventListener('resize', h);
-    return () => window.removeEventListener('resize', h);
+    window.addEventListener("resize", h);
+    return () => window.removeEventListener("resize", h);
   }, []);
   return mobile;
 }
@@ -32,31 +39,36 @@ function useIsMobile() {
 export default function App() {
   const isMobile = useIsMobile();
 
-  const [sidebarOpen, setSidebarOpen]   = useState(true);
-  const [rightOpen, setRightOpen]       = useState(false);
-  const [rightTab, setRightTab]         = useState<RightTab>('overview');
-  const [aiOpen, setAiOpen]             = useState(false);
-  const [compareOpen, setCompareOpen]   = useState(false);
-  const [modal, setModal]               = useState<AppModal>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [rightOpen, setRightOpen] = useState(false);
+  const [rightTab, setRightTab] = useState<RightTab>("overview");
+  const [aiOpen, setAiOpen] = useState(false);
+  const [compareOpen, setCompareOpen] = useState(false);
+  const [modal, setModal] = useState<AppModal>(null);
 
   // Backend state
-  const [models, setModels]             = useState<ModelSummary[]>([]);
-  const [activeModelId, setActiveModelId] = useState('flood_11_factor_v1');
-  const [activeModelName, setActiveModelName] = useState('Flood');
-  const [modelDetail, setModelDetail]   = useState<ModelDetail | null>(null);
-  const [statistics, setStatistics]     = useState<AnalysisStatistics | null>(null);
+  const [models, setModels] = useState<ModelSummary[]>([]);
+  const [activeModelId, setActiveModelId] = useState("flood_11_factor_v1");
+  const [activeModelName, setActiveModelName] = useState("Flood");
+  const [modelDetail, setModelDetail] = useState<ModelDetail | null>(null);
+  const [statistics, setStatistics] = useState<AnalysisStatistics | null>(null);
 
   // Layers state — default to the canonical available-evidence classified product
-  const [layers, setLayers]             = useState<Layer[]>(INITIAL_LAYERS);
-  const [activeLayerId, setActiveLayerId] = useState('flood_11_factor_v1_available_evidence_suitability_classified');
+  const [layers, setLayers] = useState<Layer[]>(INITIAL_LAYERS);
+  const [activeLayerId, setActiveLayerId] = useState(
+    "flood_11_factor_v1_available_evidence_suitability_classified",
+  );
 
   // ── 2. SINGLE SOURCE OF TRUTH FOR MAP LOCATION ────────────────────────────────
   // There is ONE selected coordinate for the entire map (WGS84 EPSG:4326).
   // It belongs to the MAP, not to any raster layer.
   // Switching between Continuous and Classified raster layers must NEVER change this.
-  const [selectedMapCoordinate, setSelectedMapCoordinate] = useState<{ lat: number; lon: number }>({
+  const [selectedMapCoordinate, setSelectedMapCoordinate] = useState<{
+    lat: number;
+    lon: number;
+  }>({
     lat: 31.8645,
-    lon: 76.7920,
+    lon: 76.792,
   });
   const selectedMapCoordinateRef = useRef(selectedMapCoordinate);
   useEffect(() => {
@@ -68,24 +80,27 @@ export default function App() {
   const [loadingInspection, setLoadingInspection] = useState(false);
 
   // Map state
-  const [basemap, setBasemap]           = useState('dark');
-  const [coord, setCoord]               = useState('31.86450°N  76.79200°E');
-  const [centerTarget, setCenterTarget] = useState<{ lat: number; lng: number } | null>(null);
+  const [basemap, setBasemap] = useState("dark");
+  const [coord, setCoord] = useState("31.86450°N  76.79200°E");
+  const [centerTarget, setCenterTarget] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
 
   // Theme state
-  const [theme, setTheme]               = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
   // ── 1. Fetch backend models, layers, stats, and metadata on load ─────────────────
   // NOTE: activeLayerId is deliberately excluded from dependencies to ensure switching
   // layers NEVER reloads the backend or overwrites the user's selectedMapCoordinate!
   const loadBackend = useCallback(async () => {
-    if (activeModelId === 'cyclone' || activeModelId === 'drought') {
+    if (activeModelId === "cyclone" || activeModelId === "drought") {
       setLayers([]);
-      setActiveLayerId('');
+      setActiveLayerId("");
       setModelDetail(null);
       setStatistics(null);
       setSelectedZone(null);
@@ -96,11 +111,11 @@ export default function App() {
       const modelsRes = await api.getModels().catch(() => []);
       if (modelsRes.length > 0) {
         setModels(modelsRes);
-        const currentValid = modelsRes.some(m => m.model_id === activeModelId);
+        const currentValid = modelsRes.some((m) => m.model_id === activeModelId);
         if (!currentValid) {
           const defaultId = modelsRes[0].model_id;
           setActiveModelId(defaultId);
-          setActiveModelName(defaultId.includes('landslide') ? 'Landslide' : 'Flood');
+          setActiveModelName(defaultId.includes("landslide") ? "Landslide" : "Flood");
         }
       }
 
@@ -121,49 +136,51 @@ export default function App() {
       if (layersRes.length > 0) {
         // Filter out internal bitmask raster from public layers
         const publicLayersRes = layersRes.filter(
-          (l: LayerInfo) => !l.product_id.includes('bitmask') && !l.layer_name?.includes('bitmask')
+          (l: LayerInfo) => !l.product_id.includes("bitmask") && !l.layer_name?.includes("bitmask"),
         );
 
         const defaultClassifiedId = publicLayersRes.find(
-          l => l.type === 'RESULT' && l.product_id.includes('classified')
+          (l) => l.type === "RESULT" && l.product_id.includes("classified"),
         )?.product_id;
 
-        setActiveLayerId(prev => {
-          const currentActiveStillValid = publicLayersRes.some(l => l.product_id === prev);
-          return currentActiveStillValid ? prev : (defaultClassifiedId || publicLayersRes[0].product_id);
+        setActiveLayerId((prev) => {
+          const currentActiveStillValid = publicLayersRes.some((l) => l.product_id === prev);
+          return currentActiveStillValid
+            ? prev
+            : defaultClassifiedId || publicLayersRes[0].product_id;
         });
 
         const mappedLayers: Layer[] = publicLayersRes.map((l: LayerInfo) => {
-          const isResult = l.type === 'RESULT' || l.layer_type === 'result_raster';
-          const isQuality = l.type === 'QUALITY' || l.layer_type === 'quality_mask';
-          const critKey = l.criterion_id || '';
+          const isResult = l.type === "RESULT" || l.layer_type === "result_raster";
+          const isQuality = l.type === "QUALITY" || l.layer_type === "quality_mask";
+          const critKey = l.criterion_id || "";
           const critMeta = CRITERIA_INFO[critKey];
 
-          let group: Layer['group'] = 'composite';
-          let groupLabel = 'Analysis Results';
+          let group: Layer["group"] = "composite";
+          let groupLabel = "Analysis Results";
           if (isQuality) {
-            group = 'quality';
-            groupLabel = 'Quality & Coverage';
+            group = "quality";
+            groupLabel = "Quality & Coverage";
           } else if (isResult) {
-            group = 'composite';
-            groupLabel = 'Analysis Results';
+            group = "composite";
+            groupLabel = "Analysis Results";
           } else {
-            const cat = (l.category || '').toLowerCase();
-            if (cat.includes('hydro')) {
-              group = 'hydrological';
-              groupLabel = 'Hydrological Criteria';
-            } else if (cat.includes('topo')) {
-              group = 'topographic';
-              groupLabel = 'Topographic Criteria';
-            } else if (cat.includes('geo')) {
-              group = 'geological';
-              groupLabel = 'Geological Criteria';
+            const cat = (l.category || "").toLowerCase();
+            if (cat.includes("hydro")) {
+              group = "hydrological";
+              groupLabel = "Hydrological Criteria";
+            } else if (cat.includes("topo")) {
+              group = "topographic";
+              groupLabel = "Topographic Criteria";
+            } else if (cat.includes("geo")) {
+              group = "geological";
+              groupLabel = "Geological Criteria";
             } else if (critMeta) {
               group = critMeta.group;
               groupLabel = critMeta.groupLabel;
             } else {
-              group = 'environmental';
-              groupLabel = 'Environmental Criteria';
+              group = "environmental";
+              groupLabel = "Environmental Criteria";
             }
           }
 
@@ -177,11 +194,11 @@ export default function App() {
             groupLabel,
             visible: l.product_id === (defaultClassifiedId || layersRes[0].product_id),
             opacity: isResult ? 85 : 75,
-            unit: l.unit || critMeta?.unit || '',
-            source: l.description || critMeta?.source || 'Canonical Spatial Package',
-            resolution: l.resolution || '30 m',
-            date: '2026-09',
-            description: l.description || critMeta?.description || '',
+            unit: l.unit || critMeta?.unit || "",
+            source: l.description || critMeta?.source || "Canonical Spatial Package",
+            resolution: l.resolution || "30 m",
+            date: "2026-09",
+            description: l.description || critMeta?.description || "",
             scoring_mode: l.scoring_mode,
           };
         });
@@ -190,13 +207,18 @@ export default function App() {
       }
 
       // Query point inspection at currently selected canonical map coordinate
-      const currentTarget = selectedMapCoordinateRef.current || { lat: 31.8645, lon: 76.7920 };
-      const ptRes = await api.inspectPoint(activeModelId, currentTarget.lat, currentTarget.lon).catch(() => null);
+      const currentTarget = selectedMapCoordinateRef.current || {
+        lat: 31.8645,
+        lon: 76.792,
+      };
+      const ptRes = await api
+        .inspectPoint(activeModelId, currentTarget.lat, currentTarget.lon)
+        .catch(() => null);
       if (ptRes) {
         handlePointInspectionResult(ptRes, currentTarget.lat, currentTarget.lon);
       }
     } catch (err) {
-      console.warn('Backend loading note (fallback in use):', err);
+      console.warn("Backend loading note (fallback in use):", err);
     }
   }, [activeModelId]);
 
@@ -207,46 +229,74 @@ export default function App() {
   // Transform backend point inspection response to Zone structure
   const handlePointInspectionResult = (pt: PointInspectionResponse, lat: number, lon: number) => {
     if (import.meta.env?.DEV) {
-      console.log(`[Canonical Map Point Sync] lat=${lat}, lon=${lon}, continuous_score=${pt.continuous_score}, classified_value=${pt.classified_value}`);
+      console.log(
+        `[Canonical Map Point Sync] lat=${lat}, lon=${lon}, continuous_score=${pt.continuous_score}, classified_value=${pt.classified_value}`,
+      );
     }
 
-    const rawScore = pt.continuous_score !== null && pt.continuous_score !== undefined ? pt.continuous_score : 0;
-    const classifiedVal = pt.classified_value ?? (pt.class_label === 'Very High' ? 5 : pt.class_label === 'High' ? 4 : pt.class_label === 'Moderate' ? 3 : pt.class_label === 'Low' ? 2 : 1);
+    const rawScore =
+      pt.continuous_score !== null && pt.continuous_score !== undefined ? pt.continuous_score : 0;
+    const classifiedVal =
+      pt.classified_value ??
+      (pt.class_label === "Very High"
+        ? 5
+        : pt.class_label === "High"
+          ? 4
+          : pt.class_label === "Moderate"
+            ? 3
+            : pt.class_label === "Low"
+              ? 2
+              : 1);
     const cls = classValueToSuitClass(classifiedVal);
 
     // Support both Array and Object criteria from backend
-    const rawCriteria: any[] = Array.isArray(pt.criteria)
-      ? pt.criteria
-      : Object.entries(pt.criteria || {}).map(([key, val]: [string, any]) => ({
-          criterion: key,
-          display_name: val.display_name || key.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
-          raw_value: val.raw_value,
-          rating: val.rating,
-          weight: val.weight,
-          status: val.status,
-          unit: val.unit || '',
-          source: val.source || 'Canonical Spatial Package',
-          nodata_reason: val.nodata_reason,
-          contribution: val.rating !== null && val.rating !== undefined ? val.rating * val.weight : null,
-        }));
+    type CriterionEntry = CriterionSample & { [key: string]: unknown };
+    const rawCriteria: CriterionEntry[] = Array.isArray(pt.criteria)
+      ? (pt.criteria as CriterionEntry[])
+      : Object.entries((pt.criteria as Record<string, unknown>) || {}).map(([key, rawVal]) => {
+          const val = (rawVal && typeof rawVal === "object" ? rawVal : {}) as Record<
+            string,
+            unknown
+          >;
+          return {
+            criterion: key,
+            display_name:
+              (val.display_name as string) ||
+              key.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
+            raw_value: (val.raw_value as number | null) ?? null,
+            rating: (val.rating as number | null) ?? null,
+            weight: typeof val.weight === "number" ? val.weight : 0,
+            status: (val.status as string) || "VALID",
+            unit: (val.unit as string) || "",
+            source: (val.source as string) || "Canonical Spatial Package",
+            nodata_reason: (val.nodata_reason as string | null) ?? null,
+            contribution:
+              val.rating !== null && val.rating !== undefined && typeof val.weight === "number"
+                ? (val.rating as number) * val.weight
+                : null,
+          };
+        });
 
-    const criteriaRows: CriterionRow[] = rawCriteria.map(c => {
+    const criteriaRows: CriterionRow[] = rawCriteria.map((c) => {
       const critMeta = CRITERIA_INFO[c.criterion];
-      const isLimiting = (c.rating !== null && c.rating >= 4) || (c.contribution !== null && c.contribution > 0.3);
+      const isLimiting =
+        (c.rating !== null && c.rating >= 4) || (c.contribution !== null && c.contribution > 0.3);
       return {
-        name: c.display_name || critMeta?.label || c.criterion.replace(/_/g, ' '),
+        name: c.display_name || critMeta?.label || c.criterion.replace(/_/g, " "),
         criterionId: c.criterion,
         weight: c.weight,
         rawScore: c.raw_value,
         rating: c.rating,
         contribution: c.contribution,
-        unit: c.unit || critMeta?.unit || '',
-        cls: isLimiting ? 'limiting' : 'positive',
+        unit: c.unit || critMeta?.unit || "",
+        cls: isLimiting ? "limiting" : "positive",
         layerId: c.criterion,
-        source: c.source || critMeta?.source || 'Canonical Spatial Package',
-        evidence: c.status === 'NODATA'
-          ? (c.nodata_reason || 'Factor not available for this location — susceptibility calculated from valid criteria.')
-          : (critMeta?.evidence || `Sampled value: ${c.raw_value}`),
+        source: c.source || critMeta?.source || "Canonical Spatial Package",
+        evidence:
+          c.status === "NODATA"
+            ? c.nodata_reason ||
+              "Factor not available for this location — susceptibility calculated from valid criteria."
+            : critMeta?.evidence || `Sampled value: ${c.raw_value}`,
         status: c.status,
       };
     });
@@ -261,8 +311,8 @@ export default function App() {
       classifiedValue: classifiedVal,
       lat,
       lng: lon,
-      district: 'Himachal Pradesh',
-      region: 'Himalayan Basin',
+      district: "Himachal Pradesh",
+      region: "Himalayan Basin",
       area: 44.3,
       finalStatus: pt.final_status,
       coverageStatus: coverage.status,
@@ -279,96 +329,103 @@ export default function App() {
   };
 
   // ── 2. Handle map point click (Live Backend Inspection) ──────────────────────
-  const handlePointClick = useCallback(async (lat: number, lon: number) => {
-    // Instantly set canonical coordinate single source of truth
-    setSelectedMapCoordinate({ lat, lon });
-    selectedMapCoordinateRef.current = { lat, lon };
+  const handlePointClick = useCallback(
+    async (lat: number, lon: number) => {
+      // Instantly set canonical coordinate single source of truth
+      setSelectedMapCoordinate({ lat, lon });
+      selectedMapCoordinateRef.current = { lat, lon };
 
-    if (activeModelId === 'cyclone' || activeModelId === 'drought') {
-      // Placeholder model: do not make API calls or fabricate fake data
-      return;
-    }
+      if (activeModelId === "cyclone" || activeModelId === "drought") {
+        // Placeholder model: do not make API calls or fabricate fake data
+        return;
+      }
 
-    setLoadingInspection(true);
-    try {
-      const pt = await api.inspectPoint(activeModelId, lat, lon);
-      handlePointInspectionResult(pt, lat, lon);
-      // Auto open right panel on inspection overview
-      setRightTab('overview');
-      setRightOpen(true);
-    } catch (err) {
-      console.error('Point inspection failed:', err);
-      // Fallback preserves clicked geographic coordinates
-      setSelectedZone({
-        id: `pt-${lat.toFixed(4)}-${lon.toFixed(4)}`,
-        label: `${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E`,
-        cls: 'very-low',
-        score: 0,
-        classifiedValue: 1,
-        lat,
-        lng: lon,
-        district: 'Himachal Pradesh',
-        region: 'Himalayan Basin',
-        area: 44.3,
-        finalStatus: 'OUTSIDE_ANALYSIS_AREA',
-        coverageStatus: 'UNAVAILABLE',
-        criteria: INITIAL_CRITERIA,
-      });
-      setRightTab('overview');
-      setRightOpen(true);
-    } finally {
-      setLoadingInspection(false);
-    }
-  }, [activeModelId]);
+      setLoadingInspection(true);
+      try {
+        const pt = await api.inspectPoint(activeModelId, lat, lon);
+        handlePointInspectionResult(pt, lat, lon);
+        // Auto open right panel on inspection overview
+        setRightTab("overview");
+        setRightOpen(true);
+      } catch (err) {
+        console.error("Point inspection failed:", err);
+        // Fallback preserves clicked geographic coordinates
+        setSelectedZone({
+          id: `pt-${lat.toFixed(4)}-${lon.toFixed(4)}`,
+          label: `${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E`,
+          cls: "very-low",
+          score: 0,
+          classifiedValue: 1,
+          lat,
+          lng: lon,
+          district: "Himachal Pradesh",
+          region: "Himalayan Basin",
+          area: 44.3,
+          finalStatus: "OUTSIDE_ANALYSIS_AREA",
+          coverageStatus: "UNAVAILABLE",
+          criteria: INITIAL_CRITERIA,
+        });
+        setRightTab("overview");
+        setRightOpen(true);
+      } finally {
+        setLoadingInspection(false);
+      }
+    },
+    [activeModelId],
+  );
 
   // ── 3. Handle layer selection for map rendering ──────────────────────────────
   // Switching between Continuous and Classified NEVER changes selectedMapCoordinate!
   const handleSelectLayer = (id: string) => {
     setActiveLayerId(id);
-    setLayers(prev => prev.map(l => ({
-      ...l,
-      visible: l.id === id,
-    })));
+    setLayers((prev) =>
+      prev.map((l) => ({
+        ...l,
+        visible: l.id === id,
+      })),
+    );
   };
 
   const handleLayerEvidence = (id: string) => {
     setActiveLayerId(id);
-    setLayers(prev => prev.map(l => ({
-      ...l,
-      visible: l.id === id,
-    })));
+    setLayers((prev) =>
+      prev.map((l) => ({
+        ...l,
+        visible: l.id === id,
+      })),
+    );
   };
 
   const handleModelChange = (modelName: string) => {
     const lower = modelName.toLowerCase();
-    if (lower.includes('cyclone')) {
-      setActiveModelName('Cyclone');
-      setActiveModelId('cyclone');
+    if (lower.includes("cyclone")) {
+      setActiveModelName("Cyclone");
+      setActiveModelId("cyclone");
       setLayers([]);
-      setActiveLayerId('');
+      setActiveLayerId("");
       setModelDetail(null);
       setStatistics(null);
       setSelectedZone(null);
       return;
     }
-    if (lower.includes('drought')) {
-      setActiveModelName('Drought');
-      setActiveModelId('drought');
+    if (lower.includes("drought")) {
+      setActiveModelName("Drought");
+      setActiveModelId("drought");
       setLayers([]);
-      setActiveLayerId('');
+      setActiveLayerId("");
       setModelDetail(null);
       setStatistics(null);
       setSelectedZone(null);
       return;
     }
-    if (lower.includes('landslide')) {
-      setActiveModelName('Landslide');
-      setActiveModelId('landslide_14_factor_v1');
+    if (lower.includes("landslide")) {
+      setActiveModelName("Landslide");
+      setActiveModelId("landslide_14_factor_v1");
       return;
     }
     // Default to Flood
-    setActiveModelName('Flood');
-    setActiveModelId('flood_11_factor_v1');
+    setActiveModelName("Flood");
+    setActiveModelId("flood_11_factor_v1");
   };
 
   const handleLocationFly = (loc: { lat: number; lng: number }) => {
@@ -378,34 +435,40 @@ export default function App() {
 
   const handleToggleAnalytics = () => {
     if (!rightOpen) {
-      setRightTab('statistics');
+      setRightTab("statistics");
       setRightOpen(true);
-    } else if (rightTab !== 'statistics') {
-      setRightTab('statistics');
+    } else if (rightTab !== "statistics") {
+      setRightTab("statistics");
     } else {
       setRightOpen(false);
     }
   };
 
-  const activeLayer = layers.find(l => l.id === activeLayerId) || layers.find(l => l.visible) || null;
+  const activeLayer =
+    layers.find((l) => l.id === activeLayerId) || layers.find((l) => l.visible) || null;
 
   if (isMobile) return <MobileApp />;
 
   return (
-    <div className="flex flex-col h-full overflow-hidden" style={{ background: 'var(--c-base)' }}>
+    <div className="flex flex-col h-full overflow-hidden" style={{ background: "var(--c-base)" }}>
       {/* Navbar */}
       <Navbar
-        sidebarOpen={sidebarOpen}  onSidebar={() => setSidebarOpen(v => !v)}
-        rightOpen={rightOpen}      onRight={handleToggleAnalytics}
-        aiOpen={aiOpen}            onAI={() => setAiOpen(v => !v)}
-        compareOpen={compareOpen}  onCompare={() => setCompareOpen(v => !v)}
-        onExport={() => setModal('export')}
-        model={activeModelName}    onModel={handleModelChange}
+        sidebarOpen={sidebarOpen}
+        onSidebar={() => setSidebarOpen((v) => !v)}
+        rightOpen={rightOpen}
+        onRight={handleToggleAnalytics}
+        aiOpen={aiOpen}
+        onAI={() => setAiOpen((v) => !v)}
+        compareOpen={compareOpen}
+        onCompare={() => setCompareOpen((v) => !v)}
+        onExport={() => setModal("export")}
+        model={activeModelName}
+        onModel={handleModelChange}
         modelsList={models}
         coord={coord}
         onSearchLocation={handleLocationFly}
         theme={theme}
-        onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+        onToggleTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
       />
 
       {/* Body */}
@@ -435,7 +498,7 @@ export default function App() {
             onPointClick={handlePointClick}
             activeLayer={activeLayer}
             compareMode={compareOpen}
-            onCompare={() => setCompareOpen(v => !v)}
+            onCompare={() => setCompareOpen((v) => !v)}
             basemap={basemap}
             onCoordChange={setCoord}
             centerTarget={centerTarget}
@@ -450,11 +513,11 @@ export default function App() {
               zone={selectedZone}
               onClose={() => setSelectedZone(null)}
               onDetails={() => {
-                setRightTab('overview');
+                setRightTab("overview");
                 setRightOpen(true);
               }}
               onWhy={() => {
-                setRightTab('evidence');
+                setRightTab("evidence");
                 setRightOpen(true);
               }}
               onAsk={() => {
@@ -466,10 +529,17 @@ export default function App() {
 
           {/* Map floating controls */}
           <div className="absolute bottom-4 left-4 z-10 flex items-center gap-2 pointer-events-auto">
-            <div className="px-3 py-1.5 rounded text-[12px] font-mono flex items-center gap-2"
-              style={{ background: 'var(--c-panel)', border: '1px solid var(--c-border)', color: 'var(--c-text2)', boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
+            <div
+              className="px-3 py-1.5 rounded text-[12px] font-mono flex items-center gap-2"
+              style={{
+                background: "var(--c-panel)",
+                border: "1px solid var(--c-border)",
+                color: "var(--c-text2)",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
+              }}
+            >
               <span className="w-2 h-2 rounded-full bg-[#00b4d8] animate-pulse" />
-              <span>{activeLayer ? activeLayer.name : 'No Layer Active'}</span>
+              <span>{activeLayer ? activeLayer.name : "No Layer Active"}</span>
               <span className="opacity-40">|</span>
               <span className="text-[11px] opacity-75">{coord}</span>
             </div>
@@ -507,7 +577,7 @@ export default function App() {
       </div>
 
       {/* Export modal dialog */}
-      {modal === 'export' && (
+      {modal === "export" && (
         <ExportCenter
           onClose={() => setModal(null)}
           zone={selectedZone}

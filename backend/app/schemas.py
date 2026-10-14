@@ -1,7 +1,9 @@
 """Pydantic response schemas for all API endpoints."""
+
 from __future__ import annotations
 
-from typing import Any, Optional, Union
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -80,8 +82,8 @@ class ModelDetail(BaseModel):
     model_id: str
     name: str
     version: str
-    source_run_id: Optional[Union[int, str]] = 56
-    publication_date: Optional[str] = "September 2026"
+    source_run_id: int | str | None = 56
+    publication_date: str | None = "September 2026"
     criterion_count: int
     criteria: list[str]
     weights: list[CriterionWeight]
@@ -116,10 +118,10 @@ class LayerInfo(BaseModel):
     height: int = 0
     bounds: list[float] = Field(default_factory=list)
     nodata_value: str = "nan"
-    scoring_mode: Optional[str] = None
+    scoring_mode: str | None = None
     status: str = "published"
     relative_path: str = ""
-    alias_of: Optional[str] = None
+    alias_of: str | None = None
     valid_pixel_pct: float = 0.0
     description: str = ""
     layer_id: str = ""
@@ -130,13 +132,13 @@ class LayerInfo(BaseModel):
 class CriterionInspection(BaseModel):
     criterion: str
     display_name: str
-    raw_value: Optional[float] = None
+    raw_value: float | None = None
     unit: str = ""
-    rating: Optional[float] = None
+    rating: float | None = None
     weight: float = 0.0
-    contribution: Optional[float] = None
+    contribution: float | None = None
     status: str = "VALID"  # VALID | NODATA | OUTSIDE_ANALYSIS_AREA
-    nodata_reason: Optional[str] = None
+    nodata_reason: str | None = None
     source: str = ""
 
 
@@ -144,22 +146,24 @@ class PointInspectionResponse(BaseModel):
     lat: float
     lon: float
     model_id: str
-    continuous_score: Optional[float] = None
-    classified_value: Optional[float] = None
-    class_label: Optional[str] = None
-    final_status: str = "VALID"  # VALID | PARTIAL_EVIDENCE | NODATA | OUTSIDE_ANALYSIS_AREA
-    coverage_status: Optional[str] = "COMPLETE"  # COMPLETE | PARTIAL | UNAVAILABLE
+    continuous_score: float | None = None
+    classified_value: float | None = None
+    class_label: str | None = None
+    final_status: str = (
+        "VALID"  # VALID | PARTIAL_EVIDENCE | NODATA | OUTSIDE_ANALYSIS_AREA
+    )
+    coverage_status: str | None = "COMPLETE"  # COMPLETE | PARTIAL | UNAVAILABLE
     evidence_count: int = 11
     evidence_total: int = 11
     missing_criteria: list[str] = Field(default_factory=list)
-    scoring_mode: Optional[str] = None
-    strict_score: Optional[float] = None
-    available_evidence_score: Optional[float] = None
-    criteria: Union[dict[str, Any], list[CriterionInspection]]
-    criteria_list: Optional[list[CriterionInspection]] = None
-    location: Optional[dict[str, float]] = None
-    model: Optional[dict[str, str]] = None
-    final: Optional[dict[str, Any]] = None
+    scoring_mode: str | None = None
+    strict_score: float | None = None
+    available_evidence_score: float | None = None
+    criteria: dict[str, Any] | list[CriterionInspection]
+    criteria_list: list[CriterionInspection] | None = None
+    location: dict[str, float] | None = None
+    model: dict[str, str] | None = None
+    final: dict[str, Any] | None = None
 
 
 # ── Statistics ─────────────────────────────────────────────
@@ -168,7 +172,7 @@ class ClassDistribution(BaseModel):
     label: str
     pixel_count: int
     percentage: float
-    area_km2: Optional[float] = None
+    area_km2: float | None = None
 
 
 class EvidenceDistributionItem(BaseModel):
@@ -182,8 +186,8 @@ class CoverageDistributionItem(BaseModel):
     status: str
     label: str
     percentage: float
-    pixel_count: Optional[int] = None
-    color: Optional[str] = None
+    pixel_count: int | None = None
+    color: str | None = None
 
 
 class AnalysisStatistics(BaseModel):
@@ -195,14 +199,14 @@ class AnalysisStatistics(BaseModel):
     nodata_pixels: int
     valid_coverage_pct: float
     nodata_coverage_pct: float
-    score_min: Optional[float] = None
-    score_max: Optional[float] = None
-    score_mean: Optional[float] = None
-    score_std: Optional[float] = None
+    score_min: float | None = None
+    score_max: float | None = None
+    score_mean: float | None = None
+    score_std: float | None = None
     class_distribution: list[ClassDistribution]
     evidence_distribution: list[EvidenceDistributionItem] = Field(default_factory=list)
     coverage_distribution: list[CoverageDistributionItem] = Field(default_factory=list)
-    resolution_m: Optional[float] = None
+    resolution_m: float | None = None
     crs: str = ""
 
 
@@ -225,8 +229,8 @@ class AnalysisMetadata(BaseModel):
         "STRICT",
     ]
     minimum_valid_criteria: int = 8
-    kappa: Optional[str] = None
-    kappa_reason: Optional[str] = None
+    kappa: str | None = None
+    kappa_reason: str | None = None
     nodata_value: str = "nan"
     package_type: str = "Spatial Knowledge Package"
     reproducibility: dict[str, Any] = Field(default_factory=dict)

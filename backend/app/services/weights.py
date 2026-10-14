@@ -5,10 +5,11 @@ Authoritative sources:
 - flood_11_factor_v1: canonical Run #56
 - landslide_14_factor_v1: canonical Run #63 Spatial Knowledge Package
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -36,8 +37,10 @@ class AHPModelConfig:
     def weight_for(self, criterion: str) -> float:
         try:
             return self.weights[criterion]
-        except KeyError:
-            raise ValueError(f"No weight for criterion '{criterion}' in model '{self.model_id}'")
+        except KeyError as err:
+            raise ValueError(
+                f"No weight for criterion '{criterion}' in model '{self.model_id}'"
+            ) from err
 
 
 # ── Flood 11-factor model — canonical Run #56 ──
@@ -59,17 +62,17 @@ FLOOD_AHP = AHPModelConfig(
         "ndvi",
     ),
     weights={
-        "rainfall":            0.132592101878827,
-        "slope":               0.230587976569696,
-        "flow_accumulation":   0.111537859706376,
-        "distance_to_rivers":  0.148020730048277,
-        "twi":                 0.142168213466147,
-        "drainage_density":    0.0667581536527979,
-        "elevation":           0.0345206594435582,
-        "lulc":                0.0572818244236022,
-        "curvature":           0.0281789133881518,
-        "soil":                0.0317296439597403,
-        "ndvi":                0.0166239234628261,
+        "rainfall": 0.132592101878827,
+        "slope": 0.230587976569696,
+        "flow_accumulation": 0.111537859706376,
+        "distance_to_rivers": 0.148020730048277,
+        "twi": 0.142168213466147,
+        "drainage_density": 0.0667581536527979,
+        "elevation": 0.0345206594435582,
+        "lulc": 0.0572818244236022,
+        "curvature": 0.0281789133881518,
+        "soil": 0.0317296439597403,
+        "ndvi": 0.0166239234628261,
     },
     lambda_max=11.238356826786,
     consistency_index=0.0238356826785981,
@@ -133,20 +136,20 @@ LANDSLIDE_MCDA = AHPModelConfig(
         "ndvi",
     ),
     weights={
-        "slope":               0.23,
-        "lithology":           0.15,
-        "lineament_density":   0.15,
-        "drainage_density":    0.09,
-        "rainfall_10_year":    0.08,
-        "relative_relief":     0.07,
-        "twi":                 0.05,
-        "geomorphology":       0.04,
-        "soil":                0.04,
-        "distance_to_faults":  0.03,
-        "distance_to_roads":   0.03,
-        "lulc":                0.02,
-        "aspect":              0.01,
-        "ndvi":                0.01,
+        "slope": 0.23,
+        "lithology": 0.15,
+        "lineament_density": 0.15,
+        "drainage_density": 0.09,
+        "rainfall_10_year": 0.08,
+        "relative_relief": 0.07,
+        "twi": 0.05,
+        "geomorphology": 0.04,
+        "soil": 0.04,
+        "distance_to_faults": 0.03,
+        "distance_to_roads": 0.03,
+        "lulc": 0.02,
+        "aspect": 0.01,
+        "ndvi": 0.01,
     },
     lambda_max=14.0,
     consistency_index=0.0,
@@ -192,7 +195,7 @@ MODELS_REGISTRY: dict[str, AHPModelConfig] = {
 }
 
 
-def get_model_config(model_id: str) -> Optional[AHPModelConfig]:
+def get_model_config(model_id: str) -> AHPModelConfig | None:
     """Retrieve model configuration by ID or normalized name."""
     if not model_id:
         return None

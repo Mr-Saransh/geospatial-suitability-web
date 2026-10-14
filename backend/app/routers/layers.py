@@ -1,21 +1,21 @@
 """Layer catalog and tile serving endpoints."""
-from typing import Optional
+
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 
-from app.services.repository import repository
-from app.services.raster_service import render_tile
 from app.schemas import LayerInfo
+from app.services.raster_service import render_tile
+from app.services.repository import repository
 
 router = APIRouter(prefix="/api/v1", tags=["layers"])
 
 
 @router.get("/layers", response_model=list[LayerInfo])
 def list_layers(
-    model_id: Optional[str] = Query(
+    model_id: str | None = Query(
         None,
         description="Filter layers by model ID (e.g. 'flood_11_factor_v1', 'landslide_14_factor_v1', or 'all'). Defaults to primary model.",
-    )
+    ),
 ):
     """
     List available raster layers from the canonical spatial package.
@@ -26,7 +26,9 @@ def list_layers(
     elif model_id:
         selected_layers = repository.get_layers_for_model(model_id)
         if not selected_layers:
-            raise HTTPException(status_code=404, detail=f"No layers found for model '{model_id}'")
+            raise HTTPException(
+                status_code=404, detail=f"No layers found for model '{model_id}'"
+            )
     else:
         # Default: Return primary model layers (flood_11_factor_v1 for backward compatibility)
         flood_layers = repository.get_layers_for_model("flood_11_factor_v1")
@@ -35,7 +37,7 @@ def list_layers(
         else:
             selected_layers = repository.layers
 
-    return [LayerInfo(**l) for l in selected_layers]
+    return [LayerInfo(**layer) for layer in selected_layers]
 
 
 @router.get("/layers/{layer_id:path}", response_model=LayerInfo)
@@ -47,8 +49,7 @@ def get_layer(layer_id: str):
     layer = repository.get_layer(layer_id)
     if not layer:
         raise HTTPException(
-            status_code=404,
-            detail=f"Layer '{layer_id}' not found in canonical package"
+            status_code=404, detail=f"Layer '{layer_id}' not found in canonical package"
         )
 
     return LayerInfo(**layer)
@@ -64,7 +65,7 @@ def get_tile(layer_id: str, z: int, x: int, y: int):
     if tile_data is None:
         raise HTTPException(
             status_code=404,
-            detail=f"Tile {z}/{x}/{y} not available for layer '{layer_id}'"
+            detail=f"Tile {z}/{x}/{y} not available for layer '{layer_id}'",
         )
 
     return Response(

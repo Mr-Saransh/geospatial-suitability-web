@@ -5,27 +5,26 @@ All raster access uses windowed reads (never loads full statewide arrays into me
 Adheres strictly to the canonical Himachal Pradesh Spatial Knowledge Package.
 Model-agnostic: seamlessly serves Flood (11 factors) and Landslide (14 factors).
 """
+
 from __future__ import annotations
 
 import io
 import logging
-import math
 from pathlib import Path
-from typing import Any, Optional, Tuple
+from typing import Any
 
 import numpy as np
 import rasterio
-from rasterio.windows import Window
-from rasterio.warp import reproject, Resampling, transform_bounds
-from rasterio.transform import from_bounds
 from PIL import Image
+from rasterio.transform import from_bounds
+from rasterio.warp import Resampling, reproject, transform_bounds
 
 from app.services.repository import (
-    repository,
     CRITERION_DISPLAY_NAMES,
     CRITERION_UNITS,
+    repository,
 )
-from app.services.weights import MODELS_REGISTRY, get_model_config
+from app.services.weights import get_model_config
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +44,9 @@ FLOOD_BIT_CRITERIA_MAP: dict[int, str] = {
 }
 
 
-def _get_bitmask_criteria_mapping(model_id: str, criteria: tuple[str, ...]) -> dict[int, str]:
+def _get_bitmask_criteria_mapping(
+    model_id: str, criteria: tuple[str, ...]
+) -> dict[int, str]:
     """Return bit-to-criterion mapping for the model."""
     if "flood" in model_id.lower():
         return FLOOD_BIT_CRITERIA_MAP
@@ -56,7 +57,10 @@ def _get_bitmask_criteria_mapping(model_id: str, criteria: tuple[str, ...]) -> d
 
 # ── Point sampling ──────────────────────────────────────────
 
-def sample_raster(raster_path: Path, lat: float, lon: float) -> Tuple[Optional[float], str]:
+
+def sample_raster(
+    raster_path: Path, lat: float, lon: float
+) -> tuple[float | None, str]:
     """
     Sample a single pixel value at (lat, lon) using repository windowed read.
     Returns (value, crs) or (None, crs) if NoData or out of bounds.
@@ -81,8 +85,14 @@ def point_inspection(model_id: str, lat: float, lon: float) -> dict:
         return _outside_analysis_response(model_id, lat, lon, model_config)
 
     # 1. Resolve Quality Rasters
-    cov_pid = model_config.metadata.get("coverage_product_id") or f"{model_id}_valid_criteria_count"
-    bit_pid = model_config.metadata.get("bitmask_product_id") or f"{model_id}_missing_criteria_bitmask"
+    cov_pid = (
+        model_config.metadata.get("coverage_product_id")
+        or f"{model_id}_valid_criteria_count"
+    )
+    bit_pid = (
+        model_config.metadata.get("bitmask_product_id")
+        or f"{model_id}_missing_criteria_bitmask"
+    )
 
     valid_count_layer = repository.get_layer(cov_pid, model_id)
     bitmask_layer = repository.get_layer(bit_pid, model_id)
@@ -102,14 +112,20 @@ def point_inspection(model_id: str, lat: float, lon: float) -> dict:
 
     # Outside analysis area detection
     total_criteria_count = len(model_config.criteria)
-    if (bitmask_val is None and valid_count_val is None) or \
-       (bitmask_val == 0 and valid_count_val is None) or \
-       (valid_count_val == 255 and (bitmask_val is None or bitmask_val == 0)):
+    if (
+        (bitmask_val is None and valid_count_val is None)
+        or (bitmask_val == 0 and valid_count_val is None)
+        or (valid_count_val == 255 and (bitmask_val is None or bitmask_val == 0))
+    ):
         return _outside_analysis_response(model_id, lat, lon, model_config)
 
     # Decode bitmask into missing criteria
     bit_map = _get_bitmask_criteria_mapping(model_id, model_config.criteria)
-    int_bitmask = int(bitmask_val) if bitmask_val is not None else ((1 << total_criteria_count) - 1)
+    int_bitmask = (
+        int(bitmask_val)
+        if bitmask_val is not None
+        else ((1 << total_criteria_count) - 1)
+    )
 
     missing_criteria: list[str] = []
     for bit, crit in bit_map.items():
@@ -132,10 +148,22 @@ def point_inspection(model_id: str, lat: float, lon: float) -> dict:
         scoring_mode = f"INSUFFICIENT_CRITERIA (<{model_config.minimum_valid_criteria})"
 
     # 2. Sample user-facing result rasters
-    default_cont_pid = model_config.metadata.get("default_continuous_product_id") or f"{model_id}_available_evidence_suitability"
-    default_cls_pid = model_config.metadata.get("default_classified_product_id") or f"{model_id}_available_evidence_suitability_classified"
-    strict_cont_pid = model_config.metadata.get("strict_continuous_product_id") or f"{model_id}_strict_suitability"
-    strict_cls_pid = model_config.metadata.get("strict_classified_product_id") or f"{model_id}_strict_suitability_classified"
+    default_cont_pid = (
+        model_config.metadata.get("default_continuous_product_id")
+        or f"{model_id}_available_evidence_suitability"
+    )
+    default_cls_pid = (
+        model_config.metadata.get("default_classified_product_id")
+        or f"{model_id}_available_evidence_suitability_classified"
+    )
+    strict_cont_pid = (
+        model_config.metadata.get("strict_continuous_product_id")
+        or f"{model_id}_strict_suitability"
+    )
+    strict_cls_pid = (
+        model_config.metadata.get("strict_classified_product_id")
+        or f"{model_id}_strict_suitability_classified"
+    )
 
     avail_cont_layer = repository.get_layer(default_cont_pid, model_id)
     avail_cls_layer = repository.get_layer(default_cls_pid, model_id)
@@ -144,38 +172,52 @@ def point_inspection(model_id: str, lat: float, lon: float) -> dict:
 
     avail_score = None
     if avail_cont_layer:
-        v, _ = sample_raster(repository.get_raster_path_for_layer(avail_cont_layer), lat, lon)
+        v, _ = sample_raster(
+            repository.get_raster_path_for_layer(avail_cont_layer), lat, lon
+        )
         avail_score = round(v, 6) if v is not None else None
 
     avail_cls = None
     if avail_cls_layer:
-        v, _ = sample_raster(repository.get_raster_path_for_layer(avail_cls_layer), lat, lon)
+        v, _ = sample_raster(
+            repository.get_raster_path_for_layer(avail_cls_layer), lat, lon
+        )
         avail_cls = round(v, 0) if (v is not None and v > 0) else None
 
     strict_score = None
     if strict_cont_layer and final_status == "VALID":
-        v, _ = sample_raster(repository.get_raster_path_for_layer(strict_cont_layer), lat, lon)
+        v, _ = sample_raster(
+            repository.get_raster_path_for_layer(strict_cont_layer), lat, lon
+        )
         strict_score = round(v, 6) if v is not None else avail_score
 
-    strict_cls = None
+    _strict_cls = None
     if strict_cls_layer and final_status == "VALID":
-        v, _ = sample_raster(repository.get_raster_path_for_layer(strict_cls_layer), lat, lon)
-        strict_cls = round(v, 0) if (v is not None and v > 0) else avail_cls
+        v, _ = sample_raster(
+            repository.get_raster_path_for_layer(strict_cls_layer), lat, lon
+        )
+        _strict_cls = round(v, 0) if (v is not None and v > 0) else avail_cls
 
     continuous_score = avail_score
     classified_value = avail_cls
 
     class_label = None
     if classified_value is not None:
-        class_label = model_config.classification_labels.get(int(classified_value), "Unknown")
+        class_label = model_config.classification_labels.get(
+            int(classified_value), "Unknown"
+        )
 
     # 3. Sample all criteria (factor + rating)
     model_layers = repository.get_layers_for_model(model_id)
     factor_layers = {
-        l["criterion_id"]: l for l in model_layers if l.get("type") == "FACTOR" and l.get("criterion_id")
+        layer["criterion_id"]: layer
+        for layer in model_layers
+        if layer.get("type") == "FACTOR" and layer.get("criterion_id")
     }
     rating_layers = {
-        l["criterion_id"]: l for l in model_layers if l.get("type") == "RATING" and l.get("criterion_id")
+        layer["criterion_id"]: layer
+        for layer in model_layers
+        if layer.get("type") == "RATING" and layer.get("criterion_id")
     }
 
     criteria_list = []
@@ -241,7 +283,9 @@ def point_inspection(model_id: str, lat: float, lon: float) -> dict:
             "contribution": contribution,
             "status": status,
             "nodata_reason": reason,
-            "source": fl.get("description", "Canonical Package") if fl else "Canonical Package",
+            "source": fl.get("description", "Canonical Package")
+            if fl
+            else "Canonical Package",
         }
         criteria_list.append(item)
         criteria_dict[crit] = {
@@ -251,7 +295,11 @@ def point_inspection(model_id: str, lat: float, lon: float) -> dict:
             "status": status,
         }
 
-    coverage_status = "COMPLETE" if final_status == "VALID" else ("PARTIAL" if final_status == "PARTIAL_EVIDENCE" else "UNAVAILABLE")
+    coverage_status = (
+        "COMPLETE"
+        if final_status == "VALID"
+        else ("PARTIAL" if final_status == "PARTIAL_EVIDENCE" else "UNAVAILABLE")
+    )
 
     return {
         # Standard Phase 6 contract
@@ -282,12 +330,16 @@ def point_inspection(model_id: str, lat: float, lon: float) -> dict:
     }
 
 
-def _outside_analysis_response(model_id: str, lat: float, lon: float, model_config: Any) -> dict:
+def _outside_analysis_response(
+    model_id: str, lat: float, lon: float, model_config: Any
+) -> dict:
     """Standardized response when query coordinate lies outside Himachal Pradesh."""
     criteria_list = [
         {
             "criterion": crit,
-            "display_name": CRITERION_DISPLAY_NAMES.get(crit, crit.replace("_", " ").title()),
+            "display_name": CRITERION_DISPLAY_NAMES.get(
+                crit, crit.replace("_", " ").title()
+            ),
             "raw_value": None,
             "unit": CRITERION_UNITS.get(crit, ""),
             "rating": None,
@@ -347,11 +399,11 @@ _MAX_TILE_CACHE = 4096
 
 # Susceptibility classified discrete hazard colors: Green (1) to Red (5)
 SUITABILITY_CMAP = {
-    1: (0, 200, 150),     # Class 1: Very Low Susceptibility  — Green
-    2: (74, 222, 128),    # Class 2: Low Susceptibility       — Light Green
-    3: (251, 191, 36),    # Class 3: Moderate Susceptibility  — Yellow
-    4: (249, 115, 22),    # Class 4: High Susceptibility      — Orange
-    5: (239, 68, 68),     # Class 5: Very High Susceptibility — Red
+    1: (0, 200, 150),  # Class 1: Very Low Susceptibility  — Green
+    2: (74, 222, 128),  # Class 2: Low Susceptibility       — Light Green
+    3: (251, 191, 36),  # Class 3: Moderate Susceptibility  — Yellow
+    4: (249, 115, 22),  # Class 4: High Susceptibility      — Orange
+    5: (239, 68, 68),  # Class 5: Very High Susceptibility — Red
 }
 
 # Quality valid_criteria_count discrete colors
@@ -361,19 +413,19 @@ VALID_CRITERIA_CMAP = {
     12: (251, 191, 36),
     11: (74, 222, 128),
     10: (0, 180, 216),
-    9:  (251, 191, 36),
-    8:  (249, 115, 22),
-    7:  (239, 68, 68),
-    6:  (239, 68, 68),
-    5:  (239, 68, 68),
+    9: (251, 191, 36),
+    8: (249, 115, 22),
+    7: (239, 68, 68),
+    6: (239, 68, 68),
+    5: (239, 68, 68),
 }
 
 CONTINUOUS_CMAP = [
-    (0, 200, 150),     # 1.0: Green (Very Low)
-    (74, 222, 128),    # 2.0: Light Green (Low)
-    (251, 191, 36),    # 3.0: Yellow (Moderate)
-    (249, 115, 22),    # 4.0: Orange (High)
-    (239, 68, 68),     # 5.0: Red (Very High)
+    (0, 200, 150),  # 1.0: Green (Very Low)
+    (74, 222, 128),  # 2.0: Light Green (Low)
+    (251, 191, 36),  # 3.0: Yellow (Moderate)
+    (249, 115, 22),  # 4.0: Orange (High)
+    (239, 68, 68),  # 5.0: Red (Very High)
 ]
 
 
@@ -387,7 +439,9 @@ def get_tile_bounds_3857(z: int, x: int, y: int) -> tuple[float, float, float, f
     return min_x, min_y, max_x, max_y
 
 
-def _get_layer_value_range(layer_id: str, ds: rasterio.DatasetReader) -> tuple[float, float]:
+def _get_layer_value_range(
+    layer_id: str, ds: rasterio.DatasetReader
+) -> tuple[float, float]:
     """Return cached min and max for continuous coloring across all tiles."""
     if layer_id in _layer_range_cache:
         return _layer_range_cache[layer_id]
@@ -421,7 +475,9 @@ def _get_layer_value_range(layer_id: str, ds: rasterio.DatasetReader) -> tuple[f
     return 0.0, 1.0
 
 
-def render_tile(layer_id: str, z: int, x: int, y: int, tile_size: int = 256) -> Optional[bytes]:
+def render_tile(
+    layer_id: str, z: int, x: int, y: int, tile_size: int = 256
+) -> bytes | None:
     """
     Render a single map tile as a PNG image in EPSG:3857 Web Mercator.
     Guarantees raster stays strictly on the geographic boundary of the state.
@@ -452,16 +508,30 @@ def render_tile(layer_id: str, z: int, x: int, y: int, tile_size: int = 256) -> 
                     b_3857 = transform_bounds(ds.crs, "EPSG:3857", *ds.bounds)
                     _layer_bounds_3857[canon_id] = b_3857
                 except Exception:
-                    _layer_bounds_3857[canon_id] = (-ORIGIN_SHIFT, -ORIGIN_SHIFT, ORIGIN_SHIFT, ORIGIN_SHIFT)
+                    _layer_bounds_3857[canon_id] = (
+                        -ORIGIN_SHIFT,
+                        -ORIGIN_SHIFT,
+                        ORIGIN_SHIFT,
+                        ORIGIN_SHIFT,
+                    )
 
             ds_left, ds_bottom, ds_right, ds_top = _layer_bounds_3857[canon_id]
-            if min_x > ds_right or max_x < ds_left or min_y > ds_top or max_y < ds_bottom:
+            if (
+                min_x > ds_right
+                or max_x < ds_left
+                or min_y > ds_top
+                or max_y < ds_bottom
+            ):
                 trans = _transparent_tile(tile_size)
                 _tile_cache[cache_key] = trans
                 return trans
 
-            dst_transform = from_bounds(min_x, min_y, max_x, max_y, tile_size, tile_size)
-            dst_array = np.full((tile_size, tile_size), fill_value=np.nan, dtype=np.float32)
+            dst_transform = from_bounds(
+                min_x, min_y, max_x, max_y, tile_size, tile_size
+            )
+            dst_array = np.full(
+                (tile_size, tile_size), fill_value=np.nan, dtype=np.float32
+            )
 
             is_classified = "classified" in canon_id
             is_valid_criteria = "valid_criteria_count" in canon_id
@@ -535,7 +605,9 @@ def render_tile(layer_id: str, z: int, x: int, y: int, tile_size: int = 256) -> 
                 lower = np.floor(scaled).astype(np.int32)
                 upper = np.clip(lower + 1, 0, n)
                 frac = (scaled - lower)[:, np.newaxis]
-                rgb = (colors[lower] * (1.0 - frac) + colors[upper] * frac).astype(np.uint8)
+                rgb = (colors[lower] * (1.0 - frac) + colors[upper] * frac).astype(
+                    np.uint8
+                )
                 rgba[valid_mask, :3] = rgb
                 rgba[valid_mask, 3] = 190
 

@@ -1,17 +1,17 @@
-export type SuitClass = 'very-high' | 'high' | 'moderate' | 'low' | 'very-low';
-export type RightTab = 'overview' | 'criteria' | 'statistics' | 'evidence' | 'metadata';
-export type MobileSheet = 'layers' | 'analyze' | 'ai' | 'export' | 'more' | null;
-export type AppModal = 'export' | null;
-export type BasemapId = 'dark' | 'satellite' | 'topo' | 'streets';
+export type SuitClass = "very-high" | "high" | "moderate" | "low" | "very-low";
+export type RightTab = "overview" | "criteria" | "statistics" | "evidence" | "metadata";
+export type MobileSheet = "layers" | "analyze" | "ai" | "export" | "more" | null;
+export type AppModal = "export" | null;
+export type BasemapId = "dark" | "satellite" | "topo" | "streets";
 
 export interface Layer {
   id: string; // product_id
   name: string; // unique display_name
   layer_name?: string;
   layer_type?: string;
-  layerType?: 'FACTOR' | 'RATING' | 'RESULT' | 'QUALITY' | string;
+  layerType?: "FACTOR" | "RATING" | "RESULT" | "QUALITY" | string;
   criterion_id?: string;
-  group: 'composite' | 'topographic' | 'hydrological' | 'environmental' | 'quality' | string;
+  group: "composite" | "topographic" | "hydrological" | "environmental" | "quality" | string;
   groupLabel: string;
   subgroup?: string;
   visible: boolean;
@@ -35,8 +35,8 @@ export interface Zone {
   district: string;
   region: string;
   area: number;
-  finalStatus?: 'VALID' | 'PARTIAL_EVIDENCE' | 'NODATA' | 'OUTSIDE_ANALYSIS_AREA' | string;
-  coverageStatus?: 'COMPLETE' | 'PARTIAL' | 'UNAVAILABLE';
+  finalStatus?: "VALID" | "PARTIAL_EVIDENCE" | "NODATA" | "OUTSIDE_ANALYSIS_AREA" | string;
+  coverageStatus?: "COMPLETE" | "PARTIAL" | "UNAVAILABLE";
   evidenceCount?: number;
   evidenceTotal?: number;
   missingCriteria?: string[];
@@ -54,17 +54,21 @@ export interface CriterionRow {
   rating: number | null;
   contribution: number | null;
   unit?: string;
-  cls: 'positive' | 'limiting';
+  cls: "positive" | "limiting";
   layerId: string;
   source: string;
   evidence: string;
-  status?: 'VALID' | 'NODATA' | 'OUTSIDE_ANALYSIS_AREA' | string;
+  status?: "VALID" | "NODATA" | "OUTSIDE_ANALYSIS_AREA" | string;
 }
 
 export interface AIMessage {
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   text: string;
-  actions?: Array<{ label: string; type: 'layer' | 'evidence' | 'stats'; target: string }>;
+  actions?: Array<{
+    label: string;
+    type: "layer" | "evidence" | "stats";
+    target: string;
+  }>;
 }
 
 export interface SuitMeta {

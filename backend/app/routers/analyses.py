@@ -1,9 +1,10 @@
 """Point inspection and statistics endpoints."""
+
 from fastapi import APIRouter, HTTPException, Query
 
-from app.services.raster_service import point_inspection, compute_statistics
+from app.schemas import AnalysisStatistics, PointInspectionResponse
+from app.services.raster_service import compute_statistics, point_inspection
 from app.services.weights import get_model_config
-from app.schemas import PointInspectionResponse, AnalysisStatistics
 
 router = APIRouter(prefix="/api/v1", tags=["analyses"])
 

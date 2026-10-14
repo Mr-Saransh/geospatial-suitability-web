@@ -118,25 +118,26 @@ The system bridges a high-fidelity Figma React frontend with a high-performance 
 
 ## 📡 API Endpoints Reference
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/api/v1/health` | Backend and package health status |
-| `GET` | `/api/v1/metadata/package` | Spatial knowledge package metadata & validation |
-| `GET` | `/api/v1/models` | List all available models (Flood, Landslide, etc.) |
-| `GET` | `/api/v1/models/{model_id}` | Detailed AHP/MCDA weights, criteria & classification |
-| `GET` | `/api/v1/layers` | Dynamic layer catalog (`?model_id=...` or `?model_id=all`) |
-| `GET` | `/api/v1/layers/{layer_id}` | Metadata for a specific raster layer |
-| `GET` | `/api/v1/tiles/{layer_id}/{z}/{x}/{y}.png` | Slippy map PNG tile generator (EPSG:3857) |
-| `GET` | `/api/v1/analyses/{model_id}/point?lat=X&lon=Y` | Windowed point inspection with structured evidence |
-| `GET` | `/api/v1/analyses/{model_id}/statistics` | Canonical pixel, class, and evidence distributions |
-| `GET` | `/api/v1/analyses/{model_id}/metadata` | Provenance, CR, and scientific metadata |
-| `GET` | `/api/v1/boundary` | Official GeoJSON boundary for Himachal Pradesh |
+| Method | Endpoint                                        | Description                                                |
+| ------ | ----------------------------------------------- | ---------------------------------------------------------- |
+| `GET`  | `/api/v1/health`                                | Backend and package health status                          |
+| `GET`  | `/api/v1/metadata/package`                      | Spatial knowledge package metadata & validation            |
+| `GET`  | `/api/v1/models`                                | List all available models (Flood, Landslide, etc.)         |
+| `GET`  | `/api/v1/models/{model_id}`                     | Detailed AHP/MCDA weights, criteria & classification       |
+| `GET`  | `/api/v1/layers`                                | Dynamic layer catalog (`?model_id=...` or `?model_id=all`) |
+| `GET`  | `/api/v1/layers/{layer_id}`                     | Metadata for a specific raster layer                       |
+| `GET`  | `/api/v1/tiles/{layer_id}/{z}/{x}/{y}.png`      | Slippy map PNG tile generator (EPSG:3857)                  |
+| `GET`  | `/api/v1/analyses/{model_id}/point?lat=X&lon=Y` | Windowed point inspection with structured evidence         |
+| `GET`  | `/api/v1/analyses/{model_id}/statistics`        | Canonical pixel, class, and evidence distributions         |
+| `GET`  | `/api/v1/analyses/{model_id}/metadata`          | Provenance, CR, and scientific metadata                    |
+| `GET`  | `/api/v1/boundary`                              | Official GeoJSON boundary for Himachal Pradesh             |
 
 ---
 
 ## Supported Models
 
 ### 1. Flood Susceptibility (`flood_11_factor_v1`)
+
 - **Methodology**: 11-Factor Analytic Hierarchy Process (AHP, Saaty 1980)
 - **Criteria (11)**: Rainfall, Slope, Flow Accumulation, Distance to Rivers, TWI, Drainage Density, Elevation, LULC, Curvature, Soil, NDVI
 - **CRS**: `EPSG:4326`
@@ -144,6 +145,7 @@ The system bridges a high-fidelity Figma React frontend with a high-performance 
 - **Total Published Rasters**: 28
 
 ### 2. Landslide Susceptibility (`landslide_14_factor_v1`)
+
 - **Methodology**: 14-Factor Multi-Criteria Decision Analysis (MCDA)
 - **Criteria (14)**: Slope, Lithology, Rainfall (10-Year), Relative Relief, Lineament Density, Drainage Density, TWI, Geomorphology, Soil, Distance to Faults, Distance to Roads, LULC, Aspect, NDVI
 - **CRS**: `EPSG:32643` (UTM Zone 43N)

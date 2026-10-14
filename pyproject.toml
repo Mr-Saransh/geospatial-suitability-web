@@ -1,0 +1,33 @@
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+exclude = [".git", "node_modules", "dist", "__pycache__", ".vscode"]
+
+[tool.ruff.lint]
+select = [
+  "E", # pycodestyle
+  "W", # pycodestyle warnings
+  "F", # Pyflakes
+  "I", # isort
+  "UP", # pyupgrade
+  "B", # flake8-bugbear
+]
+ignore = [
+  "E501", # line length handled by formatter
+  "B008", # function call in argument defaults (standard for FastAPI Depends / Query)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pyright]
+include = ["backend"]
+extraPaths = ["backend"]
+venvPath = "C:\\"
+venv = "gee_env"
+typeCheckingMode = "basic"
+

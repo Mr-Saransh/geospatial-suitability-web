@@ -1,8 +1,10 @@
 """Health endpoint."""
+
 from fastapi import APIRouter
+
 from app.config import settings
-from app.services.repository import repository
 from app.schemas import HealthResponse
+from app.services.repository import repository
 
 router = APIRouter(prefix="/api/v1", tags=["health"])
 
@@ -18,17 +20,31 @@ def health():
 
     # Flood model details for baseline regression compatibility
     flood_layers = repository.get_layers_for_model("flood_11_factor_v1")
-    f_count = len([l for l in flood_layers if l.get("type") == "FACTOR"]) or 11
-    r_count = len([l for l in flood_layers if l.get("type") == "RATING"]) or 11
-    res_count = len([l for l in flood_layers if l.get("type") == "RESULT"]) or 4
-    q_count = len([l for l in flood_layers if l.get("type") == "QUALITY"]) or 2
+    f_count = (
+        len([layer for layer in flood_layers if layer.get("type") == "FACTOR"]) or 11
+    )
+    r_count = (
+        len([layer for layer in flood_layers if layer.get("type") == "RATING"]) or 11
+    )
+    res_count = (
+        len([layer for layer in flood_layers if layer.get("type") == "RESULT"]) or 4
+    )
+    q_count = (
+        len([layer for layer in flood_layers if layer.get("type") == "QUALITY"]) or 2
+    )
     total_rasters = len(flood_layers) or 28
 
     models_available = list(repository.models.keys())
-    primary_model = "flood_11_factor_v1" if "flood_11_factor_v1" in models_available else (models_available[0] if models_available else "flood_11_factor_v1")
+    primary_model = (
+        "flood_11_factor_v1"
+        if "flood_11_factor_v1" in models_available
+        else (models_available[0] if models_available else "flood_11_factor_v1")
+    )
 
     return HealthResponse(
-        status="healthy" if is_valid else ("degraded" if val["packages_found"] > 0 else "unhealthy"),
+        status="healthy"
+        if is_valid
+        else ("degraded" if val["packages_found"] > 0 else "unhealthy"),
         package_found=is_valid,
         package_status="healthy" if is_valid else "missing_or_incomplete",
         package_version="1.0",

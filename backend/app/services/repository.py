@@ -12,6 +12,7 @@ Key Features:
 - Multi-model point sampling, metadata discovery, and boundary serving
 - Windowed reads: never loads entire statewide rasters into memory
 """
+
 from __future__ import annotations
 
 import json
@@ -20,14 +21,14 @@ import math
 import sqlite3
 import struct
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import rasterio
-from rasterio.windows import Window
 from pyproj import Transformer
+from rasterio.windows import Window
 
 from app.config import settings
-from app.services.weights import MODELS_REGISTRY, AHPModelConfig, get_model_config
+from app.services.weights import get_model_config
 
 logger = logging.getLogger(__name__)
 
@@ -169,7 +170,7 @@ class SpatialKnowledgeRepository:
             return
 
         try:
-            with open(manifest_path, "r", encoding="utf-8") as f:
+            with open(manifest_path, encoding="utf-8") as f:
                 manifest = json.load(f)
         except Exception as e:
             logger.error("Failed to parse manifest.json in %s: %s", root.name, e)
@@ -192,10 +193,12 @@ class SpatialKnowledgeRepository:
                 fp = metadata_dir / fname
                 if fp.exists():
                     try:
-                        with open(fp, "r", encoding="utf-8") as f:
+                        with open(fp, encoding="utf-8") as f:
                             meta_files[fname.replace(".json", "")] = json.load(f)
                     except Exception as e:
-                        logger.warning("Could not read %s in %s: %s", fname, root.name, e)
+                        logger.warning(
+                            "Could not read %s in %s: %s", fname, root.name, e
+                        )
 
         # Merge aliases
         pkg_aliases = manifest.get("aliases", {})
@@ -231,7 +234,9 @@ class SpatialKnowledgeRepository:
             "package_root": root,
             "manifest": manifest,
             "metadata": meta_files,
-            "criterion_count": len(model_cfg.criteria) if model_cfg else len(meta_files.get("model_info", {}).get("criteria", [])),
+            "criterion_count": len(model_cfg.criteria)
+            if model_cfg
+            else len(meta_files.get("model_info", {}).get("criteria", [])),
             "consistency_ratio": model_cfg.consistency_ratio if model_cfg else 0.0,
             "state_name": state_name,
         }
@@ -240,16 +245,16 @@ class SpatialKnowledgeRepository:
         raw_layers = manifest.get("layers", [])
         model_layers = []
 
-        for l in raw_layers:
+        for layer in raw_layers:
             # Skip non-raster or boundary-only layers from general layer catalog
-            ltype = l.get("layer_type") or l.get("type") or ""
+            ltype = layer.get("layer_type") or layer.get("type") or ""
             if "vector" in ltype.lower():
                 continue
 
             # Determine product ID
-            pid = l.get("product_id")
+            pid = layer.get("product_id")
             if not pid:
-                layer_name = l.get("layer_name") or l.get("name") or ""
+                layer_name = layer.get("layer_name") or layer.get("name") or ""
                 # Strip type prefix e.g. "factor_raster:slope" -> "slope"
                 if ":" in layer_name:
                     prefix, name_part = layer_name.split(":", 1)
@@ -269,7 +274,7 @@ class SpatialKnowledgeRepository:
             if not pid:
                 continue
 
-            rel_path = l.get("relative_path") or l.get("target_path") or ""
+            rel_path = layer.get("relative_path") or layer.get("target_path") or ""
             rel_path = rel_path.replace("\\", "/")
 
             # Safe verification: check file exists within root
@@ -280,15 +285,18 @@ class SpatialKnowledgeRepository:
                 file_exists = False
                 logger.warning("Unsafe path rejected in manifest: %s", rel_path)
 
-            criterion_id = l.get("criterion_id", "")
+            criterion_id = layer.get("criterion_id", "")
             if not criterion_id and pid:
                 criterion_id = pid.replace("_rating", "")
 
             # Determine layer semantic type and category
             is_result = "result" in ltype.lower() or "suitability" in pid.lower()
-            is_quality = "quality" in ltype.lower() or "criteria" in pid.lower() or "mask" in ltype.lower()
+            is_quality = (
+                "quality" in ltype.lower()
+                or "criteria" in pid.lower()
+                or "mask" in ltype.lower()
+            )
             is_rating = "rating" in ltype.lower() or pid.endswith("_rating")
-            is_factor = not is_result and not is_quality and not is_rating
 
             if is_result:
                 sem_type = "RESULT"
@@ -304,15 +312,17 @@ class SpatialKnowledgeRepository:
                 category = CRITERION_CATEGORIES.get(criterion_id, CATEGORY_ENV)
 
             # Build semantic display name
-            display_name = self._build_display_name(pid, criterion_id, sem_type, model_id)
+            display_name = self._build_display_name(
+                pid, criterion_id, sem_type, model_id
+            )
 
             # Spatial resolution
-            rx = abs(float(l.get("resolution_x", 30.0)))
+            rx = abs(float(layer.get("resolution_x", 30.0)))
             if rx < 0.01:
                 # Degree units
                 res_str = f"~{round(rx * 111320, 1)} m"
             else:
-                res_str = f"{int(round(rx))} m"
+                res_str = f"{round(rx)} m"
 
             layer_dict = {
                 "product_id": pid,
@@ -322,22 +332,24 @@ class SpatialKnowledgeRepository:
                 "layer_type": ltype or f"{sem_type.lower()}_raster",
                 "category": category,
                 "model": model_id,
-                "unit": CRITERION_UNITS.get(criterion_id, l.get("unit", "")),
-                "crs": l.get("crs", manifest.get("target_crs", "EPSG:4326")),
+                "unit": CRITERION_UNITS.get(criterion_id, layer.get("unit", "")),
+                "crs": layer.get("crs", manifest.get("target_crs", "EPSG:4326")),
                 "resolution": res_str,
                 "resolution_x": rx,
-                "resolution_y": abs(float(l.get("resolution_y", rx))),
-                "width": int(l.get("width", 0)),
-                "height": int(l.get("height", 0)),
-                "bounds": l.get("bounds", []),
-                "nodata_value": str(l.get("nodata_value", "nan")),
-                "scoring_mode": l.get("scoring_mode"),
+                "resolution_y": abs(float(layer.get("resolution_y", rx))),
+                "width": int(layer.get("width", 0)),
+                "height": int(layer.get("height", 0)),
+                "bounds": layer.get("bounds", []),
+                "nodata_value": str(layer.get("nodata_value", "nan")),
+                "scoring_mode": layer.get("scoring_mode"),
                 "status": "published" if file_exists else "missing_on_disk",
                 "relative_path": rel_path,
                 "package_root": str(root),
                 "alias_of": None,
-                "valid_pixel_pct": float(l.get("valid_pixel_pct", 0.0)),
-                "description": l.get("description", f"{sem_type} layer for {display_name}"),
+                "valid_pixel_pct": float(layer.get("valid_pixel_pct", 0.0)),
+                "description": layer.get(
+                    "description", f"{sem_type} layer for {display_name}"
+                ),
                 # Compatibility keys
                 "layer_id": pid,
                 "layer_name": pid,
@@ -347,15 +359,19 @@ class SpatialKnowledgeRepository:
             model_layers.append(layer_dict)
             self._layers_by_product_id[pid] = layer_dict
             # Also index by layer_name and relative_path basename
-            if l.get("layer_name") and l["layer_name"] != pid:
-                self._layers_by_product_id[l["layer_name"]] = layer_dict
+            if layer.get("layer_name") and layer["layer_name"] != pid:
+                self._layers_by_product_id[layer["layer_name"]] = layer_dict
 
         self._layers_by_model[model_id] = model_layers
         self.layers.extend(model_layers)
 
-    def _build_display_name(self, product_id: str, criterion_id: str, sem_type: str, model_id: str) -> str:
+    def _build_display_name(
+        self, product_id: str, criterion_id: str, sem_type: str, model_id: str
+    ) -> str:
         """Create a user-friendly, clean semantic display name for a layer."""
-        crit_label = CRITERION_DISPLAY_NAMES.get(criterion_id, criterion_id.replace("_", " ").title())
+        crit_label = CRITERION_DISPLAY_NAMES.get(
+            criterion_id, criterion_id.replace("_", " ").title()
+        )
         is_landslide = "landslide" in model_id.lower()
 
         if sem_type == "FACTOR":
@@ -398,12 +414,14 @@ class SpatialKnowledgeRepository:
         # Strict containment check
         try:
             target.relative_to(root_resolved)
-        except ValueError:
-            raise ValueError(f"Path traversal detected: {relative_path} escapes package root")
+        except ValueError as err:
+            raise ValueError(
+                f"Path traversal detected: {relative_path} escapes package root"
+            ) from err
 
         return target
 
-    def get_layer(self, layer_id: str, model_id: Optional[str] = None) -> Optional[dict]:
+    def get_layer(self, layer_id: str, model_id: str | None = None) -> dict | None:
         """
         Lookup layer metadata by product_id, alias, or layer_name.
         Resolves legacy aliases transparently without duplicate files.
@@ -426,19 +444,26 @@ class SpatialKnowledgeRepository:
             return self._layers_by_product_id[cleaned]
 
         # 3. Model-scoped search if model_id provided
-        search_space = self._layers_by_model.get(model_id, self.layers) if model_id else self.layers
+        search_space = (
+            self._layers_by_model.get(model_id, self.layers)
+            if model_id
+            else self.layers
+        )
 
-        for l in search_space:
-            if l["product_id"].lower() == cleaned.lower():
-                return l
-            if l.get("canonical_filename", "").lower() == f"{cleaned.lower()}.tif" or l.get("canonical_filename", "").lower() == cleaned.lower():
-                return l
-            if cleaned.lower() in l["relative_path"].lower():
-                return l
+        for layer in search_space:
+            if layer["product_id"].lower() == cleaned.lower():
+                return layer
+            if (
+                layer.get("canonical_filename", "").lower() == f"{cleaned.lower()}.tif"
+                or layer.get("canonical_filename", "").lower() == cleaned.lower()
+            ):
+                return layer
+            if cleaned.lower() in layer["relative_path"].lower():
+                return layer
 
         return None
 
-    def get_layers_for_model(self, model_id: Optional[str] = None) -> list[dict]:
+    def get_layers_for_model(self, model_id: str | None = None) -> list[dict]:
         """Return all layers belonging to a model, or all layers if model_id is None."""
         if not model_id:
             return self.layers
@@ -449,7 +474,9 @@ class SpatialKnowledgeRepository:
         root = Path(layer["package_root"])
         return self.safe_resolve_raster_path(root, layer["relative_path"])
 
-    def sample_raster_at(self, raster_path: Path, lat: float, lon: float) -> Tuple[Optional[float], str]:
+    def sample_raster_at(
+        self, raster_path: Path, lat: float, lon: float
+    ) -> tuple[float | None, str]:
         """
         Perform a 1x1 windowed read at WGS84 (lat, lon).
         Automatically transforms coordinates to the raster's native CRS.
@@ -477,7 +504,7 @@ class SpatialKnowledgeRepository:
                     return None, crs_str
 
                 # Windowed 1x1 read
-                window = Window(col, row, 1, 1)
+                window = Window(col, row, 1, 1)  # type: ignore[call-arg]  # pyright: ignore[reportCallIssue]
                 data = ds.read(1, window=window)
                 value = float(data[0, 0])
 
@@ -493,7 +520,9 @@ class SpatialKnowledgeRepository:
 
                 return value, crs_str
         except Exception as e:
-            logger.debug("Failed sampling %s at (%s, %s): %s", raster_path.name, lat, lon, e)
+            logger.debug(
+                "Failed sampling %s at (%s, %s): %s", raster_path.name, lat, lon, e
+            )
             return None, ""
 
     def get_state_boundary(self) -> dict:
@@ -522,13 +551,15 @@ class SpatialKnowledgeRepository:
                     "properties": {"name": "Himachal Pradesh", "state": "HP"},
                     "geometry": {
                         "type": "Polygon",
-                        "coordinates": [[
-                            [b[0], b[1]],
-                            [b[2], b[1]],
-                            [b[2], b[3]],
-                            [b[0], b[3]],
-                            [b[0], b[1]],
-                        ]],
+                        "coordinates": [
+                            [
+                                [b[0], b[1]],
+                                [b[2], b[1]],
+                                [b[2], b[3]],
+                                [b[0], b[3]],
+                                [b[0], b[1]],
+                            ]
+                        ],
                     },
                 }
             ],
@@ -536,7 +567,7 @@ class SpatialKnowledgeRepository:
         self._boundary_cache["Himachal Pradesh"] = fallback
         return fallback
 
-    def _extract_geojson_from_gpkg(self, gpkg_path: Path) -> Optional[dict]:
+    def _extract_geojson_from_gpkg(self, gpkg_path: Path) -> dict | None:
         """Extract GeoJSON FeatureCollection from a standard GeoPackage file."""
         try:
             conn = sqlite3.connect(gpkg_path)
@@ -559,15 +590,21 @@ class SpatialKnowledgeRepository:
 
             offset = 5
             if geom_type == 3:  # Polygon
-                num_rings = struct.unpack(f"{endian}I", wkb_bytes[offset:offset+4])[0]
+                num_rings = struct.unpack(f"{endian}I", wkb_bytes[offset : offset + 4])[
+                    0
+                ]
                 offset += 4
                 rings = []
                 for _ in range(num_rings):
-                    num_pts = struct.unpack(f"{endian}I", wkb_bytes[offset:offset+4])[0]
+                    num_pts = struct.unpack(
+                        f"{endian}I", wkb_bytes[offset : offset + 4]
+                    )[0]
                     offset += 4
                     pts = []
                     for _ in range(num_pts):
-                        x, y = struct.unpack(f"{endian}dd", wkb_bytes[offset:offset+16])
+                        x, y = struct.unpack(
+                            f"{endian}dd", wkb_bytes[offset : offset + 16]
+                        )
                         offset += 16
                         pts.append([round(x, 6), round(y, 6)])
                     rings.append(pts)
