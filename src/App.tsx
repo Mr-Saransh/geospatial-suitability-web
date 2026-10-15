@@ -547,7 +547,7 @@ export default function App() {
           />
         ) : (
           sidebarOpen && (
-            <div className="fixed inset-x-0 top-12 bottom-14 z-[1250] flex pointer-events-none">
+            <div className="fixed inset-x-0 top-[52px] sm:top-14 bottom-14 z-[1250] flex pointer-events-none">
               <div
                 className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity pointer-events-auto"
                 onClick={() => setSidebarOpen(false)}

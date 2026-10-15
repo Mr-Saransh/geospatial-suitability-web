@@ -108,7 +108,7 @@ body,
   font-family: var(--font-body);
   background: var(--c-base);
   color: var(--c-text);
-  font-size: 13.5px;
+  font-size: 15px;
   line-height: 1.5;
   transition:
     background-color 0.2s ease,

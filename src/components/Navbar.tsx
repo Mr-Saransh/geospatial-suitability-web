@@ -279,57 +279,56 @@ export default function Navbar({
 
   return (
     <header
-      className="flex-shrink-0 z-[1200] relative"
+      className="flex-shrink-0 z-[1200] relative h-[52px] sm:h-14 transition-all"
       style={{
         background: "var(--c-surface)",
         borderBottom: "1px solid var(--c-border)",
-        height: 48,
       }}
     >
-      <div className="flex items-center h-full px-3 gap-2 justify-between">
+      <div className="flex items-center h-full px-2.5 sm:px-4 gap-2 sm:gap-3 justify-between">
         {/* Left: Brand + Sidebar toggle */}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 flex-shrink-0">
           <button
             onClick={onSidebar}
-            className="flex items-center gap-2 p-1.5 rounded transition-colors hover:bg-[rgba(255,255,255,0.05)] text-[var(--c-text)] focus:outline-none"
+            className="flex items-center gap-2 p-1 sm:p-1.5 rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.06)] text-[var(--c-text)] focus:outline-none"
             title="Toggle Explore Map Panel"
             aria-label="Toggle Explore Map Panel"
           >
             <div
-              className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0 shadow-sm"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm"
               style={{
                 background: "linear-gradient(135deg, #88B59A 0%, #457358 100%)",
               }}
             >
-              <svg width="15" height="15" viewBox="0 0 20 20" fill="none">
+              <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
                 <polygon
                   points="10,1 19,6 19,14 10,19 1,14 1,6"
                   stroke="white"
-                  strokeWidth="1.4"
+                  strokeWidth="1.5"
                   fill="none"
                 />
                 <circle cx="10" cy="10" r="2.5" fill="white" />
-                <line x1="10" y1="3.5" x2="10" y2="7" stroke="white" strokeWidth="1" />
-                <line x1="10" y1="13" x2="10" y2="16.5" stroke="white" strokeWidth="1" />
+                <line x1="10" y1="3.5" x2="10" y2="7" stroke="white" strokeWidth="1.2" />
+                <line x1="10" y1="13" x2="10" y2="16.5" stroke="white" strokeWidth="1.2" />
               </svg>
             </div>
-            <div className="hidden sm:flex flex-col text-left leading-none">
+            <div className="hidden sm:flex flex-col text-left leading-tight">
               <span
-                className="text-[14px] font-semibold tracking-tight text-[var(--c-text)]"
+                className="text-[15px] sm:text-[16px] font-bold tracking-tight text-[var(--c-text)]"
                 style={{ fontFamily: "var(--font-display)" }}
               >
                 MCGSE
               </span>
-              <span className="text-[10px] text-[var(--c-text3)] font-mono">Web-GIS</span>
+              <span className="text-[11px] text-[var(--c-text3)] font-mono font-medium">Web-GIS</span>
             </div>
-            <IconSidebar size={13} style={{ color: sidebarOpen ? "var(--c-accent)" : "var(--c-text3)" }} />
+            <IconSidebar size={15} style={{ color: sidebarOpen ? "var(--c-accent)" : "var(--c-text3)" }} />
           </button>
 
           {/* Model selector dropdown */}
           <div className="relative z-[1210]">
             <button
               onClick={() => setModelOpen((v) => !v)}
-              className="flex items-center gap-1.5 h-8 px-2.5 rounded text-xs transition-colors hover:border-[var(--c-border2)] cursor-pointer"
+              className="flex items-center gap-1.5 sm:gap-2 h-9 sm:h-10 px-2 sm:px-3 rounded-lg text-xs sm:text-[13px] font-medium transition-colors hover:border-[var(--c-border2)] cursor-pointer"
               style={{
                 background: "var(--c-panel)",
                 border: `1px solid ${modelOpen ? "var(--c-accent)" : "var(--c-border)"}`,
@@ -338,14 +337,14 @@ export default function Navbar({
               title="Select Hazard Model"
             >
               <span
-                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                className="w-2 h-2 rounded-full flex-shrink-0"
                 style={{
                   background: model === "Cyclone" || model === "Drought" ? "var(--c-sand)" : "var(--c-accent)",
                 }}
               />
-              <span className="font-medium">{model}</span>
+              <span className="font-semibold">{model}</span>
               <IconChevronD
-                size={10}
+                size={11}
                 style={{
                   color: "var(--c-text2)",
                   transform: modelOpen ? "rotate(180deg)" : "none",
@@ -355,7 +354,7 @@ export default function Navbar({
             </button>
             {modelOpen && (
               <div
-                className="absolute left-0 top-full mt-1.5 z-[1220] rounded-lg py-1 shadow-2xl min-w-[190px]"
+                className="absolute left-0 top-full mt-2 z-[1220] rounded-xl py-1.5 shadow-2xl min-w-[210px]"
                 style={{
                   background: "var(--c-surface)",
                   border: "1px solid var(--c-border)",
@@ -363,7 +362,7 @@ export default function Navbar({
                 }}
               >
                 <div
-                  className="px-3 py-1 text-[10px] uppercase tracking-wider font-semibold border-b text-[var(--c-text3)] font-mono"
+                  className="px-3.5 py-1.5 text-[11px] uppercase tracking-wider font-semibold border-b text-[var(--c-text3)] font-mono"
                   style={{ borderColor: "var(--c-border)" }}
                 >
                   Susceptibility Model
@@ -378,7 +377,7 @@ export default function Navbar({
                         onModel(m);
                         setModelOpen(false);
                       }}
-                      className="w-full text-left px-3 py-1.5 text-xs flex items-center justify-between gap-2 transition-colors hover:bg-[rgba(255,255,255,0.04)] cursor-pointer"
+                      className="w-full text-left px-3.5 py-2 text-[13px] flex items-center justify-between gap-2.5 transition-colors hover:bg-[rgba(255,255,255,0.05)] cursor-pointer"
                       style={{
                         color: isSelected ? "var(--c-accent)" : "var(--c-text)",
                         background: isSelected ? "var(--c-accent-dim)" : "transparent",
@@ -386,7 +385,7 @@ export default function Navbar({
                     >
                       <div className="flex items-center gap-2 truncate">
                         <span
-                          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                          className="w-2 h-2 rounded-full flex-shrink-0"
                           style={{
                             background: isSelected
                               ? "var(--c-accent)"
@@ -398,7 +397,7 @@ export default function Navbar({
                         <span className="font-medium">{m}</span>
                       </div>
                       {isSelected && (
-                        <span className="text-[11px] font-bold text-[var(--c-accent)]">✓</span>
+                        <span className="text-[12px] font-bold text-[var(--c-accent)]">✓</span>
                       )}
                     </button>
                   );
@@ -409,17 +408,17 @@ export default function Navbar({
         </div>
 
         {/* Center: Search input + Map Tools beside it */}
-        <div className="flex items-center gap-1.5 flex-1 max-w-[560px] mx-1 sm:mx-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-1 max-w-[620px] mx-1 sm:mx-3">
           {/* Global Location Search */}
           <div className="relative flex-1 min-w-0" ref={searchContainerRef}>
             <div
-              className="flex items-center gap-2 h-8 px-2.5 rounded transition-all"
+              className="flex items-center gap-2 sm:gap-2.5 h-9 sm:h-10 px-2.5 sm:px-3 rounded-lg transition-all"
               style={{
                 background: "var(--c-panel)",
                 border: `1px solid ${showSuggestions && suggestions.length > 0 ? "var(--c-accent)" : "var(--c-border)"}`,
               }}
             >
-              <IconSearch size={13} style={{ color: "var(--c-text3)", flexShrink: 0 }} />
+              <IconSearch size={15} style={{ color: "var(--c-text3)", flexShrink: 0 }} />
               <input
                 placeholder="Search place or coordinates…"
                 value={searchQuery}
@@ -431,18 +430,18 @@ export default function Navbar({
                   if (searchQuery.trim()) setShowSuggestions(true);
                 }}
                 onKeyDown={handleKeyDown}
-                className="flex-1 bg-transparent text-xs outline-none text-[var(--c-text)] placeholder:text-[var(--c-text3)] min-w-0"
+                className="flex-1 bg-transparent text-xs sm:text-[13px] outline-none text-[var(--c-text)] placeholder:text-[var(--c-text3)] min-w-0"
               />
               {isSearchingExternal && (
-                <span className="w-2.5 h-2.5 rounded-full border border-[var(--c-accent)] border-t-transparent animate-spin flex-shrink-0" />
+                <span className="w-3 h-3 rounded-full border border-[var(--c-accent)] border-t-transparent animate-spin flex-shrink-0" />
               )}
               {searchQuery && (
                 <button
                   onClick={clearSearch}
-                  className="w-4 h-4 flex items-center justify-center rounded text-[var(--c-text3)] hover:text-[var(--c-text)] transition-colors cursor-pointer"
+                  className="w-5 h-5 flex items-center justify-center rounded text-[var(--c-text3)] hover:text-[var(--c-text)] transition-colors cursor-pointer"
                   title="Clear search"
                 >
-                  <IconX size={11} />
+                  <IconX size={12} />
                 </button>
               )}
             </div>
@@ -450,34 +449,34 @@ export default function Navbar({
             {/* Search suggestions dropdown */}
             {showSuggestions && suggestions.length > 0 && (
               <div
-                className="absolute left-0 right-0 top-full mt-1.5 z-[1300] rounded-lg py-1 shadow-2xl overflow-hidden max-h-72 overflow-y-auto"
+                className="absolute left-0 right-0 top-full mt-2 z-[1300] rounded-xl py-1.5 shadow-2xl overflow-hidden max-h-80 overflow-y-auto"
                 style={{
                   background: "var(--c-surface)",
                   border: "1px solid var(--c-border)",
                   boxShadow: "0 16px 40px rgba(0,0,0,0.6)",
                 }}
               >
-                <div className="px-3 py-1 text-[10px] uppercase font-mono tracking-wider text-[var(--c-text3)] border-b border-[var(--c-border)]">
+                <div className="px-3.5 py-1.5 text-[11px] uppercase font-mono tracking-wider text-[var(--c-text3)] border-b border-[var(--c-border)]">
                   Suggested Locations & Coordinates
                 </div>
                 {suggestions.map((s, idx) => (
                   <button
                     key={s.id}
                     onClick={() => selectSuggestion(s)}
-                    className="w-full text-left px-3 py-2 flex items-center justify-between gap-2 transition-colors cursor-pointer"
+                    className="w-full text-left px-3.5 py-2.5 flex items-center justify-between gap-2 transition-colors cursor-pointer"
                     style={{
                       background: selectedIndex === idx ? "var(--c-accent-dim)" : "transparent",
                     }}
                     onMouseEnter={() => setSelectedIndex(idx)}
                   >
                     <div className="flex flex-col min-w-0">
-                      <span className="text-xs font-semibold text-[var(--c-text)] truncate">
+                      <span className="text-[13px] font-semibold text-[var(--c-text)] truncate">
                         {s.title}
                       </span>
-                      <span className="text-[11px] text-[var(--c-text2)] truncate">{s.subtitle}</span>
+                      <span className="text-xs text-[var(--c-text2)] truncate">{s.subtitle}</span>
                     </div>
                     <span
-                      className="text-[9px] px-1.5 py-0.5 rounded font-mono flex-shrink-0"
+                      className="text-[10px] px-2 py-0.5 rounded font-mono flex-shrink-0 font-medium"
                       style={{
                         background: s.isOutsideHp ? "rgba(239,68,68,0.15)" : "var(--c-panel)",
                         color: s.isOutsideHp ? "#ef4444" : "var(--c-text3)",
@@ -496,18 +495,18 @@ export default function Navbar({
           <button
             onClick={onLayers}
             title="Map Layers (Toggle Floating Panel)"
-            className="hidden md:flex items-center gap-1.5 h-8 px-2.5 rounded text-xs font-medium transition-all cursor-pointer flex-shrink-0"
+            className="hidden md:flex items-center gap-2 h-9 sm:h-10 px-3 rounded-lg text-xs sm:text-[13px] font-semibold transition-all cursor-pointer flex-shrink-0"
             style={{
               background: layersOpen ? "var(--c-accent-dim)" : "var(--c-panel)",
               border: `1px solid ${layersOpen ? "var(--c-accent)" : "var(--c-border)"}`,
               color: layersOpen ? "var(--c-accent)" : "var(--c-text)",
             }}
           >
-            <IconLayers size={13} style={{ color: layersOpen ? "var(--c-accent)" : "var(--c-text2)" }} />
+            <IconLayers size={15} style={{ color: layersOpen ? "var(--c-accent)" : "var(--c-text2)" }} />
             <span>Layers</span>
             {layerCount !== undefined && (
               <span
-                className="text-[10px] font-mono px-1 py-0.2 rounded"
+                className="text-[11px] font-mono px-1.5 py-0.5 rounded"
                 style={{
                   background: layersOpen ? "var(--c-accent)" : "var(--c-border2)",
                   color: layersOpen ? "var(--c-base)" : "var(--c-text2)",
@@ -522,20 +521,20 @@ export default function Navbar({
           <button
             onClick={onCompare}
             title="Compare Layers"
-            className="hidden md:flex items-center gap-1.5 h-8 px-2.5 rounded text-xs font-medium transition-all cursor-pointer flex-shrink-0"
+            className="hidden md:flex items-center gap-2 h-9 sm:h-10 px-3 rounded-lg text-xs sm:text-[13px] font-semibold transition-all cursor-pointer flex-shrink-0"
             style={{
               background: compareOpen ? "var(--c-accent-dim)" : "var(--c-panel)",
               border: `1px solid ${compareOpen ? "var(--c-accent)" : "var(--c-border)"}`,
               color: compareOpen ? "var(--c-accent)" : "var(--c-text2)",
             }}
           >
-            <IconCompare size={13} style={{ color: compareOpen ? "var(--c-accent)" : "var(--c-text2)" }} />
+            <IconCompare size={15} style={{ color: compareOpen ? "var(--c-accent)" : "var(--c-text2)" }} />
             <span>Compare</span>
           </button>
         </div>
 
         {/* Right: Actions */}
-        <div className="flex items-center gap-1 flex-shrink-0">
+        <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
           {/* Analytics — Desktop */}
           <div className="hidden md:flex">
             <NavBtn label="Analytics" Icon={IconChart} active={rightOpen} onClick={onRight} />
@@ -547,7 +546,7 @@ export default function Navbar({
           </div>
 
           {/* Secondary actions (Desktop) */}
-          <div className="hidden lg:flex items-center gap-1">
+          <div className="hidden lg:flex items-center gap-1.5">
             <NavBtn label="Export" Icon={IconExport} onClick={onExport} />
             <NavBtn label="Help" Icon={IconHelp} onClick={onHelp} />
           </div>
@@ -556,17 +555,17 @@ export default function Navbar({
           <button
             onClick={onToggleTheme}
             title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            className="w-8 h-8 flex items-center justify-center rounded text-xs transition-colors hover:bg-[rgba(255,255,255,0.05)] cursor-pointer"
+            className="w-9 sm:w-10 h-9 sm:h-10 flex items-center justify-center rounded-lg text-xs transition-colors hover:bg-[rgba(255,255,255,0.06)] cursor-pointer"
             style={{ color: theme === "dark" ? "#f59e0b" : "#0284c7" }}
           >
-            {theme === "dark" ? <IconSun size={14} /> : <IconMoon size={14} />}
+            {theme === "dark" ? <IconSun size={16} /> : <IconMoon size={16} />}
           </button>
 
           {/* Overflow / Tools Menu for smaller screens (Mobile & Tablet) */}
           <div className="relative lg:hidden">
             <button
               onClick={() => setOverflowOpen((v) => !v)}
-              className="h-8 px-2 flex items-center justify-center rounded text-xs gap-1 transition-all hover:bg-[rgba(255,255,255,0.06)] cursor-pointer flex-shrink-0"
+              className="h-9 sm:h-10 px-2.5 flex items-center justify-center rounded-lg text-xs gap-1 transition-all hover:bg-[rgba(255,255,255,0.06)] cursor-pointer flex-shrink-0"
               style={{
                 border: `1px solid ${overflowOpen ? "var(--c-accent)" : "var(--c-border)"}`,
                 background: overflowOpen ? "var(--c-accent-dim)" : "var(--c-panel)",
@@ -574,11 +573,11 @@ export default function Navbar({
               }}
               title="More tools & navigation"
             >
-              <span className="font-bold tracking-widest text-[13px] leading-none px-0.5">•••</span>
+              <span className="font-bold tracking-widest text-[14px] leading-none px-0.5">•••</span>
             </button>
             {overflowOpen && (
               <div
-                className="absolute right-0 top-full mt-1.5 z-[1250] rounded-xl py-1.5 shadow-2xl min-w-[200px] max-w-[calc(100vw-24px)] overflow-hidden backdrop-blur-md"
+                className="absolute right-0 top-full mt-2 z-[1250] rounded-xl py-1.5 shadow-2xl min-w-[210px] max-w-[calc(100vw-24px)] overflow-hidden backdrop-blur-md"
                 style={{
                   background: "var(--c-surface)",
                   border: "1px solid var(--c-border)",
@@ -586,7 +585,7 @@ export default function Navbar({
                 }}
               >
                 <div
-                  className="px-3 py-1 text-[10px] uppercase font-mono tracking-wider font-semibold border-b text-[var(--c-text3)]"
+                  className="px-3.5 py-1.5 text-[11px] uppercase font-mono tracking-wider font-semibold border-b text-[var(--c-text3)]"
                   style={{ borderColor: "var(--c-border)" }}
                 >
                   Tools & Analysis
@@ -598,19 +597,19 @@ export default function Navbar({
                     onLayers();
                     setOverflowOpen(false);
                   }}
-                  className="md:hidden w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-[rgba(255,255,255,0.05)] cursor-pointer transition-colors"
+                  className="md:hidden w-full text-left px-3.5 py-2.5 text-[13px] flex items-center justify-between hover:bg-[rgba(255,255,255,0.05)] cursor-pointer transition-colors"
                   style={{
                     color: layersOpen ? "var(--c-accent)" : "var(--c-text)",
                     background: layersOpen ? "var(--c-accent-dim)" : "transparent",
                   }}
                 >
                   <div className="flex items-center gap-2.5">
-                    <IconLayers size={14} style={{ color: layersOpen ? "var(--c-accent)" : "var(--c-text2)" }} />
+                    <IconLayers size={15} style={{ color: layersOpen ? "var(--c-accent)" : "var(--c-text2)" }} />
                     <span className="font-medium">Map Layers</span>
                   </div>
                   {layerCount !== undefined && (
                     <span
-                      className="text-[10px] font-mono px-1.5 py-0.5 rounded"
+                      className="text-[11px] font-mono px-1.5 py-0.5 rounded"
                       style={{
                         background: layersOpen ? "var(--c-accent)" : "var(--c-border2)",
                         color: layersOpen ? "var(--c-base)" : "var(--c-text2)",
@@ -627,18 +626,18 @@ export default function Navbar({
                     onCompare();
                     setOverflowOpen(false);
                   }}
-                  className="md:hidden w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-[rgba(255,255,255,0.05)] cursor-pointer transition-colors"
+                  className="md:hidden w-full text-left px-3.5 py-2.5 text-[13px] flex items-center justify-between hover:bg-[rgba(255,255,255,0.05)] cursor-pointer transition-colors"
                   style={{
                     color: compareOpen ? "var(--c-accent)" : "var(--c-text)",
                     background: compareOpen ? "var(--c-accent-dim)" : "transparent",
                   }}
                 >
                   <div className="flex items-center gap-2.5">
-                    <IconCompare size={14} style={{ color: compareOpen ? "var(--c-accent)" : "var(--c-text2)" }} />
+                    <IconCompare size={15} style={{ color: compareOpen ? "var(--c-accent)" : "var(--c-text2)" }} />
                     <span className="font-medium">Compare Layers</span>
                   </div>
                   {compareOpen && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--c-accent)]" />
+                    <span className="w-2 h-2 rounded-full bg-[var(--c-accent)]" />
                   )}
                 </button>
 
@@ -648,18 +647,18 @@ export default function Navbar({
                     onRight();
                     setOverflowOpen(false);
                   }}
-                  className="md:hidden w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-[rgba(255,255,255,0.05)] cursor-pointer transition-colors"
+                  className="md:hidden w-full text-left px-3.5 py-2.5 text-[13px] flex items-center justify-between hover:bg-[rgba(255,255,255,0.05)] cursor-pointer transition-colors"
                   style={{
                     color: rightOpen ? "var(--c-accent)" : "var(--c-text)",
                     background: rightOpen ? "var(--c-accent-dim)" : "transparent",
                   }}
                 >
                   <div className="flex items-center gap-2.5">
-                    <IconChart size={14} style={{ color: rightOpen ? "var(--c-accent)" : "var(--c-text2)" }} />
+                    <IconChart size={15} style={{ color: rightOpen ? "var(--c-accent)" : "var(--c-text2)" }} />
                     <span className="font-medium">Analytics & Stats</span>
                   </div>
                   {rightOpen && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--c-accent)]" />
+                    <span className="w-2 h-2 rounded-full bg-[var(--c-accent)]" />
                   )}
                 </button>
 
@@ -669,18 +668,18 @@ export default function Navbar({
                     onAI();
                     setOverflowOpen(false);
                   }}
-                  className="md:hidden w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-[rgba(255,255,255,0.05)] cursor-pointer transition-colors"
+                  className="md:hidden w-full text-left px-3.5 py-2.5 text-[13px] flex items-center justify-between hover:bg-[rgba(255,255,255,0.05)] cursor-pointer transition-colors"
                   style={{
                     color: aiOpen ? "var(--c-accent)" : "var(--c-text)",
                     background: aiOpen ? "var(--c-accent-dim)" : "transparent",
                   }}
                 >
                   <div className="flex items-center gap-2.5">
-                    <IconBot size={14} style={{ color: aiOpen ? "var(--c-accent)" : "var(--c-text2)" }} />
+                    <IconBot size={15} style={{ color: aiOpen ? "var(--c-accent)" : "var(--c-text2)" }} />
                     <span className="font-medium">MCGSE AI</span>
                   </div>
                   {aiOpen && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--c-accent)]" />
+                    <span className="w-2 h-2 rounded-full bg-[var(--c-accent)]" />
                   )}
                 </button>
 
@@ -696,9 +695,9 @@ export default function Navbar({
                     onExport();
                     setOverflowOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2 text-xs flex items-center gap-2.5 hover:bg-[rgba(255,255,255,0.05)] cursor-pointer transition-colors text-[var(--c-text)]"
+                  className="w-full text-left px-3.5 py-2.5 text-[13px] flex items-center gap-2.5 hover:bg-[rgba(255,255,255,0.05)] cursor-pointer transition-colors text-[var(--c-text)]"
                 >
-                  <IconExport size={14} style={{ color: "var(--c-text2)" }} />
+                  <IconExport size={15} style={{ color: "var(--c-text2)" }} />
                   <span className="font-medium">Export Data</span>
                 </button>
 
@@ -708,9 +707,9 @@ export default function Navbar({
                     onHelp?.();
                     setOverflowOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2 text-xs flex items-center gap-2.5 hover:bg-[rgba(255,255,255,0.05)] cursor-pointer transition-colors text-[var(--c-text)]"
+                  className="w-full text-left px-3.5 py-2.5 text-[13px] flex items-center gap-2.5 hover:bg-[rgba(255,255,255,0.05)] cursor-pointer transition-colors text-[var(--c-text)]"
                 >
-                  <IconHelp size={14} style={{ color: "var(--c-text2)" }} />
+                  <IconHelp size={15} style={{ color: "var(--c-text2)" }} />
                   <span className="font-medium">Help & Guide</span>
                 </button>
               </div>
@@ -749,14 +748,14 @@ function NavBtn({
     <button
       onClick={onClick}
       title={label}
-      className="flex items-center gap-1.5 h-8 px-2.5 rounded text-xs font-medium transition-all cursor-pointer"
+      className="flex items-center gap-2 h-9 sm:h-10 px-2.5 sm:px-3 rounded-lg text-xs sm:text-[13px] font-semibold transition-all cursor-pointer"
       style={{
         color: active ? "var(--c-accent)" : "var(--c-text2)",
         background: active ? "var(--c-accent-dim)" : "transparent",
         border: active ? "1px solid var(--c-accent)" : "1px solid transparent",
       }}
     >
-      <Icon size={13} style={{ color: active ? "var(--c-accent)" : "currentColor" }} />
+      <Icon size={16} style={{ color: active ? "var(--c-accent)" : "currentColor" }} />
       <span className="hidden xl:inline">{label}</span>
     </button>
   );
