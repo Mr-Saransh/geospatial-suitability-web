@@ -345,3 +345,14 @@ class TestAIAssistantEndpoint(unittest.TestCase):
         )
         self.assertEqual(res.status_code, 422)
 
+    # 20. Conversational greeting check: no technical table dumps
+    def test_greeting_conversational_response(self):
+        res = self.client.post("/api/v1/ai/ask", json={"question": "hi"})
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        ans = data["answer"].lower()
+        # Should greet or introduce
+        self.assertTrue(any(w in ans for w in ("welcome", "hello", "hi", "assistant", "mcgse ai")))
+        # Should NOT dump factor weights or raw table headers on a simple hi
+        self.assertNotIn("factor weights & criteria", ans)
+

@@ -22,7 +22,7 @@ from fastapi.responses import StreamingResponse
 
 from app.config import settings
 from app.schemas import AIAssistantRequest, AIAssistantResponse, AIHealthResponse
-from app.services.ai_evidence import retrieve_gis_evidence
+from app.services.ai_evidence import is_greeting_or_intro, retrieve_gis_evidence
 from app.services.ollama_service import ollama_service
 
 logger = logging.getLogger(__name__)
@@ -214,37 +214,50 @@ async def ask_ai_stream(req: AIAssistantRequest, request: Request):
 
     async def event_generator() -> AsyncGenerator[str, None]:
         try:
-            # 1. Understanding question
-            yield _format_sse(
-                "status",
-                {
-                    "type": "status",
-                    "stage": "understanding_question",
-                    "message": "Understanding your question and spatial context...",
-                },
-            )
-            await asyncio.sleep(0.01)
+            is_greeting = is_greeting_or_intro(cleaned_question)
 
-            # 2. Identifying model
-            yield _format_sse(
-                "status",
-                {
-                    "type": "status",
-                    "stage": "identifying_model",
-                    "message": f"Identifying spatial model for: {cleaned_question[:60]}...",
-                    "model_id": req.model_id,
-                },
-            )
+            if is_greeting:
+                yield _format_sse(
+                    "status",
+                    {
+                        "type": "status",
+                        "stage": "understanding_question",
+                        "message": "Connecting with MCGSE AI...",
+                    },
+                )
+                await asyncio.sleep(0.01)
+            else:
+                # 1. Understanding question
+                yield _format_sse(
+                    "status",
+                    {
+                        "type": "status",
+                        "stage": "understanding_question",
+                        "message": "Understanding your question and spatial context...",
+                    },
+                )
+                await asyncio.sleep(0.01)
 
-            # 3. Retrieving metadata
-            yield _format_sse(
-                "status",
-                {
-                    "type": "status",
-                    "stage": "retrieving_metadata",
-                    "message": "Retrieving model criteria, weights, and classification thresholds...",
-                },
-            )
+                # 2. Identifying model
+                yield _format_sse(
+                    "status",
+                    {
+                        "type": "status",
+                        "stage": "identifying_model",
+                        "message": f"Identifying spatial model for: {cleaned_question[:60]}...",
+                        "model_id": req.model_id,
+                    },
+                )
+
+                # 3. Retrieving metadata
+                yield _format_sse(
+                    "status",
+                    {
+                        "type": "status",
+                        "stage": "retrieving_metadata",
+                        "message": "Retrieving model criteria, weights, and classification thresholds...",
+                    },
+                )
 
             # 4. If coordinates supplied, inspecting raster evidence
             if req.latitude is not None and req.longitude is not None:
@@ -311,13 +324,13 @@ async def ask_ai_stream(req: AIAssistantRequest, request: Request):
                 },
             )
 
-            # 8. Generating answer locally
+            # 8. Generating answer
             yield _format_sse(
                 "status",
                 {
                     "type": "status",
                     "stage": "generating_answer",
-                    "message": "Generating answer locally via Ollama...",
+                    "message": "Synthesizing answer from spatial evidence...",
                 },
             )
 

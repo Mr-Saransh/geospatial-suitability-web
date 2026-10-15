@@ -71,6 +71,47 @@ COMPARISON_KEYWORDS = (
     "landslide and flood",
 )
 
+GREETING_WORDS = {
+    "hi",
+    "hello",
+    "hey",
+    "hey there",
+    "hello there",
+    "hi there",
+    "good morning",
+    "good afternoon",
+    "good evening",
+    "howdy",
+    "greetings",
+    "yo",
+    "sup",
+    "who are you",
+    "what are you",
+    "what can you do",
+    "help",
+    "how can you help",
+    "start",
+    "intro",
+}
+
+
+def is_greeting_or_intro(question: str) -> bool:
+    """Detect if the input is a greeting or general introduction inquiry."""
+    cleaned = question.strip().lower().rstrip("!?.")
+    if not cleaned:
+        return False
+    if cleaned in GREETING_WORDS:
+        return True
+    words = cleaned.split()
+    if len(words) <= 3 and any(w in GREETING_WORDS for w in words):
+        spatial_terms = {
+            "flood", "landslide", "risk", "slope", "score", "mandi", "shimla",
+            "layer", "weight", "criteria", "coordinate", "raster", "elevation"
+        }
+        if not any(st in words for st in spatial_terms):
+            return True
+    return False
+
 
 def is_comparison_question(question: str) -> bool:
     """Determine whether the question asks for a multi-model comparison."""

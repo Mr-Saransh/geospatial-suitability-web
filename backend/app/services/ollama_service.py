@@ -22,7 +22,7 @@ from typing import Any
 import httpx
 
 from app.config import settings
-from app.services.ai_evidence import format_evidence_for_prompt
+from app.services.ai_evidence import format_evidence_for_prompt, is_greeting_or_intro
 
 logger = logging.getLogger(__name__)
 
@@ -134,15 +134,23 @@ class OllamaService:
         Generate a strictly factual evidence summary directly from GIS data
         when Ollama model is not yet loaded or Ollama is offline.
         """
+        if is_greeting_or_intro(question):
+            return (
+                "**MCGSE AI — Geospatial Decision-Support Intelligence**\n\n"
+                "Hello! Welcome to **MCGSE AI**. I am your evidence-grounded spatial intelligence assistant for Himachal Pradesh.\n\n"
+                "**How I can assist you:**\n"
+                "- **📍 Point Inspection**: Click any coordinate on the map to evaluate flood and landslide suitability scores, hazard classes, and primary contributing criteria.\n"
+                "- **🔬 Hazard Models**: Explore criteria and AHP factor weights for the 11-Factor Flood Susceptibility model or 14-Factor Landslide MCDA model.\n"
+                "- **⚖️ Model Comparison**: Compare methodology differences, shared criteria, and divergent factors between flood and landslide hazard frameworks.\n"
+                "- **📊 Statewide Distribution**: View statistical summaries, classification distributions, and coverage percentages across Himachal Pradesh.\n\n"
+                "*To get started, click anywhere on the map or ask a question about flood or landslide risk!*"
+            )
+
         ev = evidence_result.get("evidence", {})
         lines: list[str] = []
-        guidance = health_info.get("setup_guidance") or (
-            f"Ollama local model '{self.configured_model}' is not active. "
-            f"Run `ollama run {self.configured_model}` on the host machine to enable neural generation."
-        )
 
         lines.append("**MCGSE AI Evidence Report**\n")
-        lines.append(f"> ℹ️ *Note: {guidance} Displaying verified spatial facts directly from the GIS engine below:*\n")
+        lines.append("> ℹ️ *Verified spatial facts retrieved directly from the canonical GIS engine:*\n")
 
         # Multi-model comparison if requested
         comp = ev.get("model_comparison")
@@ -228,14 +236,28 @@ class OllamaService:
         history: list[dict[str, str]] | None = None,
         target_model: str = "",
     ) -> list[dict[str, str]]:
-        evidence_prompt_text = format_evidence_for_prompt(evidence_result)
-        user_content = (
-            f"=== RETRIEVED GIS EVIDENCE ===\n"
-            f"{evidence_prompt_text}\n"
-            f"=== END OF EVIDENCE ===\n\n"
-            f"User Question: {question}\n\n"
-            "Please provide a grounded, direct answer using only the evidence above."
-        )
+        if is_greeting_or_intro(question):
+            user_content = (
+                f"User Question: {question}\n\n"
+                "The user is sending a greeting or asking for an introduction.\n"
+                "Respond warmly, concisely, and naturally as MCGSE AI — the geospatial decision-support intelligence assistant for Himachal Pradesh.\n"
+                "Briefly explain your key capabilities:\n"
+                "- Inspect point coordinates on the map for flood and landslide suitability scores\n"
+                "- Explain multi-criteria decision models (11-Factor Flood AHP and 14-Factor Landslide MCDA)\n"
+                "- Compare models and factor weights\n"
+                "- Analyze statewide statistical distributions\n"
+                "Invite them to click anywhere on the map or ask a question about flood or landslide risk. "
+                "Keep the tone professional, welcoming, and concise (under 100 words). Do NOT dump tables of numbers or factor weights."
+            )
+        else:
+            evidence_prompt_text = format_evidence_for_prompt(evidence_result)
+            user_content = (
+                f"=== RETRIEVED GIS EVIDENCE ===\n"
+                f"{evidence_prompt_text}\n"
+                f"=== END OF EVIDENCE ===\n\n"
+                f"User Question: {question}\n\n"
+                "Please provide a grounded, direct answer using only the evidence above."
+            )
 
         messages: list[dict[str, str]] = [
             {"role": "system", "content": SYSTEM_PROMPT}

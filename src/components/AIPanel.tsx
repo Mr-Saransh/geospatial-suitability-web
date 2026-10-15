@@ -550,17 +550,13 @@ export default function AIPanel({
           )}
         </div>
 
-        {loading ? (
+        {loading && (
           <button
             onClick={handleStopGenerating}
             className="px-2 py-0.5 rounded text-[10px] font-mono text-red-400 border border-red-500/30 hover:bg-red-500/10 cursor-pointer transition-colors"
           >
             Stop
           </button>
-        ) : (
-          <span className="text-[10px] font-mono text-[var(--c-text3)]">
-            {aiHealth?.model_installed ? aiHealth.configured_model : "Local Ollama"}
-          </span>
         )}
       </div>
 
