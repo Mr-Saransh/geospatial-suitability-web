@@ -65,9 +65,12 @@ export interface AIMessage {
   role: "user" | "assistant";
   text: string;
   evidence?: import("./lib/api/types").AIAssistantEvidence;
+  items?: import("./lib/api/types").StructuredEvidenceItem[];
   warnings?: string[];
   source?: string;
   modelUsed?: string;
+  isStreaming?: boolean;
+  error?: boolean;
   actions?: Array<{
     label: string;
     type: "layer" | "evidence" | "stats";

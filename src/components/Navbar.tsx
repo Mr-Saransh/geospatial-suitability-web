@@ -541,9 +541,9 @@ export default function Navbar({
             <NavBtn label="Analytics" Icon={IconChart} active={rightOpen} onClick={onRight} />
           </div>
 
-          {/* AI Assistant — Desktop */}
+          {/* MCGSE AI — Desktop */}
           <div className="hidden md:flex">
-            <NavBtn label="AI Assistant" Icon={IconBot} active={aiOpen} onClick={onAI} />
+            <NavBtn label="MCGSE AI" Icon={IconBot} active={aiOpen} onClick={onAI} />
           </div>
 
           {/* Secondary actions (Desktop) */}
@@ -663,7 +663,7 @@ export default function Navbar({
                   )}
                 </button>
 
-                {/* 4. AI Assistant (Mobile) */}
+                {/* 4. MCGSE AI (Mobile) */}
                 <button
                   onClick={() => {
                     onAI();
@@ -677,7 +677,7 @@ export default function Navbar({
                 >
                   <div className="flex items-center gap-2.5">
                     <IconBot size={14} style={{ color: aiOpen ? "var(--c-accent)" : "var(--c-text2)" }} />
-                    <span className="font-medium">AI Assistant</span>
+                    <span className="font-medium">MCGSE AI</span>
                   </div>
                   {aiOpen && (
                     <span className="w-1.5 h-1.5 rounded-full bg-[var(--c-accent)]" />

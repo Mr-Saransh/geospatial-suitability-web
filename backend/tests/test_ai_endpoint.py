@@ -223,7 +223,14 @@ class TestAIAssistantEndpoint(unittest.TestCase):
         self.assertTrue(len(data["warnings"]) > 0 or data["source"] in ("ollama", "evidence_fallback"))
 
     # 13. Rate limiting enforcement
-    def test_rate_limiting_enforcement(self):
+    @patch("app.routers.ai.ollama_service.generate_grounded_answer", new_callable=AsyncMock)
+    def test_rate_limiting_enforcement(self, mock_generate):
+        mock_generate.return_value = {
+            "answer": "Instant response",
+            "model_used": "test_model",
+            "source": "mock",
+            "warning": None,
+        }
         client_ip = "testclient"
         # Temporarily lower limit to test rate limiting
         orig_limit = settings.ai_rate_limit_per_minute
@@ -256,3 +263,85 @@ class TestAIAssistantEndpoint(unittest.TestCase):
         data = res.json()
         self.assertEqual(data["model_id"], "landslide_14_factor_v1")
         self.assertEqual(data["evidence"]["criteria_count"], 14)
+
+    # 15. Atomic Structured Evidence Items
+    def test_atomic_structured_evidence_items(self):
+        res = self.client.post(
+            "/api/v1/ai/ask",
+            json={
+                "question": "What are the factor weights?",
+                "model_id": "flood_11_factor_v1",
+                "latitude": 31.8645,
+                "longitude": 76.7920,
+            },
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertIn("items", data)
+        self.assertTrue(len(data["items"]) > 0)
+        first_item = data["items"][0]
+        self.assertIn("id", first_item)
+        self.assertIn("category", first_item)
+        self.assertIn("label", first_item)
+        self.assertIn("value", first_item)
+        self.assertIn("source", first_item)
+
+    # 16. Multi-Model Comparison Evidence Retrieval
+    def test_multi_model_comparison(self):
+        res = self.client.post(
+            "/api/v1/ai/ask",
+            json={
+                "question": "Compare the Flood and Landslide models and their factors",
+            },
+        )
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        ev = data["evidence"]
+        self.assertIn("model_comparison", ev)
+        comp = ev["model_comparison"]
+        self.assertIn("common_criteria", comp)
+        self.assertIn("primary_model", comp)
+        self.assertIn("comparison_model", comp)
+        self.assertTrue(len(comp["common_criteria"]) > 0)
+
+    # 17. Live Streaming Endpoint SSE headers and events
+    def test_streaming_endpoint_sse(self):
+        res = self.client.post(
+            "/api/v1/ai/ask/stream",
+            json={
+                "question": "What are the criteria weights for flood?",
+                "model_id": "flood_11_factor_v1",
+            },
+        )
+        self.assertEqual(res.status_code, 200)
+        self.assertIn("text/event-stream", res.headers.get("content-type", ""))
+        body = res.text
+        self.assertIn("event: status", body)
+        self.assertIn("event: evidence", body)
+        self.assertIn("event: done", body)
+
+    # 18. Live Streaming with point coordinates
+    def test_streaming_endpoint_with_coordinates(self):
+        res = self.client.post(
+            "/api/v1/ai/ask/stream",
+            json={
+                "question": "Analyze risk at this point",
+                "model_id": "flood_11_factor_v1",
+                "latitude": 31.8645,
+                "longitude": 76.7920,
+            },
+        )
+        self.assertEqual(res.status_code, 200)
+        body = res.text
+        self.assertIn("inspecting_raster", body)
+        self.assertIn("event: evidence", body)
+        self.assertIn("event: done", body)
+
+    # 19. Streaming validation error
+    def test_streaming_validation_error(self):
+        res = self.client.post(
+            "/api/v1/ai/ask/stream",
+            json={"question": "   "},
+        )
+        self.assertEqual(res.status_code, 422)
+

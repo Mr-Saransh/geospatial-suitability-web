@@ -94,8 +94,8 @@ const HELP_TOPICS: HelpItem[] = [
   {
     icon: IconBot,
     iconColor: "var(--c-accent)",
-    title: "Consult the AI Assistant",
-    tag: "AI Copilot",
+    title: "Consult MCGSE AI",
+    tag: "MCGSE AI",
     description:
       "Click AI Assistant in the top toolbar to ask natural language questions about local susceptibility factors, criteria weights, or model methodology.",
     hint: "The assistant opens independently without resetting your map view.",

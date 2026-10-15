@@ -1,10 +1,16 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { AI_PRESETS } from "../data";
 import type { Zone, AIMessage, Layer } from "../types";
-import type { AIAssistantEvidence, AIHealthResponse } from "../lib/api/types";
+import type {
+  AIAssistantEvidence,
+  AIHealthResponse,
+  StructuredEvidenceItem,
+  AIStatusStreamEvent,
+  AIEvidenceStreamEvent,
+  AIDoneStreamEvent,
+} from "../lib/api/types";
 import { api } from "../lib/api/client";
-import { IconBot, IconSend, IconX, IconInfo, IconChevronD, IconChevronU } from "../icons";
-import { Btn, Pill, Mono } from "../ui";
+import { IconBot, IconSend, IconX, IconInfo, IconChevronD, IconChevronU, IconRefresh } from "../icons";
+import { Btn } from "../ui";
 
 interface Props {
   open?: boolean;
@@ -22,19 +28,61 @@ function formatMarkdown(text: string): string {
   return text
     .replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--c-text)">$1</strong>')
     .replace(/\*(.*?)\*/g, '<em style="color:var(--c-text2)">$1</em>')
-    .replace(/`([^`]+)`/g, '<code style="background:var(--c-panel);padding:1px 4px;border-radius:4px;font-family:var(--font-mono);color:var(--c-accent)">$1</code>')
+    .replace(
+      /`([^`]+)`/g,
+      '<code style="background:var(--c-panel);padding:1px 4px;border-radius:4px;font-family:var(--font-mono);color:var(--c-accent)">$1</code>'
+    )
     .replace(/\n\n/g, '</p><p style="margin-top:6px">')
     .replace(/\n- (.*?)(?=\n|$)/g, '<li style="margin-left:14px;list-style-type:disc">$1</li>')
     .replace(/\n/g, "<br/>");
 }
 
-function EvidenceAccordion({ evidence, warnings }: { evidence: AIAssistantEvidence; warnings?: string[] }) {
+function EvidenceAccordion({
+  evidence,
+  items = [],
+  warnings,
+}: {
+  evidence: AIAssistantEvidence;
+  items?: StructuredEvidenceItem[];
+  warnings?: string[];
+}) {
   const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState<string>("all");
+  const [copied, setCopied] = useState(false);
 
   const pt = evidence.point_inspection;
   const coords = evidence.coordinates;
   const stats = evidence.statistics;
   const weights = evidence.criteria_weights || [];
+  const comp = evidence.model_comparison;
+
+  const handleCopy = () => {
+    const lines: string[] = [`## Verified Spatial Facts (${evidence.model_name || evidence.model_id})`];
+    if (coords) {
+      lines.push(`- Coordinates: ${coords.latitude.toFixed(4)}°N, ${coords.longitude.toFixed(4)}°E`);
+      if (evidence.suitability_score != null) {
+        lines.push(`- Score: ${evidence.suitability_score.toFixed(2)} (${evidence.suitability_label || ""})`);
+      }
+    }
+    if (items.length > 0) {
+      lines.push("\n### Atomic Evidence Items:");
+      items.forEach((it) => {
+        lines.push(`- [${it.category}] ${it.label}: ${it.value} ${it.unit || ""} (Source: ${it.source})`);
+      });
+    }
+    navigator.clipboard.writeText(lines.join("\n"));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const filteredItems = items.filter((it) => {
+    if (filter === "all") return true;
+    if (filter === "point") return it.category === "point_inspection";
+    if (filter === "weights") return it.category === "criteria_weights";
+    if (filter === "stats") return it.category === "statistics";
+    if (filter === "compare") return it.category === "model_comparison";
+    return true;
+  });
 
   return (
     <div
@@ -60,6 +108,11 @@ function EvidenceAccordion({ evidence, warnings }: { evidence: AIAssistantEviden
               Score {evidence.suitability_score.toFixed(2)}
             </span>
           )}
+          {items.length > 0 && (
+            <span className="text-[10px] text-[var(--c-text3)] font-mono">
+              ({items.length} facts)
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1 text-[10px]" style={{ color: "var(--c-text3)" }}>
           <span>{open ? "Hide" : "Inspect Facts"}</span>
@@ -69,115 +122,113 @@ function EvidenceAccordion({ evidence, warnings }: { evidence: AIAssistantEviden
 
       {open && (
         <div
-          className="px-3 py-2.5 flex flex-col gap-2 border-t leading-normal animate-in fade-in-50"
+          className="px-3 py-2.5 flex flex-col gap-2.5 border-t leading-normal animate-in fade-in-50"
           style={{ borderColor: "var(--c-border)" }}
         >
-          {/* Model info */}
+          {/* Filter Bar & Copy Action */}
           <div className="flex items-center justify-between flex-wrap gap-1 pb-1 border-b border-[var(--c-border)]">
-            <span style={{ color: "var(--c-text3)" }}>Model</span>
-            <span className="font-semibold text-[var(--c-text)]">
-              {evidence.model_name || evidence.model_id} ({evidence.criteria_count} factors)
-            </span>
+            <div className="flex items-center gap-1">
+              {[
+                { id: "all", label: "All" },
+                ...(coords ? [{ id: "point", label: "Point" }] : []),
+                { id: "weights", label: "Weights" },
+                ...(stats ? [{ id: "stats", label: "Stats" }] : []),
+                ...(comp ? [{ id: "compare", label: "Compare" }] : []),
+              ].map((btn) => (
+                <button
+                  key={btn.id}
+                  onClick={() => setFilter(btn.id)}
+                  className={`px-1.5 py-0.5 rounded text-[9px] font-mono cursor-pointer transition-colors ${
+                    filter === btn.id
+                      ? "bg-[var(--c-accent)] text-black font-semibold"
+                      : "bg-[var(--c-surface)] text-[var(--c-text2)] hover:text-[var(--c-text)]"
+                  }`}
+                >
+                  {btn.label}
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={handleCopy}
+              className="text-[9px] font-mono px-1.5 py-0.5 rounded text-[var(--c-accent)] hover:bg-[var(--c-accent-dim)] cursor-pointer"
+            >
+              {copied ? "✓ Copied" : "Copy Facts"}
+            </button>
           </div>
 
-          {/* Point info if coordinate was queried */}
-          {coords && (
-            <div className="flex flex-col gap-1 pb-1 border-b border-[var(--c-border)]">
-              <div className="flex items-center justify-between">
-                <span style={{ color: "var(--c-text3)" }}>Coordinate</span>
-                <span className="font-mono text-[var(--c-text)]">
-                  {coords.latitude.toFixed(4)}°N, {coords.longitude.toFixed(4)}°E
-                </span>
-              </div>
-              {evidence.location_status && (
-                <div className="flex items-center justify-between">
-                  <span style={{ color: "var(--c-text3)" }}>Location Status</span>
-                  <span
-                    className={`font-semibold ${
-                      evidence.location_status === "OUTSIDE_ANALYSIS_AREA"
-                        ? "text-red-400"
-                        : "text-[var(--c-accent)]"
-                    }`}
-                  >
-                    {evidence.location_status}
-                  </span>
-                </div>
-              )}
-              {pt && pt.suitability_score != null && (
-                <div className="flex items-center justify-between">
-                  <span style={{ color: "var(--c-text3)" }}>Suitability Result</span>
-                  <span className="font-semibold font-mono text-[var(--c-accent)]">
-                    {pt.suitability_score.toFixed(2)} / 5.00 ({pt.suitability_label || `Class ${pt.suitability_class}`})
-                  </span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Top contributing factors */}
-          {pt?.top_factors && pt.top_factors.length > 0 && (
-            <div className="flex flex-col gap-1 pb-1 border-b border-[var(--c-border)]">
-              <span className="font-medium text-[var(--c-text3)]">Top Contributing Criteria:</span>
-              <div className="flex flex-col gap-0.5 pl-1">
-                {pt.top_factors.map((f) => (
-                  <div key={f.criterion} className="flex items-center justify-between text-[10px]">
-                    <span className="capitalize text-[var(--c-text)]">{f.criterion.replace(/_/g, " ")}</span>
-                    <span className="font-mono text-[var(--c-text2)]">
-                      {f.raw_value != null ? `raw: ${f.raw_value}` : ""} · rating: {f.rating != null ? `${f.rating}/5` : "N/A"}
+          {/* Atomic Evidence Items View */}
+          {filteredItems.length > 0 ? (
+            <div className="flex flex-col gap-1 max-h-48 overflow-y-auto pr-0.5">
+              {filteredItems.map((it) => (
+                <div
+                  key={it.id}
+                  className="p-1.5 rounded flex flex-col gap-0.5 text-[10px]"
+                  style={{
+                    background: "var(--c-surface)",
+                    border: "1px solid var(--c-border2)",
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-[var(--c-text)]">{it.label}</span>
+                    <span className="font-mono font-semibold text-[var(--c-accent)]">
+                      {String(it.value)} {it.unit ? `${it.unit}` : ""}
                     </span>
                   </div>
-                ))}
-              </div>
+                  <div className="flex items-center justify-between text-[9px]" style={{ color: "var(--c-text3)" }}>
+                    <span className="truncate max-w-[200px]">Source: {it.source}</span>
+                    {it.coverage_status && <span className="font-mono">{it.coverage_status}</span>}
+                  </div>
+                  {it.caveats && (
+                    <div className="text-[9px] text-amber-400/90 italic">{it.caveats}</div>
+                  )}
+                </div>
+              ))}
             </div>
-          )}
+          ) : (
+            /* Fallback structured view if no atomic items */
+            <div className="flex flex-col gap-2">
+              {coords && pt && (
+                <div className="flex flex-col gap-0.5 pb-1 border-b border-[var(--c-border)]">
+                  <div className="flex justify-between">
+                    <span className="text-[var(--c-text3)]">Coordinate</span>
+                    <span className="font-mono text-[var(--c-text)]">
+                      {coords.latitude.toFixed(4)}°N, {coords.longitude.toFixed(4)}°E
+                    </span>
+                  </div>
+                  {pt.suitability_score != null && (
+                    <div className="flex justify-between">
+                      <span className="text-[var(--c-text3)]">Suitability Score</span>
+                      <span className="font-mono text-[var(--c-accent)] font-semibold">
+                        {pt.suitability_score.toFixed(2)} / 5.00 ({pt.suitability_label || `Class ${pt.suitability_class}`})
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
 
-          {/* Model Weights */}
-          {weights.length > 0 && (
-            <div className="flex flex-col gap-1 pb-1 border-b border-[var(--c-border)]">
-              <div className="flex items-center justify-between">
-                <span className="font-medium text-[var(--c-text3)]">AHP Factor Weights</span>
-                {evidence.consistency_ratio != null && (
-                  <span className="font-mono text-[10px] text-[var(--c-accent)]">
-                    CR: {evidence.consistency_ratio.toFixed(4)}
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-1 pt-0.5">
-                {weights.slice(0, 6).map((w) => (
-                  <span
-                    key={w.criterion}
-                    className="px-1.5 py-0.2 rounded text-[9px] font-mono"
-                    style={{ background: "var(--c-panel)", border: "1px solid var(--c-border2)" }}
-                  >
-                    {w.criterion.replace(/_/g, " ")}: {(w.weight * 100).toFixed(1)}%
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Statistics summary if retrieved */}
-          {stats && (
-            <div className="flex flex-col gap-1 pb-1 border-b border-[var(--c-border)]">
-              <span className="font-medium text-[var(--c-text3)]">Statewide Analysis Coverage:</span>
-              <div className="flex items-center justify-between text-[10px]">
-                <span style={{ color: "var(--c-text2)" }}>Valid Area Coverage:</span>
-                <span className="font-mono text-[var(--c-accent)]">{stats.valid_coverage_pct}%</span>
-              </div>
-              {stats.score_mean != null && (
-                <div className="flex items-center justify-between text-[10px]">
-                  <span style={{ color: "var(--c-text2)" }}>Mean Score:</span>
-                  <span className="font-mono text-[var(--c-text)]">
-                    {stats.score_mean.toFixed(2)} ± {stats.score_std?.toFixed(2)}
-                  </span>
+              {weights.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  <span className="text-[var(--c-text3)]">Factor Weights:</span>
+                  <div className="flex flex-wrap gap-1">
+                    {weights.slice(0, 6).map((w) => (
+                      <span
+                        key={w.criterion}
+                        className="px-1.5 py-0.2 rounded text-[9px] font-mono"
+                        style={{ background: "var(--c-surface)", border: "1px solid var(--c-border2)" }}
+                      >
+                        {w.criterion.replace(/_/g, " ")}: {(w.weight * 100).toFixed(1)}%
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
           )}
 
-          {/* Limitations and Warnings */}
+          {/* Warnings & Limitations */}
           {warnings && warnings.length > 0 && (
-            <div className="pt-0.5 flex flex-col gap-1">
+            <div className="pt-1 flex flex-col gap-1 border-t border-[var(--c-border)]">
               {warnings.map((w, idx) => (
                 <div key={idx} className="flex items-start gap-1 text-[10px] text-amber-400">
                   <span className="flex-shrink-0">⚠️</span>
@@ -204,18 +255,21 @@ export default function AIPanel({
     activeModelId.includes("landslide") ||
     activeModelName.toLowerCase().includes("landslide");
   const hazardName = isLandslide ? "Landslide" : activeModelName || "Flood";
-  const modelTitle = `${activeModelName || hazardName} Susceptibility Model`;
 
   const [aiHealth, setAiHealth] = useState<AIHealthResponse | null>(null);
   const [messages, setMessages] = useState<AIMessage[]>([
     {
       role: "assistant",
-      text: `Welcome to the **${modelTitle}** AI Assistant. I am directly grounded in the **Himachal Pradesh Spatial Knowledge Package**. I inspect point coordinates, explain criteria weights, and report statewide statistics. Click any map location or ask a question below.`,
+      text: "Welcome to **MCGSE AI**. I am your evidence-grounded spatial decision-support assistant. Ask questions about factor weights, classification rules, or select any point on the map to inspect specific coordinates.",
     },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [currentStageMessage, setCurrentStageMessage] = useState<string | null>(null);
+
   const bottomRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const lastQuestionRef = useRef<string>("");
 
   // Probe Ollama and AI health on mount
   useEffect(() => {
@@ -229,7 +283,7 @@ export default function AIPanel({
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
+  }, [messages, loading, currentStageMessage]);
 
   // Support Escape to close
   useEffect(() => {
@@ -242,14 +296,35 @@ export default function AIPanel({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
+  const handleStopGenerating = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setLoading(false);
+    setCurrentStageMessage(null);
+  }, []);
+
   const send = useCallback(
     async (q: string) => {
       if (!q.trim() || loading) return;
       const questionText = q.trim();
+      lastQuestionRef.current = questionText;
+
       const userMsg: AIMessage = { role: "user", text: questionText };
-      setMessages((m) => [...m, userMsg]);
+      const placeholderAssistantMsg: AIMessage = {
+        role: "assistant",
+        text: "",
+        isStreaming: true,
+      };
+
+      setMessages((m) => [...m, userMsg, placeholderAssistantMsg]);
       setInput("");
       setLoading(true);
+      setCurrentStageMessage("Understanding your question...");
+
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
 
       // Prepare conversation history (bounded to last 6 turns)
       const historyPayload = messages.slice(-6).map((m) => ({
@@ -258,79 +333,154 @@ export default function AIPanel({
       }));
 
       try {
-        const res = await api.askAI({
-          question: questionText,
-          model_id: activeModelId,
-          latitude: zone?.lat,
-          longitude: zone?.lng,
-          history: historyPayload,
-        });
-
-        // Generate contextual layer action buttons if factors are mentioned
-        const actions: AIMessage["actions"] = [];
-        const ev = res.evidence;
-        if (ev.point_inspection?.top_factors) {
-          for (const f of ev.point_inspection.top_factors.slice(0, 2)) {
-            actions.push({
-              label: `Layer: ${f.criterion.replace(/_/g, " ")}`,
-              type: "layer",
-              target: f.criterion,
-            });
-          }
-        }
-
-        const assistantMsg: AIMessage = {
-          role: "assistant",
-          text: res.answer,
-          evidence: res.evidence,
-          warnings: res.warnings,
-          source: res.source,
-          modelUsed: res.model_used || undefined,
-          actions,
-        };
-
-        setMessages((m) => [...m, assistantMsg]);
-      } catch (err: unknown) {
-        console.error("AI question failed:", err);
-        const errMsg = err instanceof Error ? err.message : String(err);
-
-        let userFriendly = "Sorry, I encountered an issue contacting the AI endpoint.";
-        if (errMsg.includes("429")) {
-          userFriendly = "⚠️ Rate limit reached (maximum 20 requests/min). Please wait a moment before asking again.";
-        } else if (errMsg.includes("Failed to fetch") || errMsg.includes("NetworkError")) {
-          userFriendly = "⚠️ Connection to the backend failed. Ensure your ngrok tunnel and FastAPI backend are running.";
-        }
-
-        setMessages((m) => [
-          ...m,
+        await api.askAIStream(
           {
-            role: "assistant",
-            text: `${userFriendly}\n\n*Technical note: ${errMsg}*`,
+            question: questionText,
+            model_id: activeModelId,
+            latitude: zone?.lat,
+            longitude: zone?.lng,
+            history: historyPayload,
           },
-        ]);
+          {
+            onStatus: (st: AIStatusStreamEvent) => {
+              setCurrentStageMessage(st.message);
+            },
+            onEvidence: (ev: AIEvidenceStreamEvent) => {
+              setMessages((prev) => {
+                const next = [...prev];
+                const lastIdx = next.length - 1;
+                if (lastIdx >= 0 && next[lastIdx].role === "assistant") {
+                  next[lastIdx] = {
+                    ...next[lastIdx],
+                    evidence: ev.evidence,
+                    items: ev.items,
+                    warnings: ev.warnings,
+                  };
+                }
+                return next;
+              });
+            },
+            onToken: (token: string) => {
+              setMessages((prev) => {
+                const next = [...prev];
+                const lastIdx = next.length - 1;
+                if (lastIdx >= 0 && next[lastIdx].role === "assistant") {
+                  next[lastIdx] = {
+                    ...next[lastIdx],
+                    text: next[lastIdx].text + token,
+                  };
+                }
+                return next;
+              });
+            },
+            onDone: (doneData: AIDoneStreamEvent) => {
+              // Contextual layer action buttons if top factors present
+              const actions: AIMessage["actions"] = [];
+              const ev = doneData.evidence;
+              if (ev?.point_inspection?.top_factors) {
+                for (const f of ev.point_inspection.top_factors.slice(0, 2)) {
+                  actions.push({
+                    label: `Layer: ${f.criterion.replace(/_/g, " ")}`,
+                    type: "layer",
+                    target: f.criterion,
+                  });
+                }
+              }
+
+              setMessages((prev) => {
+                const next = [...prev];
+                const lastIdx = next.length - 1;
+                if (lastIdx >= 0 && next[lastIdx].role === "assistant") {
+                  next[lastIdx] = {
+                    role: "assistant",
+                    text: doneData.answer || next[lastIdx].text,
+                    evidence: doneData.evidence,
+                    items: doneData.items,
+                    warnings: doneData.warnings,
+                    source: doneData.source,
+                    modelUsed: doneData.model_used || undefined,
+                    isStreaming: false,
+                    actions,
+                  };
+                }
+                return next;
+              });
+            },
+            onError: (err: Error) => {
+              console.error("AI stream error:", err);
+              setMessages((prev) => {
+                const next = [...prev];
+                const lastIdx = next.length - 1;
+                if (lastIdx >= 0 && next[lastIdx].role === "assistant") {
+                  next[lastIdx] = {
+                    role: "assistant",
+                    text: `⚠️ ${err.message || "Unable to complete AI response."}`,
+                    isStreaming: false,
+                    error: true,
+                  };
+                }
+                return next;
+              });
+            },
+          },
+          controller.signal
+        );
+      } catch (err: unknown) {
+        if (!controller.signal.aborted) {
+          console.error("AI question failed:", err);
+          const errMsg = err instanceof Error ? err.message : String(err);
+          let userFriendly = "Sorry, I encountered an issue contacting the AI endpoint.";
+          if (errMsg.includes("429")) {
+            userFriendly = "⚠️ Rate limit reached (maximum 20 requests/min). Please wait a moment.";
+          } else if (errMsg.includes("Failed to fetch") || errMsg.includes("NetworkError")) {
+            userFriendly = "⚠️ Backend connection failed. Ensure your ngrok tunnel and FastAPI backend are running.";
+          }
+
+          setMessages((prev) => {
+            const next = [...prev];
+            const lastIdx = next.length - 1;
+            if (lastIdx >= 0 && next[lastIdx].role === "assistant") {
+              next[lastIdx] = {
+                role: "assistant",
+                text: `${userFriendly}\n\n*Technical note: ${errMsg}*`,
+                isStreaming: false,
+                error: true,
+              };
+            }
+            return next;
+          });
+        }
       } finally {
         setLoading(false);
+        setCurrentStageMessage(null);
+        abortControllerRef.current = null;
       }
     },
-    [activeModelId, zone, messages, loading],
+    [activeModelId, zone, messages, loading]
   );
 
-  // Dynamic suggested questions relevant to current context
+  const handleRetry = useCallback(() => {
+    if (lastQuestionRef.current) {
+      send(lastQuestionRef.current);
+    }
+  }, [send]);
+
+  // Contextual suggested questions
   const dynamicPresets = zone
     ? [
         `Why is this location classified as ${zone.cls} susceptibility?`,
         "Which factor contributes most to the score at these coordinates?",
-        `What are the limiting factors for this point in ${zone.district}?`,
+        "What are the limiting criteria at this location?",
       ]
     : [
+        "How do Flood AHP and Landslide MCDA models compare?",
         `What criteria and weights are configured for the ${hazardName} model?`,
-        `What is the statewide mean susceptibility and valid coverage for ${hazardName}?`,
         "What is the Consistency Ratio (CR) of this model and is it valid?",
       ];
 
   const panelContent = (
     <div className="flex flex-col flex-1 min-h-0 h-full overflow-hidden select-none">
-      {/* Header */}
+      {/* Header — Strictly "MCGSE AI" with status pill, NO extra sub-names */}
       <div
         className="flex items-center justify-between px-4 py-3 flex-shrink-0"
         style={{
@@ -340,7 +490,7 @@ export default function AIPanel({
       >
         <div className="flex items-center gap-2">
           <div
-            className="w-7 h-7 rounded flex items-center justify-center"
+            className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0"
             style={{
               background: "var(--c-accent-dim)",
               border: "1px solid var(--c-accent)",
@@ -349,75 +499,69 @@ export default function AIPanel({
           >
             <IconBot size={14} />
           </div>
-          <div>
-            <div
-              className="text-xs font-semibold flex items-center gap-1.5"
+          <div className="flex items-center gap-2">
+            <span
+              className="text-xs font-bold"
               style={{
                 fontFamily: "var(--font-display)",
                 color: "var(--c-text)",
+                letterSpacing: "0.02em",
               }}
             >
-              <span>MCGSE AI Copilot</span>
-              {aiHealth?.model_installed ? (
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" title={`Ollama Ready (${aiHealth.configured_model})`} />
-              ) : (
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" title="GIS Grounded Mode" />
-              )}
-            </div>
-            <div
-              className="text-[10px]"
-              style={{ color: "var(--c-accent)", fontFamily: "var(--font-mono)" }}
-            >
-              Himachal Spatial Package · {hazardName} Engine
-            </div>
+              MCGSE AI
+            </span>
+
+            {aiHealth?.model_installed ? (
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                Ready
+              </span>
+            ) : (
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                Grounded
+              </span>
+            )}
           </div>
         </div>
+
         <Btn onClick={onClose} className="w-7 h-7 cursor-pointer" title="Close assistant (Esc)">
           <IconX size={13} />
         </Btn>
       </div>
 
-      {/* Context bar with Ollama model status */}
+      {/* Secondary Context Bar — Clean, no repetitive sub-names */}
       <div
-        className="px-4 py-2 flex-shrink-0 flex items-center justify-between gap-2 flex-wrap text-xs"
+        className="px-4 py-1.5 flex-shrink-0 flex items-center justify-between gap-2 text-xs"
         style={{
           background: "var(--c-panel)",
           borderBottom: "1px solid var(--c-border)",
         }}
       >
-        <div className="flex items-center gap-1.5 min-w-0">
-          <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "#00c896" }} />
-          <Mono color="var(--c-accent)">{isLandslide ? "Landslide 14-Factor" : "Flood 11-Factor"}</Mono>
+        <div className="flex items-center gap-1.5 min-w-0 text-[11px]">
           {zone ? (
-            <>
-              <span style={{ color: "var(--c-border2)" }}>·</span>
-              <Pill color="var(--c-accent)">
-                {zone.district || `${zone.lat.toFixed(2)}°N`} · {zone.score.toFixed(2)}
-              </Pill>
-            </>
+            <span className="font-mono text-[var(--c-accent)] truncate">
+              📍 Point: {zone.lat.toFixed(3)}°N, {zone.lng.toFixed(3)}°E (Score {zone.score.toFixed(2)})
+            </span>
           ) : (
-            <>
-              <span style={{ color: "var(--c-border2)" }}>·</span>
-              <Mono color="var(--c-text2)">Statewide Coverage</Mono>
-            </>
+            <span className="font-mono text-[var(--c-text3)]">
+              Statewide Spatial Analysis
+            </span>
           )}
         </div>
 
-        {/* Local Ollama runtime badge */}
-        <div className="text-[10px] font-mono flex items-center gap-1" style={{ color: "var(--c-text3)" }}>
-          <span>AI:</span>
-          {aiHealth?.model_installed ? (
-            <span className="text-emerald-400 font-semibold">{aiHealth.configured_model}</span>
-          ) : aiHealth?.ollama_reachable ? (
-            <span className="text-amber-400" title={aiHealth.setup_guidance || "Pull model"}>
-              Ollama (model needed)
-            </span>
-          ) : (
-            <span className="text-amber-400" title="GIS facts mode">
-              GIS Grounded
-            </span>
-          )}
-        </div>
+        {loading ? (
+          <button
+            onClick={handleStopGenerating}
+            className="px-2 py-0.5 rounded text-[10px] font-mono text-red-400 border border-red-500/30 hover:bg-red-500/10 cursor-pointer transition-colors"
+          >
+            Stop
+          </button>
+        ) : (
+          <span className="text-[10px] font-mono text-[var(--c-text3)]">
+            {aiHealth?.model_installed ? aiHealth.configured_model : "Local Ollama"}
+          </span>
+        )}
       </div>
 
       {/* Messages Scroll Area */}
@@ -449,47 +593,76 @@ export default function AIPanel({
                   background: msg.role === "user" ? "var(--c-accent-dim)" : "var(--c-panel)",
                   color: msg.role === "user" ? "var(--c-text)" : "var(--c-text)",
                   border: `1px solid ${
-                    msg.role === "user" ? "var(--c-accent)" : "var(--c-border)"
+                    msg.role === "user"
+                      ? "var(--c-accent)"
+                      : msg.error
+                      ? "rgba(239, 68, 68, 0.4)"
+                      : "var(--c-border)"
                   }`,
                 }}
               >
-                <div
-                  dangerouslySetInnerHTML={{
-                    __html: `<p style="margin:0">${formatMarkdown(msg.text)}</p>`,
-                  }}
-                />
+                {msg.text ? (
+                  <div
+                    dangerouslySetInnerHTML={{
+                      __html: `<p style="margin:0">${formatMarkdown(msg.text)}</p>`,
+                    }}
+                  />
+                ) : (
+                  msg.isStreaming && (
+                    <span className="text-[11px] text-[var(--c-text3)] italic">
+                      {currentStageMessage || "Thinking..."}
+                    </span>
+                  )
+                )}
 
-                {/* Collapsible Evidence Accordion for Grounded Responses */}
+                {/* Collapsible Evidence Accordion */}
                 {msg.evidence && (
-                  <EvidenceAccordion evidence={msg.evidence} warnings={msg.warnings} />
+                  <EvidenceAccordion
+                    evidence={msg.evidence}
+                    items={msg.items}
+                    warnings={msg.warnings}
+                  />
                 )}
               </div>
 
-              {/* Action Buttons */}
-              {msg.actions && msg.actions.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 pl-1">
-                  {msg.actions.map((a) => (
-                    <button
-                      key={a.label}
-                      onClick={() => a.type === "layer" && onLayerEvidence(a.target)}
-                      className="text-[10px] px-2 py-0.5 rounded flex items-center gap-1 transition-colors hover:bg-[var(--c-accent-dim)] cursor-pointer"
-                      style={{
-                        color: "var(--c-accent)",
-                        border: "1px solid var(--c-border2)",
-                        background: "var(--c-panel)",
-                      }}
-                    >
-                      <span>⊞</span>
-                      <span>{a.label}</span>
-                    </button>
-                  ))}
+              {/* Action Buttons or Retry */}
+              {msg.error ? (
+                <div className="flex items-center gap-2 pl-1 pt-0.5">
+                  <button
+                    onClick={handleRetry}
+                    className="text-[10px] px-2 py-0.5 rounded flex items-center gap-1 bg-amber-500/10 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 cursor-pointer"
+                  >
+                    <IconRefresh size={10} />
+                    <span>Retry Question</span>
+                  </button>
                 </div>
+              ) : (
+                msg.actions &&
+                msg.actions.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pl-1">
+                    {msg.actions.map((a) => (
+                      <button
+                        key={a.label}
+                        onClick={() => a.type === "layer" && onLayerEvidence(a.target)}
+                        className="text-[10px] px-2 py-0.5 rounded flex items-center gap-1 transition-colors hover:bg-[var(--c-accent-dim)] cursor-pointer"
+                        style={{
+                          color: "var(--c-accent)",
+                          border: "1px solid var(--c-border2)",
+                          background: "var(--c-panel)",
+                        }}
+                      >
+                        <span>⊞</span>
+                        <span>{a.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )
               )}
             </div>
           </div>
         ))}
 
-        {/* Loading animation */}
+        {/* Live event-driven activity status bar */}
         {loading && (
           <div className="flex gap-2 items-center">
             <div
@@ -503,27 +676,16 @@ export default function AIPanel({
               <IconBot size={11} />
             </div>
             <div
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
               style={{
                 background: "var(--c-panel)",
                 border: "1px solid var(--c-border)",
               }}
             >
-              <span className="text-[11px] text-[var(--c-text3)] font-mono mr-1">
-                Sampling rasters & generating...
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--c-accent)] animate-ping" />
+              <span className="text-[11px] text-[var(--c-text2)] font-mono">
+                {currentStageMessage || "Processing spatial query..."}
               </span>
-              {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  className="w-1.5 h-1.5 rounded-full"
-                  style={{
-                    background: "var(--c-accent)",
-                    animation: "pulse 1.2s ease-in-out infinite",
-                    animationDelay: `${i * 0.2}s`,
-                    opacity: 0.6,
-                  }}
-                />
-              ))}
             </div>
           </div>
         )}
@@ -574,8 +736,8 @@ export default function AIPanel({
             style={{ color: "var(--c-text)", fontFamily: "var(--font-body)" }}
             placeholder={
               zone
-                ? `Ask about this point (${zone.lat.toFixed(3)}°N, ${zone.lng.toFixed(3)}°E) or ${hazardName} model…`
-                : `Ask about Himachal ${hazardName.toLowerCase()} susceptibility, criteria, weights…`
+                ? `Ask about point (${zone.lat.toFixed(3)}°N, ${zone.lng.toFixed(3)}°E)...`
+                : "Ask MCGSE AI about criteria, weights, statistics…"
             }
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -586,7 +748,7 @@ export default function AIPanel({
             disabled={!input.trim() || loading}
             className="flex-shrink-0 transition-opacity disabled:opacity-30 cursor-pointer"
             style={{ color: "var(--c-accent)" }}
-            title="Send query to local AI"
+            title="Send query to MCGSE AI"
           >
             <IconSend size={14} />
           </button>
@@ -594,7 +756,7 @@ export default function AIPanel({
         <div className="flex items-center justify-between mt-1.5 text-[10px]" style={{ color: "var(--c-text3)" }}>
           <div className="flex items-center gap-1">
             <IconInfo size={10} />
-            <span>Grounded in Himachal Spatial Knowledge Package</span>
+            <span>Evidence-grounded spatial intelligence</span>
           </div>
           {zone && (
             <span className="font-mono text-[var(--c-accent)]">

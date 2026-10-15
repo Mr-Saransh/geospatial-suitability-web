@@ -175,10 +175,23 @@ export interface PackageMetadata {
   vectors_count?: number;
 }
 
-// ── AI Assistant Types ─────────────────────────────────────
+// ── AI Assistant Types V2 ──────────────────────────────────
 export interface AIChatHistoryItem {
   role: "user" | "assistant";
   content: string;
+}
+
+export interface StructuredEvidenceItem {
+  id: string;
+  model_id: string;
+  category: "model_metadata" | "criteria_weights" | "point_inspection" | "statistics" | "model_comparison" | "limitation" | string;
+  label: string;
+  value: any;
+  unit?: string | null;
+  source: string;
+  coordinates?: { latitude: number; longitude: number } | null;
+  coverage_status?: string | null;
+  caveats?: string | null;
 }
 
 export interface AIAssistantRequest {
@@ -207,6 +220,26 @@ export interface AIAssistantEvidence {
   suitability_score?: number | null;
   suitability_class?: number | null;
   suitability_label?: string | null;
+  model_comparison?: {
+    models: string[];
+    primary_model: {
+      id: string;
+      name: string;
+      criteria_count: number;
+      crs: string;
+      method?: string;
+    };
+    comparison_model: {
+      id: string;
+      name: string;
+      criteria_count: number;
+      crs: string;
+      method?: string;
+    };
+    common_criteria: string[];
+    primary_unique_criteria: string[];
+    comparison_unique_criteria: string[];
+  };
   point_inspection?: {
     coverage_status?: string;
     valid_criteria_count?: number;
@@ -251,17 +284,73 @@ export interface AIAssistantEvidence {
     type: string;
     unit?: string;
   }>;
+  items?: StructuredEvidenceItem[];
 }
 
 export interface AIAssistantResponse {
   answer: string;
   model_id?: string | null;
   evidence: AIAssistantEvidence;
+  items?: StructuredEvidenceItem[];
   coverage?: string | Record<string, unknown> | null;
   warnings: string[];
   model_used?: string | null;
   source: "ollama" | "evidence_fallback" | string;
 }
+
+export interface AIStatusStreamEvent {
+  type: "status";
+  stage:
+    | "understanding_question"
+    | "identifying_model"
+    | "retrieving_metadata"
+    | "inspecting_raster"
+    | "collecting_statistics"
+    | "preparing_evidence"
+    | "generating_answer"
+    | "fallback"
+    | string;
+  message: string;
+  model_id?: string;
+}
+
+export interface AIEvidenceStreamEvent {
+  type: "evidence";
+  model_id: string;
+  evidence: AIAssistantEvidence;
+  items: StructuredEvidenceItem[];
+  coverage?: string;
+  warnings?: string[];
+}
+
+export interface AITokenStreamEvent {
+  type: "token";
+  text: string;
+}
+
+export interface AIDoneStreamEvent {
+  type: "done";
+  answer: string;
+  model_id?: string | null;
+  evidence: AIAssistantEvidence;
+  items: StructuredEvidenceItem[];
+  coverage?: string | null;
+  warnings: string[];
+  model_used?: string | null;
+  source: string;
+}
+
+export interface AIErrorStreamEvent {
+  type: "error";
+  detail: string;
+}
+
+export type AIStreamEvent =
+  | AIStatusStreamEvent
+  | AIEvidenceStreamEvent
+  | AITokenStreamEvent
+  | AIDoneStreamEvent
+  | AIErrorStreamEvent;
 
 export interface AIHealthResponse {
   status: "ready" | "no_model_installed" | "model_mismatch" | "ollama_offline" | string;
@@ -272,3 +361,4 @@ export interface AIHealthResponse {
   installed_models: string[];
   setup_guidance?: string | null;
 }
+

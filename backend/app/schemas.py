@@ -240,10 +240,33 @@ class AnalysisMetadata(BaseModel):
     reproducibility: dict[str, Any] = Field(default_factory=dict)
 
 
-# ── AI Assistant (Evidence-Grounded Local Ollama) ─────────
+# ── AI Assistant (Evidence-Grounded Local Ollama V2) ───────
 class AIChatHistoryItem(BaseModel):
     role: str = Field(..., description="Role: 'user' or 'assistant'")
     content: str = Field(..., max_length=1500, description="Message content")
+
+
+class StructuredEvidenceItem(BaseModel):
+    id: str = Field(..., description="Stable evidence identifier (e.g. 'flood:weight:slope')")
+    model_id: str = Field(..., description="Model identifier")
+    category: str = Field(
+        ...,
+        description="Category: 'model_metadata' | 'criteria_weights' | 'point_inspection' | 'statistics' | 'model_comparison' | 'limitation'",
+    )
+    label: str = Field(..., description="Human-readable label")
+    value: Any = Field(..., description="Actual measured or computed value")
+    unit: str | None = Field(None, description="Physical unit if known (e.g., 'mm/yr', 'm', '%')")
+    source: str = Field(..., description="Authoritative source layer, manifest, or service")
+    coordinates: dict[str, float] | None = Field(None, description="Optional lat/lon if applicable")
+    coverage_status: str | None = Field(None, description="Coverage status if applicable")
+    caveats: str | None = Field(None, description="Caveats or notes")
+
+
+class AIStatusEvent(BaseModel):
+    stage: str = Field(..., description="Current operational stage identifier")
+    message: str = Field(..., description="Human-readable progress description")
+    model_id: str | None = Field(None, description="Active GIS model identifier")
+    progress: float | None = Field(None, description="Optional normalized progress (0.0 to 1.0)")
 
 
 class AIAssistantRequest(BaseModel):
@@ -282,6 +305,10 @@ class AIAssistantResponse(BaseModel):
         default_factory=dict,
         description="Structured facts retrieved directly from the backend GIS engine",
     )
+    items: list[StructuredEvidenceItem] = Field(
+        default_factory=list,
+        description="Auditable atomic evidence items with source provenance and units",
+    )
     coverage: str | dict[str, Any] | None = Field(
         None,
         description="Relevant analysis coverage, valid criteria count, or missing-evidence information",
@@ -311,3 +338,4 @@ class AIHealthResponse(BaseModel):
     model_installed: bool
     installed_models: list[str] = Field(default_factory=list)
     setup_guidance: str | None = None
+
