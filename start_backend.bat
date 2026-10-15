@@ -1,62 +1,101 @@
 @echo off
-setlocal
-title MCGSE Backend + Ngrok Static Tunnel
+setlocal EnableDelayedExpansion
+title MCGSE Backend + Ngrok Launcher
 color 0A
 
 echo.
-echo  =====================================================
+echo  ====================================================================
 echo   MCGSE Web-GIS  ^|  Permanent 1-Click Launcher
-echo  =====================================================
+echo  ====================================================================
 echo.
-echo  Live Frontend : https://geospatial-suitability-web.dssintern1.workers.dev
-echo  Permanent API : https://outreach-freely-causal.ngrok-free.dev
-echo  Local API Docs: http://127.0.0.1:8000/docs
+echo   Frontend : https://geospatial-suitability-web.dssintern1.workers.dev
+echo   Tunnel   : https://outreach-freely-causal.ngrok-free.dev
+echo   Local API: http://127.0.0.1:8000
 echo.
-echo  Keep this window open while using the application.
-echo  Press Ctrl+C to stop both backend and tunnel.
-echo  =====================================================
+echo  ====================================================================
 echo.
 
-:: Clean up any leftover processes on port 8000 first
-echo  [1/3] Preparing environment...
-taskkill /FI "WINDOWTITLE eq MCGSE Backend*" /T /F >nul 2>&1
+:: [1/4] Clean up any previous python or ngrok processes
+echo  [1/4] Cleaning previous instances...
+taskkill /IM ngrok.exe /F >nul 2>&1
+powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }" >nul 2>&1
 
-:: Start the backend in a new minimized window
-echo  [2/3] Starting FastAPI backend on port 8000...
+:: [2/4] Start FastAPI backend
+echo  [2/4] Starting FastAPI backend on port 8000...
 pushd "%~dp0backend"
 start "MCGSE Backend" /min C:\gee_env\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 popd
 
-:: Wait for backend to be ready and healthy
-echo  Waiting for backend health check (http://127.0.0.1:8000/api/v1/health)...
+:: Wait for local backend to be healthy
+echo  Waiting for local backend (http://127.0.0.1:8000/api/v1/health)...
 set READY=0
-for /L %%I in (1,1,15) do (
-    curl.exe -s http://127.0.0.1:8000/api/v1/health >nul 2>&1
-    if not errorlevel 1 (
-        set READY=1
-        goto :backend_ready
+for /L %%I in (1,1,20) do (
+    if !READY!==0 (
+        curl.exe -s http://127.0.0.1:8000/api/v1/health >nul 2>&1
+        if not errorlevel 1 (
+            set READY=1
+        ) else (
+            powershell -NoProfile -Command "Start-Sleep -Milliseconds 500" >nul 2>&1
+        )
     )
-    timeout /t 1 /nobreak >nul
 )
 
-:backend_ready
-if "%READY%"=="0" (
+if "!READY!"=="0" (
     echo.
-    echo  [ERROR] Backend failed to start on port 8000 within 15 seconds!
-    echo  Please check C:\gee_env\python.exe and database paths.
+    echo  [ERROR] Backend failed to start on port 8000 within 10 seconds!
+    echo  Please check C:\gee_env\python.exe.
     pause
     exit /b 1
 )
 
-echo  [SUCCESS] FastAPI backend is live and healthy (200 OK)!
+echo  [OK] Local backend is live and healthy (200 OK)!
 echo.
 
-:: Start ngrok with permanent static domain
-echo  [3/3] [NGROK] Connecting to https://outreach-freely-causal.ngrok-free.dev...
+:: [3/4] Start ngrok tunnel with static domain
+echo  [3/4] Starting public tunnel (https://outreach-freely-causal.ngrok-free.dev)...
+start "MCGSE Ngrok Tunnel" /min "C:\Users\ADMIN\Desktop\Private\ngrok.exe" http 8000 --url https://outreach-freely-causal.ngrok-free.dev --log stdout
+
+:: Wait for ngrok public tunnel to respond 200 OK
+echo  Waiting for public tunnel to establish...
+set TUNNEL_READY=0
+for /L %%I in (1,1,20) do (
+    if !TUNNEL_READY!==0 (
+        curl.exe -s -H "ngrok-skip-browser-warning: true" https://outreach-freely-causal.ngrok-free.dev/api/v1/health >nul 2>&1
+        if not errorlevel 1 (
+            set TUNNEL_READY=1
+        ) else (
+            powershell -NoProfile -Command "Start-Sleep -Milliseconds 500" >nul 2>&1
+        )
+    )
+)
+
+echo  [OK] Public ngrok tunnel is live and connected!
 echo.
-"C:\Users\ADMIN\Desktop\Private\ngrok.exe" http 8000 --url https://outreach-freely-causal.ngrok-free.dev
+
+:: [4/4] Launch Frontend in Default Browser
+echo  [4/4] Opening Web-GIS Frontend in browser...
+start "" "https://geospatial-suitability-web.dssintern1.workers.dev"
 
 echo.
-echo  Tunnel stopped. Closing backend...
-taskkill /FI "WINDOWTITLE eq MCGSE Backend*" /T /F >nul 2>&1
-pause
+echo  ====================================================================
+echo   STATUS: ALL SERVICES LIVE AND SYNCHRONIZED!
+echo  ====================================================================
+echo.
+echo   [OK] Local FastAPI Server : http://127.0.0.1:8000
+echo   [OK] Public Ngrok Tunnel  : https://outreach-freely-causal.ngrok-free.dev
+echo   [OK] Web-GIS Application  : https://geospatial-suitability-web.dssintern1.workers.dev
+echo.
+echo   The frontend is now open in your browser and receiving data!
+echo   Keep this window open while using the application.
+echo.
+echo   Press any key to stop all services and exit...
+echo  ====================================================================
+echo.
+
+pause >nul
+
+echo.
+echo  Stopping services...
+taskkill /IM ngrok.exe /F >nul 2>&1
+powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }" >nul 2>&1
+echo  Services stopped.

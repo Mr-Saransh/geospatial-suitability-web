@@ -78,6 +78,7 @@ export default function App() {
   const [activeModelName, setActiveModelName] = useState("Flood");
   const [modelDetail, setModelDetail] = useState<ModelDetail | null>(null);
   const [statistics, setStatistics] = useState<AnalysisStatistics | null>(null);
+  const [backendStatus, setBackendStatus] = useState<"connected" | "connecting" | "offline">("connecting");
 
   // Layers state — default to the canonical available-evidence classified product
   const [layers, setLayers] = useState<Layer[]>(INITIAL_LAYERS);
@@ -141,6 +142,13 @@ export default function App() {
         api.getLayers(activeModelId).catch(() => []),
         api.inspectPoint(activeModelId, currentTarget.lat, currentTarget.lon).catch(() => null),
       ]);
+
+      const isLive = modelsRes.length > 0 || !!detailRes || !!statsRes || layersRes.length > 0;
+      if (isLive) {
+        setBackendStatus("connected");
+      } else {
+        setBackendStatus("connecting");
+      }
 
       if (modelsRes.length > 0) {
         setModels(modelsRes);
@@ -238,12 +246,43 @@ export default function App() {
       }
     } catch (err) {
       console.warn("Backend loading note (fallback in use):", err);
+      setBackendStatus("offline");
     }
   }, [activeModelId]);
 
+  // Initial load
   useEffect(() => {
     loadBackend();
   }, [loadBackend]);
+
+  // Smart auto-sync polling: pings health every 1.5s when disconnected so data renders immediately when backend starts
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval> | null = null;
+    let isCancelled = false;
+
+    const poll = async () => {
+      try {
+        const health = await api.getHealth();
+        if (health?.status === "healthy" && !isCancelled) {
+          if (backendStatus !== "connected") {
+            await loadBackend();
+          }
+        }
+      } catch {
+        if (!isCancelled && backendStatus === "connected") {
+          setBackendStatus("offline");
+        }
+      }
+    };
+
+    const intervalMs = backendStatus === "connected" ? 20000 : 1500;
+    timer = setInterval(poll, intervalMs);
+
+    return () => {
+      isCancelled = true;
+      if (timer) clearInterval(timer);
+    };
+  }, [backendStatus, loadBackend]);
 
   // Transform backend point inspection response to Zone structure
   const handlePointInspectionResult = (pt: PointInspectionResponse, lat: number, lon: number) => {
@@ -483,6 +522,8 @@ export default function App() {
         onSearchLocation={handleLocationFly}
         theme={theme}
         onToggleTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+        backendStatus={backendStatus}
+        onReconnect={loadBackend}
       />
 
       {/* Main Workspace Body */}
