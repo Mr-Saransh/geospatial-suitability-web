@@ -107,6 +107,128 @@ function StateBoundaryLayer({ data }: { data: GeoJSON.GeoJsonObject }) {
   return null;
 }
 
+// Custom Authenticated Tile Layer that fetches tiles via fetch() with ngrok-skip-browser-warning
+// Standard <img> elements cannot send custom headers, causing ngrok free tier to return HTML error pages instead of PNG raster tiles.
+const AuthenticatedTileLayer = L.TileLayer.extend({
+  createTile(coords: L.Coords, done: L.DoneCallback) {
+    const tile = document.createElement("img");
+    tile.alt = "";
+    tile.setAttribute("role", "presentation");
+
+    const url = (this as unknown as { getTileUrl: (coords: L.Coords) => string }).getTileUrl(coords);
+    const controller = new AbortController();
+    (tile as unknown as { _abortController: AbortController })._abortController = controller;
+
+    fetch(url, {
+      signal: controller.signal,
+      headers: {
+        "ngrok-skip-browser-warning": "true",
+      },
+    })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`Tile fetch failed: ${res.status}`);
+        }
+        return res.blob();
+      })
+      .then((blob) => {
+        const objectUrl = URL.createObjectURL(blob);
+        (tile as unknown as { _objectUrl: string })._objectUrl = objectUrl;
+        tile.onload = () => {
+          done(undefined, tile);
+        };
+        tile.onerror = () => {
+          done(new Error("Image decode error"), tile);
+        };
+        tile.src = objectUrl;
+      })
+      .catch((err) => {
+        if (err.name !== "AbortError") {
+          done(err, tile);
+        }
+      });
+
+    return tile;
+  },
+
+  _abortLoading(tile: HTMLElement) {
+    const t = tile as unknown as { _abortController?: AbortController; _objectUrl?: string };
+    if (t._abortController) {
+      t._abortController.abort();
+    }
+    if (t._objectUrl) {
+      URL.revokeObjectURL(t._objectUrl);
+      t._objectUrl = undefined;
+    }
+  },
+
+  _removeTile(key: string) {
+    const tiles = (this as unknown as { _tiles?: Record<string, { el?: HTMLElement }> })._tiles;
+    const tile = tiles?.[key];
+    if (tile?.el) {
+      const t = tile.el as unknown as { _objectUrl?: string; _abortController?: AbortController };
+      if (t._abortController) {
+        t._abortController.abort();
+      }
+      if (t._objectUrl) {
+        URL.revokeObjectURL(t._objectUrl);
+        t._objectUrl = undefined;
+      }
+    }
+    return (L.TileLayer.prototype as unknown as { _removeTile: (key: string) => void })._removeTile.call(
+      this,
+      key,
+    );
+  },
+});
+
+function RasterTileLayer({
+  url,
+  opacity,
+  zIndex = 10,
+}: {
+  url: string;
+  opacity: number;
+  zIndex?: number;
+}) {
+  const map = useMap();
+  const layerRef = useRef<L.TileLayer | null>(null);
+
+  useEffect(() => {
+    if (!map || !url) return;
+
+    const layer = new (AuthenticatedTileLayer as unknown as new (
+      urlTemplate: string,
+      options: L.TileLayerOptions,
+    ) => L.TileLayer)(url, {
+      opacity,
+      zIndex,
+      minZoom: 5,
+      maxZoom: 16,
+      tileSize: 256,
+      updateWhenZooming: false,
+      updateWhenIdle: false,
+      keepBuffer: 4,
+    });
+
+    layer.addTo(map);
+    layerRef.current = layer;
+
+    return () => {
+      map.removeLayer(layer);
+      layerRef.current = null;
+    };
+  }, [map, url, zIndex]);
+
+  useEffect(() => {
+    if (layerRef.current) {
+      layerRef.current.setOpacity(opacity);
+    }
+  }, [opacity]);
+
+  return null;
+}
+
 // Map controller component to handle map events and imperative controls
 function MapEventsHandler({
   onMouseMove,
@@ -273,19 +395,13 @@ export default function MapCanvas({
         {/* Base Map Tile Layer */}
         <TileLayer url={bm.url} attribution={bm.attribution} opacity={0.85} />
 
-        {/* Real Backend Raster Layer Tiles */}
+        {/* Real Backend Raster Layer Tiles (authenticated to bypass ngrok warning) */}
         {tileUrl && activeLayer && (
-          <TileLayer
-            key={`${activeLayer.id}-${activeLayer.opacity}`}
+          <RasterTileLayer
+            key={`${activeLayer.id}`}
             url={tileUrl}
             opacity={(activeLayer.opacity ?? 85) / 100}
             zIndex={10}
-            minZoom={5}
-            maxZoom={16}
-            tileSize={256}
-            updateWhenZooming={false}
-            updateWhenIdle={false}
-            keepBuffer={4}
           />
         )}
 
