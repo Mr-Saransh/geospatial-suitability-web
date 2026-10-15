@@ -58,6 +58,23 @@ class SpatialKnowledgeSettings:
             self._raw_landslide_root, base
         )
 
+        # 3. Local Ollama AI settings
+        self.ollama_base_url: str = os.getenv(
+            "OLLAMA_BASE_URL", "http://127.0.0.1:11434"
+        ).rstrip("/")
+        self.ollama_model: str = os.getenv("OLLAMA_MODEL", "llama3.2:1b")
+        self.ollama_timeout: float = float(os.getenv("OLLAMA_TIMEOUT", "45.0"))
+        self.ai_rate_limit_per_minute: int = int(
+            os.getenv("AI_RATE_LIMIT_PER_MINUTE", "20")
+        )
+        self.ai_max_history: int = int(os.getenv("AI_MAX_HISTORY", "6"))
+        self.ai_max_question_length: int = int(
+            os.getenv("AI_MAX_QUESTION_LENGTH", "1000")
+        )
+        self.ai_max_concurrent_generations: int = int(
+            os.getenv("AI_MAX_CONCURRENT_GENERATIONS", "2")
+        )
+
     @property
     def default_package_root(self) -> Path | None:
         """Default package root for generic queries."""
@@ -200,6 +217,8 @@ class SpatialKnowledgeSettings:
             "landslide_configured": self._raw_landslide_root is not None,
             "landslide_valid": landslide_valid,
             "packages_found": len(self.all_configured_roots()),
+            "ollama_configured": bool(self.ollama_base_url and self.ollama_model),
+            "ollama_model": self.ollama_model,
         }
 
 

@@ -84,6 +84,12 @@ echo.
 echo   [OK] Local FastAPI Server : http://127.0.0.1:8000
 echo   [OK] Public Ngrok Tunnel  : https://outreach-freely-causal.ngrok-free.dev
 echo   [OK] Web-GIS Application  : https://geospatial-suitability-web.dssintern1.workers.dev
+curl.exe -s http://127.0.0.1:11434/api/tags >nul 2>&1
+if not errorlevel 1 (
+    echo   [OK] Local Ollama AI      : http://127.0.0.1:11434 (Ready)
+) else (
+    echo   [INFO] Local Ollama AI    : Offline (Start Ollama application for neural generation)
+)
 echo.
 echo   The frontend is now open in your browser and receiving data!
 echo   Keep this window open while using the application.

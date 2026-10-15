@@ -174,3 +174,101 @@ export interface PackageMetadata {
   rasters_count?: number;
   vectors_count?: number;
 }
+
+// ── AI Assistant Types ─────────────────────────────────────
+export interface AIChatHistoryItem {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface AIAssistantRequest {
+  question: string;
+  model_id?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  history?: AIChatHistoryItem[];
+}
+
+export interface AIAssistantEvidence {
+  model_id?: string;
+  model_name?: string;
+  state_name?: string;
+  criteria_count?: number;
+  criteria_weights?: Array<{ criterion: string; weight: number }>;
+  consistency_ratio?: number | null;
+  classification_ranges?: Array<{
+    class: number;
+    label: string;
+    min: number;
+    max: number;
+  }>;
+  coordinates?: { latitude: number; longitude: number };
+  location_status?: string;
+  suitability_score?: number | null;
+  suitability_class?: number | null;
+  suitability_label?: string | null;
+  point_inspection?: {
+    coverage_status?: string;
+    valid_criteria_count?: number;
+    total_criteria_count?: number;
+    missing_criteria?: string[];
+    suitability_score?: number | null;
+    suitability_class?: number | null;
+    suitability_label?: string | null;
+    top_factors?: Array<{
+      criterion: string;
+      raw_value: number | null;
+      rating: number | null;
+      weight: number;
+      contribution: number | null;
+    }>;
+    limiting_factors?: Array<{
+      criterion: string;
+      raw_value: number | null;
+      rating: number | null;
+    }>;
+    note?: string;
+    error?: string;
+  };
+  statistics?: {
+    valid_coverage_pct?: number;
+    nodata_coverage_pct?: number;
+    score_mean?: number | null;
+    score_min?: number | null;
+    score_max?: number | null;
+    score_std?: number | null;
+    class_distribution?: Array<{
+      class: number;
+      label: string;
+      percentage: number;
+      area_sq_km?: number | null;
+    }>;
+  };
+  layers_count?: number;
+  published_layers?: Array<{
+    id: string;
+    name: string;
+    type: string;
+    unit?: string;
+  }>;
+}
+
+export interface AIAssistantResponse {
+  answer: string;
+  model_id?: string | null;
+  evidence: AIAssistantEvidence;
+  coverage?: string | Record<string, unknown> | null;
+  warnings: string[];
+  model_used?: string | null;
+  source: "ollama" | "evidence_fallback" | string;
+}
+
+export interface AIHealthResponse {
+  status: "ready" | "no_model_installed" | "model_mismatch" | "ollama_offline" | string;
+  ollama_reachable: boolean;
+  ollama_url: string;
+  configured_model: string;
+  model_installed: boolean;
+  installed_models: string[];
+  setup_guidance?: string | null;
+}

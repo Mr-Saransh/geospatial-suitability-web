@@ -14,6 +14,9 @@ import type {
   PointInspectionResponse,
   AnalysisStatistics,
   PackageMetadata,
+  AIAssistantRequest,
+  AIAssistantResponse,
+  AIHealthResponse,
 } from "./types";
 
 const STORAGE_KEY = "mcgse_api_url";
@@ -96,6 +99,14 @@ export const api = {
     ),
   getStatistics: (modelId: string) =>
     request<AnalysisStatistics>(`/api/v1/analyses/${encodeURIComponent(modelId)}/statistics`),
+
+  // AI Assistant (Evidence-Grounded Local Ollama)
+  askAI: (payload: AIAssistantRequest) =>
+    request<AIAssistantResponse>("/api/v1/ai/ask", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  getAIHealth: () => request<AIHealthResponse>("/api/v1/ai/health"),
 
   // Tiles URL builder
   getTileUrlTemplate: (layerId: string) => {

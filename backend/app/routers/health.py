@@ -4,19 +4,24 @@ from fastapi import APIRouter
 
 from app.config import settings
 from app.schemas import HealthResponse
+from app.services.ollama_service import ollama_service
 from app.services.repository import repository
 
 router = APIRouter(prefix="/api/v1", tags=["health"])
 
 
 @router.get("/health", response_model=HealthResponse)
-def health():
+async def health():
     """
-    Check backend and spatial package status.
-    Never exposes local Windows filesystem paths to public clients.
+    Check backend, spatial package, and local Ollama AI status.
+    Distinguishes backend availability, spatial package availability,
+    Ollama reachability, and model availability.
     """
     val = settings.validate()
     is_valid = val["status"] == "valid" and len(repository.models) > 0
+
+    # Probe local Ollama status
+    ollama_info = await ollama_service.get_health()
 
     # Flood model details for baseline regression compatibility
     flood_layers = repository.get_layers_for_model("flood_11_factor_v1")
@@ -59,4 +64,8 @@ def health():
         boundary_status="available" if is_valid else "unavailable",
         manifest_status="valid" if is_valid else "missing",
         layers_count=total_rasters,
+        ollama_reachable=ollama_info.get("ollama_reachable", False),
+        ollama_status=ollama_info.get("status", "ollama_offline"),
+        ollama_configured_model=ollama_info.get("configured_model", settings.ollama_model),
+        ollama_model_installed=ollama_info.get("model_installed", False),
     )

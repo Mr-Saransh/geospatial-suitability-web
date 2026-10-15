@@ -24,6 +24,10 @@ class HealthResponse(BaseModel):
     boundary_status: str = "available"
     manifest_status: str = "valid"
     layers_count: int = 28
+    ollama_reachable: bool = False
+    ollama_status: str = "offline"
+    ollama_configured_model: str = ""
+    ollama_model_installed: bool = False
 
 
 # ── Package metadata ───────────────────────────────────────
@@ -234,3 +238,76 @@ class AnalysisMetadata(BaseModel):
     nodata_value: str = "nan"
     package_type: str = "Spatial Knowledge Package"
     reproducibility: dict[str, Any] = Field(default_factory=dict)
+
+
+# ── AI Assistant (Evidence-Grounded Local Ollama) ─────────
+class AIChatHistoryItem(BaseModel):
+    role: str = Field(..., description="Role: 'user' or 'assistant'")
+    content: str = Field(..., max_length=1500, description="Message content")
+
+
+class AIAssistantRequest(BaseModel):
+    question: str = Field(
+        ...,
+        min_length=1,
+        max_length=1000,
+        description="Natural-language geospatial question",
+    )
+    model_id: str | None = Field(
+        None,
+        description="Optional model identifier: flood_11_factor_v1 or landslide_14_factor_v1",
+    )
+    latitude: float | None = Field(
+        None,
+        ge=-90.0,
+        le=90.0,
+        description="Optional WGS84 latitude for location-specific inspection",
+    )
+    longitude: float | None = Field(
+        None,
+        ge=-180.0,
+        le=180.0,
+        description="Optional WGS84 longitude for location-specific inspection",
+    )
+    history: list[AIChatHistoryItem] | None = Field(
+        default_factory=list,
+        description="Bounded conversation history",
+    )
+
+
+class AIAssistantResponse(BaseModel):
+    answer: str
+    model_id: str | None = None
+    evidence: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Structured facts retrieved directly from the backend GIS engine",
+    )
+    coverage: str | dict[str, Any] | None = Field(
+        None,
+        description="Relevant analysis coverage, valid criteria count, or missing-evidence information",
+    )
+    warnings: list[str] = Field(
+        default_factory=list,
+        description="Limitations, boundary warnings, or missing source criteria",
+    )
+    model_used: str | None = Field(
+        None,
+        description="Local Ollama model name used for generation, or 'evidence_summary' if offline",
+    )
+    source: str = Field(
+        "ollama",
+        description="Execution mode: 'ollama' or 'evidence_fallback'",
+    )
+
+
+class AIHealthResponse(BaseModel):
+    status: str = Field(
+        ...,
+        description="'ready' when model is available, 'no_model_installed' when Ollama is running without model, or 'ollama_offline'",
+    )
+    ollama_reachable: bool
+    ollama_url: str
+    configured_model: str
+    model_installed: bool
+    installed_models: list[str] = Field(default_factory=list)
+    setup_guidance: str | None = None

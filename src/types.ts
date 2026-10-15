@@ -64,6 +64,10 @@ export interface CriterionRow {
 export interface AIMessage {
   role: "user" | "assistant";
   text: string;
+  evidence?: import("./lib/api/types").AIAssistantEvidence;
+  warnings?: string[];
+  source?: string;
+  modelUsed?: string;
   actions?: Array<{
     label: string;
     type: "layer" | "evidence" | "stats";

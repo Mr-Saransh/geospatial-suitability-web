@@ -14,7 +14,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import analyses, health, layers, metadata, models
+from app.routers import ai, analyses, health, layers, metadata, models
 from app.services.package_service import package_service
 from app.services.repository import repository
 
@@ -84,3 +84,4 @@ app.include_router(metadata.router)
 app.include_router(models.router)
 app.include_router(layers.router)
 app.include_router(analyses.router)
+app.include_router(ai.router)
