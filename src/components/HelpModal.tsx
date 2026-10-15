@@ -313,8 +313,8 @@ export default function HelpModal({
               </div>
               <span className="text-[11px] text-[var(--c-text3)]">
                 {backendStatus === "connected"
-                  ? "FastAPI server and ngrok tunnel are synchronized. Raster GeoTIFFs, point inspection, and spatial stats are active."
-                  : "Backend is connecting or offline. Double-click 'Start MCGSE Backend' on your desktop to start."}
+                  ? "Spatial intelligence services are live and synchronized. Raster GeoTIFFs, point inspection, and spatial stats are active."
+                  : "Spatial services are connecting or offline. Double-click 'Start MCGSE Backend' on your desktop to start."}
               </span>
             </div>
           </div>

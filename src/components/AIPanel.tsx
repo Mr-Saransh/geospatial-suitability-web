@@ -429,11 +429,21 @@ export default function AIPanel({
         if (!controller.signal.aborted) {
           console.error("AI question failed:", err);
           const errMsg = err instanceof Error ? err.message : String(err);
-          let userFriendly = "Sorry, I encountered an issue contacting the AI endpoint.";
+          let userFriendly = "Unable to connect to the spatial intelligence engine at this moment.";
+          let issueType = "Temporary service interruption";
+
           if (errMsg.includes("429")) {
-            userFriendly = "⚠️ Rate limit reached (maximum 20 requests/min). Please wait a moment.";
+            userFriendly = "Traffic limit reached. Too many requests were sent in a short period.";
+            issueType = "Rate limit threshold reached (HTTP 429)";
           } else if (errMsg.includes("Failed to fetch") || errMsg.includes("NetworkError")) {
-            userFriendly = "⚠️ Backend connection failed. Ensure your ngrok tunnel and FastAPI backend are running.";
+            userFriendly = "Could not establish a connection with the spatial analytical service.";
+            issueType = "Network connectivity timeout";
+          } else if (errMsg.includes("504") || errMsg.includes("Gateway")) {
+            userFriendly = "The geospatial calculation took longer than expected to complete.";
+            issueType = "Gateway response timeout (HTTP 504)";
+          } else if (errMsg.includes("500") || errMsg.includes("502") || errMsg.includes("503")) {
+            userFriendly = "The spatial intelligence engine is temporarily undergoing maintenance.";
+            issueType = "Service temporarily unavailable";
           }
 
           setMessages((prev) => {
@@ -442,7 +452,7 @@ export default function AIPanel({
             if (lastIdx >= 0 && next[lastIdx].role === "assistant") {
               next[lastIdx] = {
                 role: "assistant",
-                text: `${userFriendly}\n\n*Technical note: ${errMsg}*`,
+                text: `⚠️ **Technical Issue**: ${userFriendly}\n\n*Technical issue type: ${issueType}. Please retry shortly.*`,
                 isStreaming: false,
                 error: true,
               };
