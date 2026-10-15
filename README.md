@@ -131,6 +131,37 @@ The system bridges a high-fidelity Figma React frontend with a high-performance 
 | `GET`  | `/api/v1/analyses/{model_id}/statistics`        | Canonical pixel, class, and evidence distributions         |
 | `GET`  | `/api/v1/analyses/{model_id}/metadata`          | Provenance, CR, and scientific metadata                    |
 | `GET`  | `/api/v1/boundary`                              | Official GeoJSON boundary for Himachal Pradesh             |
+| `POST` | `/api/v1/ai/ask`                                | Evidence-grounded spatial intelligence via local Ollama     |
+| `GET`  | `/api/v1/ai/health`                             | Ollama AI engine reachability and model health status       |
+
+---
+
+## 🤖 Evidence-Grounded AI Assistant (Local Ollama)
+
+The application integrates an AI assistant that runs **100% locally on your PC via Ollama**, strictly grounded in the local Spatial Knowledge Package data.
+
+### Features
+- **Zero Hallucination / Evidence Grounding**: The AI answers based purely on retrieved raster values, AHP criteria weights, consistency ratios, and statewide distributions.
+- **Location-Aware Queries**: Inspects any selected WGS84 coordinate dynamically using the GIS engine before querying the model.
+- **Privacy & Local Execution**: Zero cloud API tokens, zero data egress, and port `11434` is never exposed over the public ngrok tunnel.
+- **Graceful Fallback**: If Ollama is offline or a model is not yet pulled, the backend automatically delivers verified structured GIS evidence with terminal setup instructions.
+
+### Quick Start
+1. **Pull the configured lightweight model**:
+   ```bash
+   ollama run llama3.2:1b
+   ```
+   *(Alternatively: `ollama pull qwen2.5:1.5b` and update `OLLAMA_MODEL=qwen2.5:1.5b` in `backend/.env`)*
+2. **Launch backend & tunnel**:
+   Double click `start_backend.bat` or run:
+   ```bash
+   python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+   ```
+3. **Verify AI Health**:
+   ```bash
+   curl http://127.0.0.1:8000/api/v1/ai/health
+   ```
+
 
 ---
 
