@@ -527,7 +527,7 @@ export default function MapCanvas({
           null,
           {
             Icon: IconLocate,
-            title: "Reset to Himachal Pradesh",
+            title: "Reset Map View",
             onClick: () => setZoomAction("reset"),
             essential: true,
           },

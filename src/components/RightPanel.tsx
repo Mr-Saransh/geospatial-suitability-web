@@ -147,8 +147,8 @@ export default function RightPanel({
             {activeModelName} Susceptibility Model
           </div>
           <div className="text-xs leading-relaxed max-w-xs text-[var(--c-text2)]">
-            The {activeModelName} hazard multi-criteria dataset is in development for Himachal
-            Pradesh. No simulated values are displayed.
+            The {activeModelName} hazard multi-criteria dataset is currently in development for this
+            geospatial domain. No simulated values are displayed.
           </div>
         </div>
       ) : (
@@ -267,7 +267,7 @@ function LocationTab({
           <div className="text-xs font-semibold text-[#ef4444] mb-1">Outside Analysis Boundary</div>
           <p className="text-xs text-[var(--c-text2)] leading-relaxed">
             The selected point ({zone.lat.toFixed(4)}°N, {zone.lng.toFixed(4)}°E) is outside the
-            official Himachal Pradesh study boundary.
+            active spatial analysis boundary.
           </p>
         </div>
       ) : (
@@ -482,7 +482,7 @@ function StatisticsTab({ stats, hazardName }: { stats: AnalysisStatistics; hazar
         }}
       >
         <div className="text-xs font-semibold text-[var(--c-text)]">
-          Himachal Pradesh Statewide Overview ({hazardName})
+          Geospatial Domain Overview ({hazardName})
         </div>
         <p className="text-xs text-[var(--c-text2)] leading-relaxed m-0">
           Composite evaluation across 55,673 km² of mountainous terrain based on standardized

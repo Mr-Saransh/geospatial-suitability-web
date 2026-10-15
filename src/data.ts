@@ -65,7 +65,7 @@ export function classValueToSuitClass(val: number | null): SuitClass {
   }
 }
 
-export const HIMACHAL_LOCATIONS = [
+export const PRESET_LOCATIONS = [
   { name: "Shimla", lat: 31.1048, lng: 77.1734, district: "Shimla" },
   { name: "Kullu", lat: 31.9579, lng: 77.1095, district: "Kullu" },
   { name: "Manali", lat: 32.2432, lng: 77.1892, district: "Kullu" },
@@ -88,6 +88,8 @@ export const HIMACHAL_LOCATIONS = [
   { name: "Rampur Bushahr", lat: 31.4485, lng: 77.6322, district: "Shimla" },
 ];
 
+export const HIMACHAL_LOCATIONS = PRESET_LOCATIONS;
+
 export const CRITERIA_INFO: Record<
   string,
   {
@@ -107,7 +109,7 @@ export const CRITERIA_INFO: Record<
     unit: "mm/yr",
     source: "CHIRPS v2.0 (UCSB / IMD)",
     description:
-      "Mean annual precipitation across Himachal Pradesh. Heavy monsoonal precipitation elevates flood risk.",
+      "Mean annual precipitation across the spatial study domain. Heavy monsoonal precipitation elevates flood risk.",
     evidence:
       "High precipitation intensity directly increases peak overland flow and catchment discharge.",
   },
@@ -813,7 +815,7 @@ export const INITIAL_ZONE: Zone = {
   lat: 31.8645,
   lng: 76.792,
   district: "Mandi / Shimla",
-  region: "Himachal Pradesh",
+  region: "Active Study Domain",
   area: 44.3,
   finalStatus: "VALID",
   coverageStatus: "COMPLETE",
@@ -920,7 +922,7 @@ export const AI_PRESETS: Array<{ q: string; context?: string }> = [
     context: "model",
   },
   {
-    q: "What are the dominant flood risk factors in Himachal Pradesh?",
+    q: "What are the dominant flood risk factors?",
     context: "model",
   },
   {
@@ -942,7 +944,7 @@ export const AI_ANSWERS: Record<
   }
 > = {
   "Why is this location classified with its current flood susceptibility?": {
-    text: `Under the **11-Factor Flood Susceptibility Model**, this location in Himachal Pradesh is evaluated using multi-criteria synthesis across physical criteria:\n\n• **Slope (w=0.2306):** High gradient promotes rapid overland runoff away from ridges.\n• **Distance to Rivers (w=0.1480):** Proximity to active stream corridors dictates overbank inundation hazard.\n• **Rainfall (w=0.1326):** Monsoonal rainfall remains the dominant regional hazard driver.\n\nLocations with all validated data are marked as Complete Coverage, while areas where certain factors are unavailable are transparently denoted with Partial Coverage.`,
+    text: `Under the **11-Factor Flood Susceptibility Model**, this location is evaluated using multi-criteria synthesis across physical criteria:\n\n• **Slope (w=0.2306):** High gradient promotes rapid overland runoff away from ridges.\n• **Distance to Rivers (w=0.1480):** Proximity to active stream corridors dictates overbank inundation hazard.\n• **Rainfall (w=0.1326):** Monsoonal rainfall remains the dominant regional hazard driver.\n\nLocations with all validated data are marked as Complete Coverage, while areas where certain factors are unavailable are transparently denoted with Partial Coverage.`,
     actions: [
       { label: "Show Slope Layer", type: "layer", target: "slope" },
       { label: "Show Rainfall Layer", type: "layer", target: "rainfall" },
@@ -979,7 +981,7 @@ export const AI_ANSWERS: Record<
       },
     ],
   },
-  "What are the dominant flood risk factors in Himachal Pradesh?": {
+  "What are the dominant flood risk factors?": {
     text: `In the 11-factor AHP hierarchy, the three dominant contributors are:\n\n1. **Terrain Slope (23.06%):** Steep slopes force rapid runoff accumulation into valley bottoms.\n2. **Distance to Rivers (14.80%):** Flood vulnerability is concentrated within 500 m of mainstem river channels.\n3. **Topographic Wetness Index (14.22%):** Quantifies topographic moisture accumulation and surface ponding potential.\n4. **Annual Rainfall (13.26%):** Monsoonal cloudburst intensity triggers catastrophic peak discharges.`,
     actions: [{ label: "Inspect Model Weights", type: "stats", target: "metadata" }],
   },

@@ -131,8 +131,8 @@ export default function Navbar({
         id: `coord-${parsed.lat}-${parsed.lng}`,
         title: `${parsed.lat.toFixed(4)}°N, ${parsed.lng.toFixed(4)}°E`,
         subtitle: within
-          ? "Parsed Geographic Coordinates (Himachal Pradesh)"
-          : "Coordinates outside Himachal Pradesh analysis boundary",
+          ? "Parsed Geographic Coordinates (Active Grid)"
+          : "Coordinates outside active analysis boundary",
         lat: parsed.lat,
         lng: parsed.lng,
         type: "coordinate",
@@ -140,7 +140,7 @@ export default function Navbar({
       });
     }
 
-    // 2. Match local Himachal locations
+    // 2. Match preset focus locations
     const localMatches = HIMACHAL_LOCATIONS.filter(
       (loc) => loc.name.toLowerCase().includes(q) || loc.district.toLowerCase().includes(q),
     );
@@ -168,11 +168,11 @@ export default function Navbar({
     if (q.length >= 3 && !parseCoordinates(q)) {
       setIsSearchingExternal(true);
       const timer = setTimeout(() => {
-        // Safe OpenStreetMap Nominatim query prioritizing Himachal Pradesh viewbox
+        // Safe OpenStreetMap Nominatim query across India
         fetch(
           `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-            q + " Himachal Pradesh",
-          )}&viewbox=75.5,33.3,79.1,30.3&bounded=0&limit=3`,
+            q + " India",
+          )}&limit=4`,
         )
           .then((res) => (res.ok ? res.json() : []))
           .then(
@@ -483,7 +483,7 @@ export default function Navbar({
                         border: "1px solid var(--c-border)",
                       }}
                     >
-                      {s.isOutsideHp ? "Outside HP" : s.type === "coordinate" ? "Coords" : "Location"}
+                      {s.isOutsideHp ? "Outside Bounds" : s.type === "coordinate" ? "Coords" : "Location"}
                     </span>
                   </button>
                 ))}

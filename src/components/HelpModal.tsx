@@ -43,7 +43,7 @@ const HELP_TOPICS: HelpItem[] = [
     title: "Find Places or Coordinates",
     tag: "Search",
     description:
-      "Type a Himachal district or town name (e.g. Shimla, Kullu, Dharamshala) or enter coordinates in decimal degrees (e.g. 31.1048, 77.1734).",
+      "Type a district or town name (e.g. Shimla, Mandi, Manali) or enter coordinates in decimal degrees (e.g. 31.1048, 77.1734).",
     hint: "Press Enter or click a suggestion to pan and inspect that location.",
   },
   {
@@ -79,7 +79,7 @@ const HELP_TOPICS: HelpItem[] = [
     title: "Inspect Any Location",
     tag: "Point Inspection",
     description:
-      "Click anywhere on the Himachal Pradesh map to inspect local susceptibility, canonical 1–5 score, and analysis data coverage.",
+      "Click anywhere on the map to inspect local susceptibility, canonical 1–5 score, and analysis data coverage.",
     hint: "Coverage badges indicate Complete, Partial, or Unavailable evidence.",
   },
   {
@@ -141,7 +141,7 @@ export default function HelpModal({
 
   const publicMetadataRows: [string, string][] = [
     ["Hazard Model", `${hazardName} Multi-Criteria Susceptibility Evaluation`],
-    ["Analysis Area", "Himachal Pradesh, India (Statewide Boundary)"],
+    ["Analysis Area", "Geospatial Multi-Criteria Study Domain"],
     ["Spatial Resolution", "30 m ground pixel resolution"],
     ["Coordinate Reference System", String(isLandslide ? "EPSG:32643 (UTM 43N)" : "EPSG:4326 (WGS84)")],
     ["Factor Count", `${modelDetail?.criterion_count || (isLandslide ? 14 : 11)} physical criteria`],
@@ -355,11 +355,11 @@ export default function HelpModal({
               </div>
               <div className="flex flex-col gap-0.5">
                 <div className="text-[13px] font-semibold text-[var(--c-text)]">
-                  Himachal Pradesh Multi-Criteria Spatial Evaluation Platform
+                  MCGSE Multi-Criteria Spatial Evaluation Platform
                 </div>
                 <div className="text-xs text-[var(--c-text2)] leading-relaxed">
                   MCGSE combines high-resolution environmental datasets (terrain, hydrology, geology,
-                  precipitation) to evaluate relative hazard susceptibility across Himachal Pradesh at
+                  precipitation) to evaluate relative hazard susceptibility across the active study area at
                   30-meter resolution.
                 </div>
               </div>
@@ -498,7 +498,7 @@ export default function HelpModal({
                 </div>
                 <div className="text-xs text-[var(--c-text2)] leading-relaxed">
                   Canonical Spatial Package metadata, mathematical decision matrices, coordinate reference systems,
-                  and environmental factor contributions for Himachal Pradesh.
+                  and environmental factor contributions for the evaluation domain.
                 </div>
               </div>
             </div>
@@ -516,7 +516,7 @@ export default function HelpModal({
                   Model Specifications & Coordinate Systems
                 </span>
                 <span className="text-[10px] font-mono text-[var(--c-text3)]">
-                  Himachal Pradesh Domain
+                  Active Geospatial Domain
                 </span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">

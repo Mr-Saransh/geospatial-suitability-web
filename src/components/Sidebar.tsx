@@ -239,9 +239,9 @@ export default function Sidebar({
             }
           >
             <div className="px-3.5 pb-3.5 flex flex-col gap-2.5">
-              <DropdownField icon="tag" label="State / Region">
-                <select className="w-full" value="Himachal Pradesh, India" disabled>
-                  <option>Himachal Pradesh, India</option>
+              <DropdownField icon="tag" label="Spatial Domain">
+                <select className="w-full" value="National Multi-Criteria Domain" disabled>
+                  <option>National Multi-Criteria Domain</option>
                 </select>
               </DropdownField>
 
@@ -434,7 +434,7 @@ export default function Sidebar({
               color: "var(--c-text3)",
             }}
           >
-            <span>Himachal Pradesh · 30m</span>
+            <span>Multi-Hazard Domain · 30m</span>
             <span style={{ color: "var(--c-accent)" }}>Canonical Package</span>
           </div>
         </div>
