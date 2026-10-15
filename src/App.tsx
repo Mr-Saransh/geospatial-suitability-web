@@ -844,6 +844,8 @@ export default function App() {
           activeModelId={activeModelId}
           activeModelName={activeModelName}
           defaultSection={helpSection}
+          backendStatus={backendStatus}
+          onReconnect={loadBackend}
         />
       )}
     </div>

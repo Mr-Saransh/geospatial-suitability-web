@@ -23,6 +23,8 @@ interface Props {
   activeModelId?: string;
   activeModelName?: string;
   defaultSection?: "guide" | "data-models";
+  backendStatus?: "connected" | "connecting" | "offline";
+  onReconnect?: () => void;
 }
 
 interface HelpItem {
@@ -115,6 +117,8 @@ export default function HelpModal({
   activeModelId,
   activeModelName = "Flood",
   defaultSection = "guide",
+  backendStatus = "connecting",
+  onReconnect,
 }: Props) {
   const modalRef = useRef<HTMLDivElement>(null);
   const [activeSection, setActiveSection] = useState<"guide" | "data-models">(defaultSection);
@@ -232,6 +236,101 @@ export default function HelpModal({
               </span>
             </button>
           </div>
+        </div>
+
+        {/* Backend & Spatial Engine Status Banner */}
+        <div
+          className="p-3.5 rounded-lg flex items-center justify-between gap-3 mb-4"
+          style={{
+            background: "var(--c-panel)",
+            border: `1px solid ${
+              backendStatus === "connected"
+                ? "rgba(16, 185, 129, 0.3)"
+                : backendStatus === "connecting"
+                  ? "rgba(245, 158, 11, 0.3)"
+                  : "rgba(239, 68, 68, 0.3)"
+            }`,
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+              style={{
+                background:
+                  backendStatus === "connected"
+                    ? "rgba(16, 185, 129, 0.15)"
+                    : backendStatus === "connecting"
+                      ? "rgba(245, 158, 11, 0.15)"
+                      : "rgba(239, 68, 68, 0.15)",
+                color:
+                  backendStatus === "connected"
+                    ? "#10b981"
+                    : backendStatus === "connecting"
+                      ? "#f59e0b"
+                      : "#ef4444",
+              }}
+            >
+              <span
+                className={`w-2.5 h-2.5 rounded-full ${backendStatus === "connecting" ? "animate-ping" : ""}`}
+                style={{
+                  background:
+                    backendStatus === "connected"
+                      ? "#10b981"
+                      : backendStatus === "connecting"
+                        ? "#f59e0b"
+                        : "#ef4444",
+                }}
+              />
+            </div>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] font-semibold text-[var(--c-text)]">
+                  MCGSE Spatial Engine & API
+                </span>
+                <span
+                  className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded font-semibold"
+                  style={{
+                    background:
+                      backendStatus === "connected"
+                        ? "rgba(16, 185, 129, 0.12)"
+                        : backendStatus === "connecting"
+                          ? "rgba(245, 158, 11, 0.15)"
+                          : "rgba(239, 68, 68, 0.15)",
+                    color:
+                      backendStatus === "connected"
+                        ? "#10b981"
+                        : backendStatus === "connecting"
+                          ? "#f59e0b"
+                          : "#ef4444",
+                  }}
+                >
+                  {backendStatus === "connected"
+                    ? "Live & Synchronized"
+                    : backendStatus === "connecting"
+                      ? "Connecting..."
+                      : "Offline"}
+                </span>
+              </div>
+              <span className="text-[11px] text-[var(--c-text3)]">
+                {backendStatus === "connected"
+                  ? "FastAPI server and ngrok tunnel are synchronized. Raster GeoTIFFs, point inspection, and spatial stats are active."
+                  : "Backend is connecting or offline. Double-click 'Start MCGSE Backend' on your desktop to start."}
+              </span>
+            </div>
+          </div>
+
+          {backendStatus !== "connected" && onReconnect && (
+            <button
+              onClick={onReconnect}
+              className="px-3 py-1.5 rounded-md text-xs font-semibold cursor-pointer transition-all hover:brightness-110 flex-shrink-0"
+              style={{
+                background: "var(--c-accent)",
+                color: "var(--c-base)",
+              }}
+            >
+              Retry Connection
+            </button>
+          )}
         </div>
 
         {/* ─── SECTION 1: PLATFORM GUIDE ─── */}

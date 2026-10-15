@@ -132,6 +132,7 @@ const AuthenticatedTileLayer = L.TileLayer.extend({
         return res.blob();
       })
       .then((blob) => {
+        if (controller.signal.aborted) return;
         const objectUrl = URL.createObjectURL(blob);
         (tile as unknown as { _objectUrl: string })._objectUrl = objectUrl;
         tile.onload = () => {
@@ -151,15 +152,25 @@ const AuthenticatedTileLayer = L.TileLayer.extend({
     return tile;
   },
 
-  _abortLoading(tile: HTMLElement) {
-    const t = tile as unknown as { _abortController?: AbortController; _objectUrl?: string };
-    if (t._abortController) {
-      t._abortController.abort();
+  _abortLoading() {
+    const tiles = (this as unknown as { _tiles?: Record<string, { el?: HTMLElement }> })._tiles;
+    if (tiles) {
+      for (const key of Object.keys(tiles)) {
+        const tile = tiles[key];
+        const el = tile?.el as unknown as { _objectUrl?: string; _abortController?: AbortController } | undefined;
+        if (el) {
+          if (el._abortController) {
+            el._abortController.abort();
+            el._abortController = undefined;
+          }
+          if (el._objectUrl) {
+            URL.revokeObjectURL(el._objectUrl);
+            el._objectUrl = undefined;
+          }
+        }
+      }
     }
-    if (t._objectUrl) {
-      URL.revokeObjectURL(t._objectUrl);
-      t._objectUrl = undefined;
-    }
+    return (L.TileLayer.prototype as unknown as { _abortLoading?: () => void })._abortLoading?.call(this);
   },
 
   _removeTile(key: string) {
@@ -169,6 +180,7 @@ const AuthenticatedTileLayer = L.TileLayer.extend({
       const t = tile.el as unknown as { _objectUrl?: string; _abortController?: AbortController };
       if (t._abortController) {
         t._abortController.abort();
+        t._abortController = undefined;
       }
       if (t._objectUrl) {
         URL.revokeObjectURL(t._objectUrl);

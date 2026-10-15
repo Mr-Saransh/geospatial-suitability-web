@@ -406,50 +406,6 @@ export default function Navbar({
               </div>
             )}
           </div>
-
-          {/* Backend Connection Status Badge */}
-          {backendStatus === "connected" ? (
-            <div
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium"
-              style={{
-                background: "rgba(16, 185, 129, 0.12)",
-                color: "#10b981",
-                border: "1px solid rgba(16, 185, 129, 0.25)",
-              }}
-              title="MCGSE Backend is live and synchronized"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-[#10b981] shadow-[0_0_6px_#10b981]" />
-              <span className="font-mono text-[10px] tracking-wide">LIVE</span>
-            </div>
-          ) : backendStatus === "connecting" ? (
-            <button
-              onClick={onReconnect}
-              title="Connecting to MCGSE backend... Click to retry"
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all cursor-pointer animate-pulse"
-              style={{
-                background: "rgba(245, 158, 11, 0.15)",
-                color: "#f59e0b",
-                border: "1px solid rgba(245, 158, 11, 0.3)",
-              }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b]" />
-              <span className="font-mono text-[10px] tracking-wide">CONNECTING…</span>
-            </button>
-          ) : (
-            <button
-              onClick={onReconnect}
-              title="Backend offline. Click to retry connection"
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all cursor-pointer"
-              style={{
-                background: "rgba(239, 68, 68, 0.15)",
-                color: "#ef4444",
-                border: "1px solid rgba(239, 68, 68, 0.3)",
-              }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444]" />
-              <span className="font-mono text-[10px] tracking-wide">RETRY</span>
-            </button>
-          )}
         </div>
 
         {/* Center: Search input + Map Tools beside it */}
