@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { SUIT_META } from "../data";
 import type { Zone } from "../types";
 import { SuitBadge, ScoreBar, Pill } from "../ui";
-import { IconX, IconBot } from "../icons";
+import { IconX, IconBot, IconMinimize, IconChevronU } from "../icons";
 
 interface Props {
   zone: Zone;
@@ -20,22 +21,84 @@ export default function ResultPopup({
   onWhy: _onWhy,
   loading: _loading,
 }: Props) {
+  const [minimized, setMinimized] = useState(false);
   const m = SUIT_META[zone.cls] || SUIT_META["low"];
   const criteria = zone.criteria || [];
   const top3 = criteria.slice(0, 3);
   const limiting = criteria.filter((c) => c.cls === "limiting");
 
+  if (minimized) {
+    return (
+      <div
+        className="absolute z-[1100] flex items-center gap-2 px-3 py-1.5 rounded-full shadow-2xl backdrop-blur-md cursor-pointer transition-all hover:scale-[1.02] border border-[var(--c-border)]"
+        style={{
+          bottom: 64,
+          left: "50%",
+          transform: "translateX(-50%)",
+          background: "var(--c-chip-bg)",
+          boxShadow: `0 8px 32px rgba(0,0,0,0.35), 0 0 12px ${m.color}25`,
+          maxWidth: "calc(100vw - 24px)",
+        }}
+        onClick={() => setMinimized(false)}
+        title="Click to expand coordinate details"
+      >
+        <span
+          className="w-2 h-2 rounded-full flex-shrink-0 animate-pulse"
+          style={{ background: m.color }}
+        />
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span
+            className="text-xs font-semibold truncate"
+            style={{ color: "var(--c-text)", fontFamily: "var(--font-display)" }}
+          >
+            {zone.district || `${zone.lat.toFixed(3)}°N, ${zone.lng.toFixed(3)}°E`}
+          </span>
+          <span
+            className="text-[11px] font-mono font-bold px-1.5 py-0.2 rounded"
+            style={{
+              background: `${m.color}22`,
+              color: m.color,
+            }}
+          >
+            {zone.score.toFixed(2)}
+          </span>
+        </div>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setMinimized(false);
+          }}
+          className="flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded transition-colors hover:bg-[rgba(255,255,255,0.08)] cursor-pointer"
+          style={{ color: "var(--c-accent)" }}
+          title="Expand"
+        >
+          <span>Expand</span>
+          <IconChevronU size={10} />
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+          className="w-5 h-5 flex items-center justify-center rounded-full text-[var(--c-text3)] hover:text-[var(--c-text)] hover:bg-[rgba(255,255,255,0.1)] transition-colors cursor-pointer"
+          title="Close"
+        >
+          <IconX size={11} />
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div
-      className="absolute z-[1100] rounded-xl shadow-2xl overflow-hidden backdrop-blur-md"
+      className="absolute z-[1100] rounded-xl shadow-2xl overflow-hidden backdrop-blur-md w-[calc(100vw-24px)] max-w-[340px]"
       style={{
-        bottom: 52,
+        bottom: 64,
         left: "50%",
         transform: "translateX(-50%)",
-        width: 330,
         background: "var(--c-chip-bg)",
         border: `1px solid ${m.color}35`,
-        boxShadow: `0 16px 48px rgba(0,0,0,0.25), 0 0 0 1px ${m.color}18`,
+        boxShadow: `0 16px 48px rgba(0,0,0,0.35), 0 0 0 1px ${m.color}18`,
       }}
     >
       {/* Accent top strip */}
@@ -47,11 +110,11 @@ export default function ResultPopup({
       />
 
       {/* Header */}
-      <div className="flex items-start gap-3 px-4 pt-3.5 pb-3">
-        <div>
-          <div className="flex items-center gap-2 mb-0.5">
+      <div className="flex items-start gap-2.5 px-4 pt-3 pb-2.5">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 mb-0.5 flex-wrap">
             <span
-              className="text-[15px] font-semibold"
+              className="text-[14px] font-semibold truncate"
               style={{
                 fontFamily: "var(--font-display)",
                 color: "var(--c-text)",
@@ -61,13 +124,13 @@ export default function ResultPopup({
             </span>
             <SuitBadge cls={zone.cls} />
           </div>
-          <div className="text-xs" style={{ color: "var(--c-text2)" }}>
+          <div className="text-xs truncate" style={{ color: "var(--c-text2)" }}>
             {zone.district} · {zone.region}
           </div>
         </div>
-        <div className="ml-auto text-right">
+        <div className="text-right flex-shrink-0">
           <div
-            className="text-[26px] font-bold"
+            className="text-[24px] font-bold"
             style={{
               fontFamily: "var(--font-mono)",
               color: m.color,
@@ -90,17 +153,26 @@ export default function ResultPopup({
             Class {zone.classifiedValue || 1} / 5
           </div>
         </div>
-        <button
-          onClick={onClose}
-          className="ml-1 flex-shrink-0 w-6 h-6 flex items-center justify-center hover:opacity-75 transition-opacity"
-          style={{ color: "var(--c-text2)" }}
-        >
-          <IconX size={12} />
-        </button>
+        <div className="flex items-center gap-0.5 ml-1 flex-shrink-0">
+          <button
+            onClick={() => setMinimized(true)}
+            className="w-6 h-6 flex items-center justify-center rounded text-[var(--c-text2)] hover:text-[var(--c-text)] hover:bg-[rgba(255,255,255,0.08)] transition-all cursor-pointer"
+            title="Minimize"
+          >
+            <IconMinimize size={12} />
+          </button>
+          <button
+            onClick={onClose}
+            className="w-6 h-6 flex items-center justify-center rounded text-[var(--c-text2)] hover:text-[var(--c-text)] hover:bg-[rgba(255,255,255,0.08)] transition-all cursor-pointer"
+            title="Close"
+          >
+            <IconX size={12} />
+          </button>
+        </div>
       </div>
 
       {/* Score bar */}
-      <div className="px-4 pb-3">
+      <div className="px-4 pb-2.5">
         <ScoreBar value={zone.score / 5.0} color={m.color} height={4} />
         <div
           className="flex justify-between text-[10px] mt-1"
@@ -115,8 +187,8 @@ export default function ResultPopup({
       </div>
 
       {/* Key factors */}
-      <div className="px-4 pb-3" style={{ borderTop: "1px solid var(--c-border)" }}>
-        <div className="flex items-center gap-2 pt-3 flex-wrap">
+      <div className="px-4 pb-2.5" style={{ borderTop: "1px solid var(--c-border)" }}>
+        <div className="flex items-center gap-1.5 pt-2.5 flex-wrap">
           {top3.map((c) => (
             <Pill key={c.name} color="#00c896">
               + {c.name.split(" ")[0]}
@@ -160,3 +232,4 @@ export default function ResultPopup({
     </div>
   );
 }
+

@@ -101,6 +101,7 @@ export default function App() {
 
   // Inspection state
   const [selectedZone, setSelectedZone] = useState<Zone | null>(INITIAL_ZONE);
+  const [coordinateSelected, setCoordinateSelected] = useState<boolean>(false);
   const [loadingInspection, setLoadingInspection] = useState(false);
 
   // Map state
@@ -390,11 +391,10 @@ export default function App() {
       }
 
       setLoadingInspection(true);
+      setCoordinateSelected(true);
       try {
         const pt = await api.inspectPoint(activeModelId, lat, lon);
         handlePointInspectionResult(pt, lat, lon);
-        setRightTab("overview");
-        setRightOpen(true);
       } catch (err) {
         console.error("Point inspection failed:", err);
         setSelectedZone({
@@ -412,8 +412,6 @@ export default function App() {
           coverageStatus: "UNAVAILABLE",
           criteria: INITIAL_CRITERIA,
         });
-        setRightTab("overview");
-        setRightOpen(true);
       } finally {
         setLoadingInspection(false);
       }
@@ -474,6 +472,7 @@ export default function App() {
 
   const handleLocationFly = (loc: { lat: number; lng: number }) => {
     setCenterTarget({ lat: loc.lat, lng: loc.lng });
+    setCoordinateSelected(true);
     handlePointClick(loc.lat, loc.lng);
   };
 
@@ -625,11 +624,14 @@ export default function App() {
             />
           )}
 
-          {/* Quick Floating inspection result chip if right panel closed */}
-          {selectedZone && !rightOpen && (
+          {/* Quick Floating inspection result chip if coordinate selected and right panel closed */}
+          {coordinateSelected && selectedZone && !rightOpen && (
             <ResultPopup
               zone={selectedZone}
-              onClose={() => setSelectedZone(null)}
+              onClose={() => {
+                setCoordinateSelected(false);
+                setSelectedZone(null);
+              }}
               onDetails={() => {
                 setRightTab("overview");
                 setRightOpen(true);

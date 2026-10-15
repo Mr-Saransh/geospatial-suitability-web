@@ -56,8 +56,10 @@ export const IconSearch = (p: P) => (
   />
 );
 export const IconChevronD = (p: P) => <I {...p} d={<path d="m6 9 6 6 6-6" />} />;
+export const IconChevronU = (p: P) => <I {...p} d={<path d="m18 15-6-6-6 6" />} />;
 export const IconChevronR = (p: P) => <I {...p} d={<path d="m9 18 6-6-6-6" />} />;
 export const IconChevronL = (p: P) => <I {...p} d={<path d="m15 18-6-6 6-6" />} />;
+export const IconMinimize = (p: P) => <I {...p} d={<line x1="5" y1="12" x2="19" y2="12" />} />;
 export const IconX = (p: P) => (
   <I
     {...p}

@@ -492,11 +492,11 @@ export default function Navbar({
             )}
           </div>
 
-          {/* Map Layers Action Button (Beside Search) */}
+          {/* Map Layers Action Button (Beside Search on Desktop/Tablet) */}
           <button
             onClick={onLayers}
             title="Map Layers (Toggle Floating Panel)"
-            className="flex items-center gap-1.5 h-8 px-2.5 rounded text-xs font-medium transition-all cursor-pointer flex-shrink-0"
+            className="hidden md:flex items-center gap-1.5 h-8 px-2.5 rounded text-xs font-medium transition-all cursor-pointer flex-shrink-0"
             style={{
               background: layersOpen ? "var(--c-accent-dim)" : "var(--c-panel)",
               border: `1px solid ${layersOpen ? "var(--c-accent)" : "var(--c-border)"}`,
@@ -504,7 +504,7 @@ export default function Navbar({
             }}
           >
             <IconLayers size={13} style={{ color: layersOpen ? "var(--c-accent)" : "var(--c-text2)" }} />
-            <span className="hidden sm:inline">Layers</span>
+            <span>Layers</span>
             {layerCount !== undefined && (
               <span
                 className="text-[10px] font-mono px-1 py-0.2 rounded"
@@ -518,11 +518,11 @@ export default function Navbar({
             )}
           </button>
 
-          {/* Compare Layers Action Button (Beside Search) */}
+          {/* Compare Layers Action Button (Beside Search on Desktop/Tablet) */}
           <button
             onClick={onCompare}
             title="Compare Layers"
-            className="flex items-center gap-1.5 h-8 px-2.5 rounded text-xs font-medium transition-all cursor-pointer flex-shrink-0"
+            className="hidden md:flex items-center gap-1.5 h-8 px-2.5 rounded text-xs font-medium transition-all cursor-pointer flex-shrink-0"
             style={{
               background: compareOpen ? "var(--c-accent-dim)" : "var(--c-panel)",
               border: `1px solid ${compareOpen ? "var(--c-accent)" : "var(--c-border)"}`,
@@ -530,18 +530,18 @@ export default function Navbar({
             }}
           >
             <IconCompare size={13} style={{ color: compareOpen ? "var(--c-accent)" : "var(--c-text2)" }} />
-            <span className="hidden md:inline">Compare</span>
+            <span>Compare</span>
           </button>
         </div>
 
         {/* Right: Actions */}
         <div className="flex items-center gap-1 flex-shrink-0">
-          {/* Analytics — hidden on mobile (available in bottom nav) */}
+          {/* Analytics — Desktop */}
           <div className="hidden md:flex">
             <NavBtn label="Analytics" Icon={IconChart} active={rightOpen} onClick={onRight} />
           </div>
 
-          {/* AI Assistant — hidden on mobile (available in bottom nav) */}
+          {/* AI Assistant — Desktop */}
           <div className="hidden md:flex">
             <NavBtn label="AI Assistant" Icon={IconBot} active={aiOpen} onClick={onAI} />
           </div>
@@ -556,63 +556,167 @@ export default function Navbar({
           <button
             onClick={onToggleTheme}
             title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            className="w-8 h-8 flex items-center justify-center rounded text-xs transition-colors hover:bg-[rgba(255,255,255,0.05)]"
+            className="w-8 h-8 flex items-center justify-center rounded text-xs transition-colors hover:bg-[rgba(255,255,255,0.05)] cursor-pointer"
             style={{ color: theme === "dark" ? "#f59e0b" : "#0284c7" }}
           >
             {theme === "dark" ? <IconSun size={14} /> : <IconMoon size={14} />}
           </button>
 
-          {/* Overflow Menu for smaller screens */}
+          {/* Overflow / Tools Menu for smaller screens (Mobile & Tablet) */}
           <div className="relative lg:hidden">
             <button
               onClick={() => setOverflowOpen((v) => !v)}
-              className="w-8 h-8 flex items-center justify-center rounded text-xs transition-colors hover:bg-[rgba(255,255,255,0.05)] text-[var(--c-text2)]"
-              title="More actions"
+              className="h-8 px-2 flex items-center justify-center rounded text-xs gap-1 transition-all hover:bg-[rgba(255,255,255,0.06)] cursor-pointer flex-shrink-0"
+              style={{
+                border: `1px solid ${overflowOpen ? "var(--c-accent)" : "var(--c-border)"}`,
+                background: overflowOpen ? "var(--c-accent-dim)" : "var(--c-panel)",
+                color: overflowOpen ? "var(--c-accent)" : "var(--c-text2)",
+              }}
+              title="More tools & navigation"
             >
-              •••
+              <span className="font-bold tracking-widest text-[13px] leading-none px-0.5">•••</span>
             </button>
             {overflowOpen && (
               <div
-                className="absolute right-0 top-full mt-1.5 z-[1220] rounded-lg py-1 shadow-2xl min-w-[160px]"
+                className="absolute right-0 top-full mt-1.5 z-[1250] rounded-xl py-1.5 shadow-2xl min-w-[200px] max-w-[calc(100vw-24px)] overflow-hidden backdrop-blur-md"
                 style={{
                   background: "var(--c-surface)",
                   border: "1px solid var(--c-border)",
-                  boxShadow: "0 12px 32px rgba(0,0,0,0.5)",
+                  boxShadow: "0 16px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)",
                 }}
               >
+                <div
+                  className="px-3 py-1 text-[10px] uppercase font-mono tracking-wider font-semibold border-b text-[var(--c-text3)]"
+                  style={{ borderColor: "var(--c-border)" }}
+                >
+                  Tools & Analysis
+                </div>
+
+                {/* 1. Map Layers (Mobile) */}
+                <button
+                  onClick={() => {
+                    onLayers();
+                    setOverflowOpen(false);
+                  }}
+                  className="md:hidden w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-[rgba(255,255,255,0.05)] cursor-pointer transition-colors"
+                  style={{
+                    color: layersOpen ? "var(--c-accent)" : "var(--c-text)",
+                    background: layersOpen ? "var(--c-accent-dim)" : "transparent",
+                  }}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <IconLayers size={14} style={{ color: layersOpen ? "var(--c-accent)" : "var(--c-text2)" }} />
+                    <span className="font-medium">Map Layers</span>
+                  </div>
+                  {layerCount !== undefined && (
+                    <span
+                      className="text-[10px] font-mono px-1.5 py-0.5 rounded"
+                      style={{
+                        background: layersOpen ? "var(--c-accent)" : "var(--c-border2)",
+                        color: layersOpen ? "var(--c-base)" : "var(--c-text2)",
+                      }}
+                    >
+                      {layerCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* 2. Compare Layers (Mobile) */}
                 <button
                   onClick={() => {
                     onCompare();
                     setOverflowOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2 text-xs flex items-center gap-2.5 hover:bg-[rgba(255,255,255,0.04)] text-[var(--c-text)]"
+                  className="md:hidden w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-[rgba(255,255,255,0.05)] cursor-pointer transition-colors"
+                  style={{
+                    color: compareOpen ? "var(--c-accent)" : "var(--c-text)",
+                    background: compareOpen ? "var(--c-accent-dim)" : "transparent",
+                  }}
                 >
-                  <IconCompare size={13} />
-                  <span>Compare Layers</span>
+                  <div className="flex items-center gap-2.5">
+                    <IconCompare size={14} style={{ color: compareOpen ? "var(--c-accent)" : "var(--c-text2)" }} />
+                    <span className="font-medium">Compare Layers</span>
+                  </div>
+                  {compareOpen && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--c-accent)]" />
+                  )}
                 </button>
+
+                {/* 3. Analytics (Mobile) */}
+                <button
+                  onClick={() => {
+                    onRight();
+                    setOverflowOpen(false);
+                  }}
+                  className="md:hidden w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-[rgba(255,255,255,0.05)] cursor-pointer transition-colors"
+                  style={{
+                    color: rightOpen ? "var(--c-accent)" : "var(--c-text)",
+                    background: rightOpen ? "var(--c-accent-dim)" : "transparent",
+                  }}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <IconChart size={14} style={{ color: rightOpen ? "var(--c-accent)" : "var(--c-text2)" }} />
+                    <span className="font-medium">Analytics & Stats</span>
+                  </div>
+                  {rightOpen && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--c-accent)]" />
+                  )}
+                </button>
+
+                {/* 4. AI Assistant (Mobile) */}
+                <button
+                  onClick={() => {
+                    onAI();
+                    setOverflowOpen(false);
+                  }}
+                  className="md:hidden w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-[rgba(255,255,255,0.05)] cursor-pointer transition-colors"
+                  style={{
+                    color: aiOpen ? "var(--c-accent)" : "var(--c-text)",
+                    background: aiOpen ? "var(--c-accent-dim)" : "transparent",
+                  }}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <IconBot size={14} style={{ color: aiOpen ? "var(--c-accent)" : "var(--c-text2)" }} />
+                    <span className="font-medium">AI Assistant</span>
+                  </div>
+                  {aiOpen && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--c-accent)]" />
+                  )}
+                </button>
+
+                {/* Divider on mobile before secondary actions */}
+                <div
+                  className="md:hidden my-1 border-t"
+                  style={{ borderColor: "var(--c-border)" }}
+                />
+
+                {/* 5. Export Data */}
                 <button
                   onClick={() => {
                     onExport();
                     setOverflowOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2 text-xs flex items-center gap-2.5 hover:bg-[rgba(255,255,255,0.04)] text-[var(--c-text)]"
+                  className="w-full text-left px-3 py-2 text-xs flex items-center gap-2.5 hover:bg-[rgba(255,255,255,0.05)] cursor-pointer transition-colors text-[var(--c-text)]"
                 >
-                  <IconExport size={13} />
-                  <span>Export Data</span>
+                  <IconExport size={14} style={{ color: "var(--c-text2)" }} />
+                  <span className="font-medium">Export Data</span>
                 </button>
+
+                {/* 6. Help & Guide */}
                 <button
                   onClick={() => {
                     onHelp?.();
                     setOverflowOpen(false);
                   }}
-                  className="w-full text-left px-3 py-2 text-xs flex items-center gap-2.5 hover:bg-[rgba(255,255,255,0.04)] text-[var(--c-text)]"
+                  className="w-full text-left px-3 py-2 text-xs flex items-center gap-2.5 hover:bg-[rgba(255,255,255,0.05)] cursor-pointer transition-colors text-[var(--c-text)]"
                 >
-                  <IconHelp size={13} />
-                  <span>Help & Guide</span>
+                  <IconHelp size={14} style={{ color: "var(--c-text2)" }} />
+                  <span className="font-medium">Help & Guide</span>
                 </button>
               </div>
             )}
           </div>
+
         </div>
       </div>
 
