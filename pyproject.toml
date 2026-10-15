@@ -26,8 +26,11 @@ indent-style = "space"
 
 [tool.pyright]
 include = ["backend"]
-extraPaths = ["backend"]
-venvPath = "C:\\"
+extraPaths = [
+  "backend",
+  "C:/gee_env/Lib/site-packages"
+]
+venvPath = "C:/"
 venv = "gee_env"
 typeCheckingMode = "basic"
 
