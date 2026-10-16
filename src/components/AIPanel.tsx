@@ -25,16 +25,29 @@ interface Props {
 }
 
 function formatMarkdown(text: string): string {
-  return text
-    .replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--c-text)">$1</strong>')
+  const formatted = text
+    // Markdown headers
+    .replace(/^### (.*?)$/gm, '<h4 style="font-weight:700;font-size:13px;color:var(--c-text);margin-top:10px;margin-bottom:4px;letter-spacing:-0.01em">$1</h4>')
+    .replace(/^## (.*?)$/gm, '<h3 style="font-weight:700;font-size:14px;color:var(--c-text);margin-top:12px;margin-bottom:6px;letter-spacing:-0.01em">$1</h3>')
+    // Callouts / blockquotes
+    .replace(/^> (.*?)$/gm, '<div style="border-left:3px solid var(--c-accent);padding:4px 10px;margin:8px 0;background:var(--c-accent-dim);border-radius:0 6px 6px 0;font-size:11px;color:var(--c-text2);line-height:1.45">$1</div>')
+    // Bold & italic
+    .replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--c-text);font-weight:600">$1</strong>')
     .replace(/\*(.*?)\*/g, '<em style="color:var(--c-text2)">$1</em>')
+    // Inline code
     .replace(
       /`([^`]+)`/g,
-      '<code style="background:var(--c-panel);padding:1px 4px;border-radius:4px;font-family:var(--font-mono);color:var(--c-accent)">$1</code>'
+      '<code style="background:var(--c-panel);padding:1px 5px;border-radius:4px;font-family:var(--font-mono);color:var(--c-accent);font-size:11px">$1</code>'
     )
-    .replace(/\n\n/g, '</p><p style="margin-top:6px">')
-    .replace(/\n- (.*?)(?=\n|$)/g, '<li style="margin-left:14px;list-style-type:disc">$1</li>')
+    // Ordered and unordered lists
+    .replace(/^([0-9]+)\. (.*?)$/gm, '<li style="margin-left:18px;list-style-type:decimal;margin-bottom:3px">$2</li>')
+    .replace(/^[-•] (.*?)$/gm, '<li style="margin-left:16px;list-style-type:disc;margin-bottom:3px">$1</li>')
+    // Double newlines as paragraphs
+    .replace(/\n\n/g, '</p><p style="margin-top:8px">')
+    // Single newlines
     .replace(/\n/g, "<br/>");
+
+  return `<p>${formatted}</p>`;
 }
 
 function EvidenceAccordion({

@@ -63,7 +63,7 @@ class SpatialKnowledgeSettings:
             "OLLAMA_BASE_URL", "http://127.0.0.1:11434"
         ).rstrip("/")
         self.ollama_model: str = os.getenv("OLLAMA_MODEL", "llama3.2:1b")
-        self.ollama_timeout: float = float(os.getenv("OLLAMA_TIMEOUT", "45.0"))
+        self.ollama_timeout: float = float(os.getenv("OLLAMA_TIMEOUT", "12.0"))
         self.ai_rate_limit_per_minute: int = int(
             os.getenv("AI_RATE_LIMIT_PER_MINUTE", "20")
         )
