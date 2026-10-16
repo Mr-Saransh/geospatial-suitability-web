@@ -301,9 +301,9 @@ class AIAssistantRequest(BaseModel):
 class AIAssistantResponse(BaseModel):
     answer: str
     model_id: str | None = None
-    evidence: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Structured facts retrieved directly from the backend GIS engine",
+    evidence: dict[str, Any] | None = Field(
+        default=None,
+        description="Structured facts retrieved directly from the backend GIS engine (only when coordinates or data are requested)",
     )
     items: list[StructuredEvidenceItem] = Field(
         default_factory=list,

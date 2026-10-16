@@ -16,6 +16,7 @@ Supports:
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 from app.services.raster_service import compute_statistics, point_inspection
@@ -113,6 +114,172 @@ def is_greeting_or_intro(question: str) -> bool:
     return False
 
 
+COORDINATE_KEYWORDS = (
+    "here",
+    "this place",
+    "this location",
+    "this point",
+    "this spot",
+    "this site",
+    "this area",
+    "these coordinates",
+    "selected point",
+    "clicked point",
+    "my location",
+    "at point",
+    "at coordinate",
+    "at coords",
+    "coordinate",
+    "coordinates",
+    "latitude",
+    "longitude",
+    "lat",
+    "lon",
+    "lng",
+    "build",
+    "house",
+    "home",
+    "building",
+    "construct",
+    "construction",
+    "safe to build",
+    "suitable",
+    "suitability",
+    "risk here",
+    "hazard here",
+    "flood here",
+    "landslide here",
+    "score here",
+    "limiting criteria",
+    "limiting factor",
+    "top factor",
+    "primary factor",
+    "contributing factor",
+    "why is this",
+    "why classified",
+    "why very low",
+    "why low",
+    "why moderate",
+    "why high",
+    "why very high",
+    "why class",
+    "shimla",
+    "mandi",
+    "kullu",
+    "manali",
+    "solan",
+    "dharamshala",
+    "kangra",
+    "chamba",
+    "bilaspur",
+    "una",
+    "hamirpur",
+    "kinnaur",
+    "lahaul",
+    "spiti",
+)
+
+DATA_KEYWORDS = (
+    "data",
+    "dataset",
+    "datasets",
+    "evidence",
+    "facts",
+    "inspect facts",
+    "weight",
+    "weights",
+    "statistic",
+    "statistics",
+    "stats",
+    "distribution",
+    "percentage",
+    "percent",
+    "breakdown",
+    "coverage",
+    "raster",
+    "pixel",
+    "raw value",
+    "matrix",
+    "pairwise",
+    "consistency ratio",
+    "cr value",
+    "values",
+    "numbers",
+    "compare models",
+    "model comparison",
+    "criteria",
+)
+
+CONCEPTUAL_PREFIXES = (
+    "what is gis",
+    "what's gis",
+    "what does gis",
+    "define gis",
+    "explain gis",
+    "meaning of gis",
+    "what is mcda",
+    "what is ahp",
+    "what is remote sensing",
+    "what is dem",
+    "what is digital elevation",
+    "who are you",
+    "what are you",
+    "what can you do",
+    "how does this work",
+    "how do you work",
+    "tell me a joke",
+)
+
+
+def is_coordinate_or_data_question(question: str) -> bool:
+    """
+    Determine whether the user specifically asks about:
+    1. Geographic coordinates, location, map points, or site suitability / construction.
+    2. Model data, criteria weights, factor values, statistics, or evidence inspection.
+
+    Returns False for normal conversation, greetings, definitions, and conceptual questions
+    (e.g., 'what is gis?', 'what is gis in 10 words?', 'hello', 'who are you?').
+    """
+    q_clean = question.strip().lower()
+    if not q_clean:
+        return False
+
+    if is_greeting_or_intro(q_clean):
+        return False
+
+    # Check for conceptual questions like "what is gis in 10 words?"
+    for prefix in CONCEPTUAL_PREFIXES:
+        if q_clean.startswith(prefix) or q_clean == prefix:
+            # Only treat as data/coordinate if explicitly asking for data or this point
+            if not any(k in q_clean for k in ("here", "this point", "this location", "my coordinate", "data", "weight", "fact")):
+                return False
+
+    # Coordinate / Location / Construction inquiries
+    if any(k in q_clean for k in COORDINATE_KEYWORDS):
+        return True
+
+    # Check for numeric coordinates like "31.25, 77.62"
+    if re.search(r"\b\d{1,3}\.\d{2,}\b", q_clean):
+        return True
+
+    # Data / Factor / Weight / Statistics inquiries
+    if any(k in q_clean for k in DATA_KEYWORDS):
+        return True
+
+    # Layer-specific data inquiries (e.g., "what is the slope value?", "rainfall numbers")
+    layer_names = (
+        "slope", "rainfall", "flow accumulation", "elevation",
+        "distance to rivers", "twi", "aspect", "curvature",
+        "soil", "lithology", "land use", "lulc", "ndvi", "fault"
+    )
+    if any(layer in q_clean for layer in layer_names):
+        data_terms = ("value", "number", "level", "contrib", "rating", "measure", "score", "high", "low", "much", "many", "how steep", "data")
+        if any(dt in q_clean for dt in data_terms):
+            return True
+
+    return False
+
+
 def is_comparison_question(question: str) -> bool:
     """Determine whether the question asks for a multi-model comparison."""
     q_lower = question.lower()
@@ -181,6 +348,21 @@ def retrieve_gis_evidence(
     is_comparison = is_comparison_question(question)
     resolved_id = resolve_model_id(model_id, question)
     model_cfg = get_model_config(resolved_id)
+
+    # Check if the user specifically asked for coordinate or data evidence
+    is_coord_or_data = is_coordinate_or_data_question(question)
+    if not is_coord_or_data:
+        # Normal conversation / conceptual inquiry:
+        # Do NOT extract point evidence or attach facts accordion
+        return {
+            "model_id": resolved_id,
+            "evidence": None,
+            "items": [],
+            "warnings": [],
+            "coverage": "Statewide Package",
+            "is_data_query": False,
+            "show_evidence": False,
+        }
 
     warnings: list[str] = []
     items: list[dict[str, Any]] = []
@@ -674,12 +856,17 @@ def retrieve_gis_evidence(
             if "statistics" in evidence
             else "Statewide Package"
         ),
+        "is_data_query": True,
+        "show_evidence": True,
     }
 
 
 def format_evidence_for_prompt(evidence_result: dict[str, Any]) -> str:
     """Format structured evidence into clean, auditable markdown for Ollama."""
-    ev = evidence_result.get("evidence", {})
+    ev = evidence_result.get("evidence")
+    if not ev or not evidence_result.get("is_data_query", True):
+        return "(General conceptual / normal conversation query — no specific location point or data facts requested. Answer directly, concisely, and conversationally.)"
+
     lines: list[str] = []
 
     lines.append(f"### MODEL: {ev.get('model_name')} ({ev.get('model_id')})")

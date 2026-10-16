@@ -133,11 +133,11 @@ class OllamaService:
         Translates raw spatial calculations into plain English that is easy to understand.
         """
         q_clean = question.strip().lower()
-        ev = evidence_result.get("evidence", {})
+        ev = evidence_result.get("evidence") or {}
         coords = ev.get("coordinates")
         pt = ev.get("point_inspection")
         model_name = ev.get("model_name", "Geospatial Hazard Model")
-        model_id = ev.get("model_id", "flood_11_factor_v1")
+        model_id = ev.get("model_id", evidence_result.get("model_id", "flood_11_factor_v1"))
         is_landslide_model = "landslide" in model_id.lower() or "landslide" in model_name.lower()
         hazard_type = "Landslide" if is_landslide_model else "Flood"
 
@@ -156,7 +156,9 @@ class OllamaService:
 
         # ── 2. CONCEPT: WHAT IS GIS? ───────────────────────────────
         if any(k in q_clean for k in ("what is gis", "what's gis", "define gis", "explain gis", "meaning of gis", "what gis")):
-            res = (
+            if "10 words" in q_clean or "ten words" in q_clean:
+                return "**GIS** is a digital mapping system combining location with real-world data."
+            return (
                 "### 🗺️ What is GIS (Geographic Information System)?\n\n"
                 "**GIS** stands for **Geographic Information System**. In simple terms, think of it as a **smart digital map made of multiple real-world data layers**.\n\n"
                 "Instead of just showing roads and borders, GIS captures, analyzes, and models the physical environment:\n\n"
@@ -164,14 +166,6 @@ class OllamaService:
                 "2. **Scientific Multi-Criteria Evaluation (MCDA/AHP)**: Expert-calibrated mathematical weights are assigned to each layer based on how heavily it drives disaster risk (e.g., river proximity is critical for floods, while steep slopes drive landslides).\n"
                 "3. **Actionable Decision Support**: By calculating composite scores from Class 1 (Very Low Hazard) to Class 5 (Very High Hazard), GIS enables urban planners, engineers, and citizens to make evidence-backed decisions before building roads or houses."
             )
-            if coords and pt and pt.get("suitability_score") is not None:
-                score = pt.get("suitability_score")
-                label = pt.get("suitability_label") or "Analyzed"
-                res += (
-                    f"\n\n> 💡 *For example, at your currently selected location (**{coords.get('latitude'):.4f}°N, {coords.get('longitude'):.4f}°E**), "
-                    f"our GIS engine analyzed 11 spatial factors to evaluate a {hazard_type} susceptibility score of **{score:.2f} / 5.00** ({label}).*"
-                )
-            return res
 
         # ── 3. CONCEPT: WHAT IS AHP / MCDA? ────────────────────────
         if any(k in q_clean for k in ("what is ahp", "what is mcda", "analytic hierarchy", "multi-criteria", "how are weights", "consistency ratio")):
@@ -465,6 +459,13 @@ class OllamaService:
                 "- Analyze statewide statistical distributions\n"
                 "Invite them to click anywhere on the map or ask a question about flood or landslide risk. "
                 "Keep the tone professional, welcoming, and concise (under 100 words). Do NOT dump tables of numbers or factor weights."
+            )
+        elif not evidence_result.get("is_data_query", True):
+            user_content = (
+                f"User Question: {question}\n\n"
+                "The user is asking a general conceptual question or having normal conversation.\n"
+                "Answer directly, conversationally, and concisely in plain English without robotic jargon, tables, or unsolicited coordinates. "
+                "Carefully respect any requested length constraints (e.g. 'in 10 words')."
             )
         else:
             evidence_prompt_text = format_evidence_for_prompt(evidence_result)

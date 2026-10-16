@@ -290,7 +290,7 @@ export interface AIAssistantEvidence {
 export interface AIAssistantResponse {
   answer: string;
   model_id?: string | null;
-  evidence: AIAssistantEvidence;
+  evidence?: AIAssistantEvidence | null;
   items?: StructuredEvidenceItem[];
   coverage?: string | Record<string, unknown> | null;
   warnings: string[];
@@ -317,7 +317,7 @@ export interface AIStatusStreamEvent {
 export interface AIEvidenceStreamEvent {
   type: "evidence";
   model_id: string;
-  evidence: AIAssistantEvidence;
+  evidence?: AIAssistantEvidence | null;
   items: StructuredEvidenceItem[];
   coverage?: string;
   warnings?: string[];
@@ -332,7 +332,7 @@ export interface AIDoneStreamEvent {
   type: "done";
   answer: string;
   model_id?: string | null;
-  evidence: AIAssistantEvidence;
+  evidence?: AIAssistantEvidence | null;
   items: StructuredEvidenceItem[];
   coverage?: string | null;
   warnings: string[];

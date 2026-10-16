@@ -155,12 +155,14 @@ async def ask_ai(req: AIAssistantRequest, request: Request):
     if gen_warn and gen_warn not in all_warnings:
         all_warnings.append(gen_warn)
 
+    show_evidence = evidence_result.get("show_evidence", True)
+
     return AIAssistantResponse(
         answer=generation["answer"],
         model_id=evidence_result["model_id"],
-        evidence=evidence_result["evidence"],
-        items=evidence_result.get("items", []),
-        coverage=evidence_result.get("coverage"),
+        evidence=evidence_result["evidence"] if show_evidence else None,
+        items=evidence_result.get("items", []) if show_evidence else [],
+        coverage=evidence_result.get("coverage") if show_evidence else None,
         warnings=all_warnings,
         model_used=generation.get("model_used"),
         source=generation.get("source", "ollama"),
@@ -259,40 +261,6 @@ async def ask_ai_stream(req: AIAssistantRequest, request: Request):
                     },
                 )
 
-            # 4. If coordinates supplied, inspecting raster evidence
-            if req.latitude is not None and req.longitude is not None:
-                yield _format_sse(
-                    "status",
-                    {
-                        "type": "status",
-                        "stage": "inspecting_raster",
-                        "message": f"Inspecting raster values at ({req.latitude:.4f}°N, {req.longitude:.4f}°E)...",
-                    },
-                )
-
-            # 5. If statistical query, collecting statistics
-            is_stats = any(
-                k in cleaned_question.lower()
-                for k in (
-                    "stat",
-                    "mean",
-                    "coverage",
-                    "percent",
-                    "area",
-                    "distribution",
-                    "statewide",
-                )
-            )
-            if is_stats:
-                yield _format_sse(
-                    "status",
-                    {
-                        "type": "status",
-                        "stage": "collecting_statistics",
-                        "message": "Collecting statewide coverage and distribution statistics...",
-                    },
-                )
-
             # Perform actual GIS evidence retrieval
             evidence_result = retrieve_gis_evidence(
                 question=cleaned_question,
@@ -301,28 +269,62 @@ async def ask_ai_stream(req: AIAssistantRequest, request: Request):
                 longitude=req.longitude,
             )
 
-            # 6. Preparing evidence
-            yield _format_sse(
-                "status",
-                {
-                    "type": "status",
-                    "stage": "preparing_evidence",
-                    "message": "Preparing verified GIS facts for MCGSE AI...",
-                },
-            )
+            show_evidence = evidence_result.get("show_evidence", True)
 
-            # 7. Emit verified evidence event to frontend
-            yield _format_sse(
-                "evidence",
-                {
-                    "type": "evidence",
-                    "model_id": evidence_result["model_id"],
-                    "evidence": evidence_result["evidence"],
-                    "items": evidence_result.get("items", []),
-                    "coverage": evidence_result.get("coverage"),
-                    "warnings": evidence_result.get("warnings", []),
-                },
-            )
+            # 4-7. Only inspect raster and emit evidence if user queried coordinates or data
+            if show_evidence and evidence_result.get("evidence"):
+                if req.latitude is not None and req.longitude is not None:
+                    yield _format_sse(
+                        "status",
+                        {
+                            "type": "status",
+                            "stage": "inspecting_raster",
+                            "message": f"Inspecting raster values at ({req.latitude:.4f}°N, {req.longitude:.4f}°E)...",
+                        },
+                    )
+
+                is_stats = any(
+                    k in cleaned_question.lower()
+                    for k in (
+                        "stat",
+                        "mean",
+                        "coverage",
+                        "percent",
+                        "area",
+                        "distribution",
+                        "statewide",
+                    )
+                )
+                if is_stats:
+                    yield _format_sse(
+                        "status",
+                        {
+                            "type": "status",
+                            "stage": "collecting_statistics",
+                            "message": "Collecting statewide coverage and distribution statistics...",
+                        },
+                    )
+
+                yield _format_sse(
+                    "status",
+                    {
+                        "type": "status",
+                        "stage": "preparing_evidence",
+                        "message": "Preparing verified GIS facts for MCGSE AI...",
+                    },
+                )
+
+                yield _format_sse(
+                    "evidence",
+                    {
+                        "type": "evidence",
+                        "model_id": evidence_result["model_id"],
+                        "evidence": evidence_result["evidence"],
+                        "items": evidence_result.get("items", []),
+                        "coverage": evidence_result.get("coverage"),
+                        "warnings": evidence_result.get("warnings", []),
+                    },
+                )
 
             # 8. Generating answer
             yield _format_sse(
@@ -330,7 +332,7 @@ async def ask_ai_stream(req: AIAssistantRequest, request: Request):
                 {
                     "type": "status",
                     "stage": "generating_answer",
-                    "message": "Synthesizing answer from spatial evidence...",
+                    "message": "Synthesizing answer from spatial intelligence..." if show_evidence else "Responding to your question...",
                 },
             )
 
@@ -368,9 +370,9 @@ async def ask_ai_stream(req: AIAssistantRequest, request: Request):
                 "type": "done",
                 "answer": final_answer,
                 "model_id": evidence_result["model_id"],
-                "evidence": evidence_result["evidence"],
-                "items": evidence_result.get("items", []),
-                "coverage": evidence_result.get("coverage"),
+                "evidence": evidence_result["evidence"] if show_evidence else None,
+                "items": evidence_result.get("items", []) if show_evidence else [],
+                "coverage": evidence_result.get("coverage") if show_evidence else None,
                 "warnings": all_warnings,
                 "model_used": last_done.get("model_used")
                 if last_done

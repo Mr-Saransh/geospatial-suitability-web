@@ -50,6 +50,67 @@ function formatMarkdown(text: string): string {
   return `<p>${formatted}</p>`;
 }
 
+function isCoordinateOrDataQuestion(question: string): boolean {
+  const q = question.trim().toLowerCase();
+  if (!q) return false;
+
+  // Greetings or general introduction
+  const greetings = ["hi", "hello", "hey", "howdy", "good morning", "good evening", "who are you", "what can you do"];
+  if (greetings.includes(q)) return false;
+
+  // Conceptual questions like "what is gis in 10 words?" or "what is gis?"
+  const conceptualStarts = [
+    "what is gis", "what's gis", "what does gis", "define gis", "explain gis",
+    "what is mcda", "what is ahp", "what is remote sensing", "what is dem",
+    "who are you", "what are you", "what can you do", "how does this work",
+  ];
+  for (const prefix of conceptualStarts) {
+    if (q.startsWith(prefix) || q === prefix) {
+      if (!/(here|this point|this location|my coordinate|data|weight|fact)/.test(q)) {
+        return false;
+      }
+    }
+  }
+
+  // Coordinate / Location / Construction indicators
+  const coordPatterns = [
+    "here", "this place", "this location", "this point", "this spot", "this site", "this area",
+    "these coordinates", "selected point", "clicked point", "my location", "at point", "at coordinate",
+    "coordinate", "coordinates", "latitude", "longitude", "lat", "lon", "lng",
+    "build", "house", "home", "building", "construct", "construction", "safe to build",
+    "suitable", "suitability", "risk here", "hazard here", "flood here", "landslide here",
+    "score here", "limiting criteria", "limiting factor", "top factor", "primary factor",
+    "contributing factor", "why is this", "why classified", "why very low", "why low", "why moderate", "why high",
+    "shimla", "mandi", "kullu", "manali", "solan", "dharamshala", "kangra", "chamba", "bilaspur", "una", "hamirpur", "kinnaur", "lahaul", "spiti"
+  ];
+  if (coordPatterns.some((k) => q.includes(k))) return true;
+
+  // Check for numeric coordinates like "31.25, 77.62"
+  if (/\b\d{1,3}\.\d{2,}\b/.test(q)) return true;
+
+  // Data / Factor / Weight / Statistics indicators
+  const dataPatterns = [
+    "data", "dataset", "datasets", "evidence", "facts", "inspect facts", "weight", "weights",
+    "statistic", "statistics", "stats", "distribution", "percentage", "percent", "breakdown",
+    "coverage", "raster", "pixel", "raw value", "matrix", "pairwise", "consistency ratio",
+    "cr value", "values", "numbers", "compare models", "model comparison", "criteria"
+  ];
+  if (dataPatterns.some((k) => q.includes(k))) return true;
+
+  // Layer-specific data inquiries
+  const layerNames = [
+    "slope", "rainfall", "flow accumulation", "elevation",
+    "distance to rivers", "twi", "aspect", "curvature",
+    "soil", "lithology", "land use", "lulc", "ndvi", "fault"
+  ];
+  if (layerNames.some((layer) => q.includes(layer))) {
+    const dataTerms = ["value", "number", "level", "contrib", "rating", "measure", "score", "high", "low", "much", "many", "how steep", "data"];
+    if (dataTerms.some((dt) => q.includes(dt))) return true;
+  }
+
+  return false;
+}
+
 function EvidenceAccordion({
   evidence,
   items = [],
@@ -345,13 +406,18 @@ export default function AIPanel({
         content: m.text,
       }));
 
+      // Determine if the question asks for coordinate, location, or data evidence
+      const isCoordOrData = isCoordinateOrDataQuestion(questionText);
+      const latToSend = isCoordOrData ? zone?.lat : undefined;
+      const lngToSend = isCoordOrData ? zone?.lng : undefined;
+
       try {
         await api.askAIStream(
           {
             question: questionText,
             model_id: activeModelId,
-            latitude: zone?.lat,
-            longitude: zone?.lng,
+            latitude: latToSend,
+            longitude: lngToSend,
             history: historyPayload,
           },
           {
@@ -359,14 +425,15 @@ export default function AIPanel({
               setCurrentStageMessage(st.message);
             },
             onEvidence: (ev: AIEvidenceStreamEvent) => {
+              if (!isCoordOrData || !ev.evidence) return;
               setMessages((prev) => {
                 const next = [...prev];
                 const lastIdx = next.length - 1;
                 if (lastIdx >= 0 && next[lastIdx].role === "assistant") {
                   next[lastIdx] = {
                     ...next[lastIdx],
-                    evidence: ev.evidence,
-                    items: ev.items,
+                    evidence: ev.evidence || undefined,
+                    items: ev.items || [],
                     warnings: ev.warnings,
                   };
                 }
@@ -387,9 +454,10 @@ export default function AIPanel({
               });
             },
             onDone: (doneData: AIDoneStreamEvent) => {
-              // Contextual layer action buttons if top factors present
               const actions: AIMessage["actions"] = [];
-              const ev = doneData.evidence;
+              const shouldShowEvidence = isCoordOrData && !!doneData.evidence;
+              const ev = shouldShowEvidence ? doneData.evidence : undefined;
+
               if (ev?.point_inspection?.top_factors) {
                 for (const f of ev.point_inspection.top_factors.slice(0, 2)) {
                   actions.push({
@@ -407,8 +475,8 @@ export default function AIPanel({
                   next[lastIdx] = {
                     role: "assistant",
                     text: doneData.answer || next[lastIdx].text,
-                    evidence: doneData.evidence,
-                    items: doneData.items,
+                    evidence: shouldShowEvidence ? (doneData.evidence || undefined) : undefined,
+                    items: shouldShowEvidence ? (doneData.items || []) : [],
                     warnings: doneData.warnings,
                     source: doneData.source,
                     modelUsed: doneData.model_used || undefined,
