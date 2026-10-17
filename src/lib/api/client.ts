@@ -24,10 +24,25 @@ const STORAGE_KEY = "mcgse_api_url";
 /** Return the currently active backend base URL (no trailing slash). */
 export function getApiBaseUrl(): string {
   try {
+    if (typeof window !== "undefined" && window.location) {
+      const params = new URLSearchParams(window.location.search);
+      const queryApi = params.get("api");
+      if (queryApi) {
+        const clean = queryApi.trim().replace(/\/+$/, "");
+        if (clean) {
+          localStorage.setItem(STORAGE_KEY, clean);
+          return clean;
+        }
+      }
+    }
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) return stored.replace(/\/+$/, "");
+    if (stored && !stored.includes("trycloudflare.com")) {
+      return stored.replace(/\/+$/, "");
+    } else if (stored && stored.includes("trycloudflare.com")) {
+      localStorage.removeItem(STORAGE_KEY);
+    }
   } catch { /* localStorage unavailable */ }
-  return (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
+  return (import.meta.env.VITE_API_BASE_URL || "https://outreach-freely-causal.ngrok-free.dev").replace(/\/+$/, "");
 }
 
 /** Persist a new backend URL (used by the settings UI). */
@@ -47,23 +62,33 @@ export function resetApiBaseUrl(): void {
   try { localStorage.removeItem(STORAGE_KEY); } catch { /* */ }
 }
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+async function request<T>(path: string, options?: RequestInit, retries = 2): Promise<T> {
   const url = `${getApiBaseUrl()}${path}`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
   try {
     const res = await fetch(url, {
       ...options,
+      signal: options?.signal || controller.signal,
       headers: {
         "Content-Type": "application/json",
         "ngrok-skip-browser-warning": "true",
         ...options?.headers,
       },
     });
+    clearTimeout(timeoutId);
     if (!res.ok) {
       const errorBody = await res.text().catch(() => "");
       throw new Error(`API error ${res.status}: ${res.statusText} — ${errorBody}`);
     }
     return (await res.json()) as T;
   } catch (err: unknown) {
+    clearTimeout(timeoutId);
+    // Retry on transient failures (network errors, timeouts)
+    if (retries > 0 && err instanceof Error && (err.name === "AbortError" || err.message.includes("fetch"))) {
+      await new Promise(r => setTimeout(r, 500 * (3 - retries)));
+      return request<T>(path, options, retries - 1);
+    }
     console.error(`Request failed for ${url}:`, err);
     throw err;
   }

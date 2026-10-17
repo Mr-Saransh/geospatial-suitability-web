@@ -126,8 +126,16 @@ export default function MapLayersPanel({
 
   if (!open) return null;
 
+  // Radio-style: only one layer visible at a time
   const toggleLayer = (id: string) => {
-    setLayers(layers.map((l) => (l.id === id ? { ...l, visible: !l.visible } : l)));
+    const target = layers.find((l) => l.id === id);
+    if (target?.visible) {
+      // Already visible, just select it (don't hide — always keep one visible)
+      onSelectLayer(id);
+      return;
+    }
+    // Make only this layer visible, hide all others
+    setLayers(layers.map((l) => ({ ...l, visible: l.id === id })));
     onSelectLayer(id);
   };
 
@@ -135,59 +143,26 @@ export default function MapLayersPanel({
     setLayers(layers.map((l) => (l.id === id ? { ...l, opacity: v } : l)));
   };
 
-  const showAll = () => setLayers(layers.map((l) => ({ ...l, visible: true })));
-  const hideAll = () => setLayers(layers.map((l) => ({ ...l, visible: false })));
+  // Filter: only show RESULT layers (classified/continuous), hide raw FACTOR, RATING, QUALITY
+  const displayLayers = layers.filter(
+    (l) =>
+      l.layerType === "RESULT" ||
+      l.group === "composite" ||
+      l.id.includes("suitability"),
+  );
 
-  // Categories (Excluding missing criteria bitmasks per public UI rules)
+  // Categories — only Results category since raw/rating/quality are hidden
   const categories = [
     {
       id: "results",
-      label: "Results",
+      label: "Susceptibility Layers",
       icon: "results" as const,
-      layers: layers
-        .filter(
-          (l) =>
-            l.group === "composite" || l.layerType === "RESULT" || l.id.includes("suitability"),
-        )
+      layers: displayLayers
         .sort((a, b) => {
           const idxA = RESULT_ORDER.indexOf(a.id);
           const idxB = RESULT_ORDER.indexOf(b.id);
           return (idxA !== -1 ? idxA : 99) - (idxB !== -1 ? idxB : 99);
         }),
-    },
-    {
-      id: "hydro",
-      label: "Hydrology",
-      icon: "hydro" as const,
-      layers: layers.filter((l) => l.group === "hydrological"),
-    },
-    {
-      id: "topo",
-      label: "Terrain",
-      icon: "topo" as const,
-      layers: layers.filter((l) => l.group === "topographic"),
-    },
-    {
-      id: "geo",
-      label: "Geology",
-      icon: "geo" as const,
-      layers: layers.filter((l) => l.group === "geological"),
-    },
-    {
-      id: "env",
-      label: "Environment",
-      icon: "env" as const,
-      layers: layers.filter((l) => l.group === "environmental"),
-    },
-    {
-      id: "quality",
-      label: "Data coverage",
-      icon: "quality" as const,
-      layers: layers.filter(
-        (l) =>
-          (l.group === "quality" || l.layerType === "QUALITY" || l.id.includes("criteria")) &&
-          !l.id.includes("bitmask"),
-      ),
     },
   ];
 
@@ -210,7 +185,7 @@ export default function MapLayersPanel({
             Map Layers
           </span>
           <span
-            className="text-[11px] font-medium px-1.5 py-0.5 rounded"
+            className="text-[11px] font-medium px-1.5 py-0.5 rounded hidden"
             style={{
               background: "var(--c-accent-dim)",
               color: "var(--c-accent)",
@@ -221,24 +196,6 @@ export default function MapLayersPanel({
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 text-[11px]">
-            <button
-              onClick={showAll}
-              className="px-1.5 py-0.5 rounded transition-colors hover:bg-[var(--c-accent-dim)]"
-              style={{ color: "var(--c-accent)" }}
-            >
-              All
-            </button>
-            <span style={{ color: "var(--c-text3)" }}>·</span>
-            <button
-              onClick={hideAll}
-              className="px-1.5 py-0.5 rounded transition-colors hover:bg-[rgba(255,255,255,0.05)]"
-              style={{ color: "var(--c-text2)" }}
-            >
-              None
-            </button>
-          </div>
-
           <button
             onClick={onClose}
             className="w-6 h-6 flex items-center justify-center rounded transition-colors hover:bg-[rgba(255,255,255,0.06)] text-[var(--c-text3)] hover:text-[var(--c-text)] ml-1"

@@ -29,6 +29,7 @@ interface Props {
   theme?: "dark" | "light";
   activeModelId?: string;
   activeModelName?: string;
+  onToggleFullscreen?: () => void;
 }
 
 // Custom neon pin icon for selected inspection point
@@ -313,6 +314,7 @@ export default function MapCanvas({
   theme = "dark",
   activeModelId,
   activeModelName,
+  onToggleFullscreen,
 }: Props) {
   const [zoom, setZoom] = useState(8);
   const [coord, setCoord] = useState({ lat: 31.1048, lng: 77.1734 });
@@ -367,6 +369,10 @@ export default function MapCanvas({
   const activeColor = selectedZone ? SUIT_META[selectedZone.cls]?.color || "#00b4d8" : "#00b4d8";
 
   const toggleFullscreen = () => {
+    if (onToggleFullscreen) {
+      onToggleFullscreen();
+      return;
+    }
     if (!document.fullscreenElement) {
       mapContainerRef.current?.requestFullscreen().catch(() => {});
     } else {

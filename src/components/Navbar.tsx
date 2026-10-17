@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { HIMACHAL_LOCATIONS } from "../data";
 import type { ModelSummary } from "../lib/api/types";
+import ConnectionModal from "./ConnectionModal";
 import {
   IconSearch,
   IconCompare,
@@ -103,6 +104,7 @@ export default function Navbar({
   onReconnect,
 }: Props) {
   const [modelOpen, setModelOpen] = useState(false);
+  const [connectionOpen, setConnectionOpen] = useState(false);
   const [overflowOpen, setOverflowOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
@@ -492,31 +494,6 @@ export default function Navbar({
             )}
           </div>
 
-          {/* Map Layers Action Button (Beside Search on Desktop/Tablet) */}
-          <button
-            onClick={onLayers}
-            title="Map Layers (Toggle Floating Panel)"
-            className="hidden md:flex items-center gap-2 h-9 sm:h-10 px-3 rounded-lg text-xs sm:text-[13px] font-semibold transition-all cursor-pointer flex-shrink-0"
-            style={{
-              background: layersOpen ? "var(--c-accent-dim)" : "var(--c-panel)",
-              border: `1px solid ${layersOpen ? "var(--c-accent)" : "var(--c-border)"}`,
-              color: layersOpen ? "var(--c-accent)" : "var(--c-text)",
-            }}
-          >
-            <IconLayers size={15} style={{ color: layersOpen ? "var(--c-accent)" : "var(--c-text2)" }} />
-            <span>Layers</span>
-            {layerCount !== undefined && (
-              <span
-                className="text-[11px] font-mono px-1.5 py-0.5 rounded"
-                style={{
-                  background: layersOpen ? "var(--c-accent)" : "var(--c-border2)",
-                  color: layersOpen ? "var(--c-base)" : "var(--c-text2)",
-                }}
-              >
-                {layerCount}
-              </span>
-            )}
-          </button>
 
           {/* Compare Layers Action Button (Beside Search on Desktop/Tablet) */}
           <button
@@ -551,6 +528,30 @@ export default function Navbar({
             <NavBtn label="Export" Icon={IconExport} onClick={onExport} />
             <NavBtn label="Help" Icon={IconHelp} onClick={onHelp} />
           </div>
+
+          {/* Backend Connection Status Badge */}
+          <button
+            onClick={() => setConnectionOpen(true)}
+            title={`Backend Status: ${backendStatus} — Click to view / change API URL`}
+            className="flex items-center gap-1.5 h-9 sm:h-10 px-2 sm:px-2.5 rounded-lg text-xs font-mono font-medium transition-colors hover:bg-[rgba(255,255,255,0.06)] cursor-pointer"
+            style={{
+              background: "var(--c-panel)",
+              border: "1px solid var(--c-border)",
+            }}
+          >
+            <span
+              className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                backendStatus === "connected"
+                  ? "bg-[#00c896]"
+                  : backendStatus === "connecting"
+                  ? "bg-[#f59e0b] animate-pulse"
+                  : "bg-[#ef4444]"
+              }`}
+            />
+            <span className="hidden sm:inline text-[11px] text-[var(--c-text2)] capitalize">
+              {backendStatus === "connected" ? "Live" : backendStatus === "connecting" ? "Sync" : "Offline"}
+            </span>
+          </button>
 
           {/* Theme Switcher */}
           <button
@@ -743,6 +744,14 @@ export default function Navbar({
           onClick={() => setModelOpen(false)}
         />
       )}
+
+      {/* Backend & Tunnel Connection Modal */}
+      <ConnectionModal
+        open={connectionOpen}
+        onClose={() => setConnectionOpen(false)}
+        status={backendStatus}
+        onReconnect={onReconnect}
+      />
     </header>
   );
 }

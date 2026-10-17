@@ -425,3 +425,34 @@ select:disabled {
   background: var(--c-border2);
   margin: 8px auto 4px;
 }
+
+/* ─── Landscape Phone Compatibility (h <= 520px) ─── */
+@media (max-height: 520px) and (orientation: landscape) {
+  header {
+    height: 42px !important;
+  }
+  header button,
+  header input {
+    height: 32px !important;
+    font-size: 12px !important;
+  }
+  .mobile-bottom-sheet {
+    max-height: calc(100dvh - 46px) !important;
+    height: 88vh !important;
+  }
+  .drag-handle {
+    margin: 4px auto 2px !important;
+  }
+  /* Map layers and floating panels in landscape */
+  .absolute.top-3.left-3 {
+    top: 6px !important;
+    left: 6px !important;
+    max-height: calc(100vh - 52px) !important;
+  }
+  /* Bottom status bar in landscape */
+  .absolute.bottom-0.left-0.right-0 {
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
+    font-size: 10px !important;
+  }
+}

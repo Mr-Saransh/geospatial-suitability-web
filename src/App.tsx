@@ -29,24 +29,29 @@ import { getCoverageInfo } from "./utils/coverage";
 import { IconMap, IconLayers, IconAnalyze, IconChart, IconBot } from "./icons";
 
 function useViewport() {
-  const [viewport, setViewport] = useState({
-    isMobile: typeof window !== "undefined" ? window.innerWidth < 768 : false,
-    isTablet:
-      typeof window !== "undefined" ? window.innerWidth >= 768 && window.innerWidth < 1024 : false,
-    isDesktop: typeof window !== "undefined" ? window.innerWidth >= 1024 : true,
-  });
+  const getStates = () => {
+    if (typeof window === "undefined") {
+      return { isMobile: false, isTablet: false, isDesktop: true, isLandscapePhone: false };
+    }
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const isLandscapePhone = h < 520 && w < 1024 && w > h;
+    const isMobile = w < 768 || isLandscapePhone;
+    const isTablet = !isLandscapePhone && w >= 768 && w < 1024;
+    const isDesktop = !isLandscapePhone && w >= 1024;
+    return { isMobile, isTablet, isDesktop, isLandscapePhone };
+  };
+
+  const [viewport, setViewport] = useState(getStates);
 
   useEffect(() => {
-    const handleResize = () => {
-      const w = window.innerWidth;
-      setViewport({
-        isMobile: w < 768,
-        isTablet: w >= 768 && w < 1024,
-        isDesktop: w >= 1024,
-      });
-    };
+    const handleResize = () => setViewport(getStates());
     window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    window.addEventListener("orientationchange", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("orientationchange", handleResize);
+    };
   }, []);
 
   return viewport;
@@ -64,6 +69,15 @@ export default function App() {
   const [aiOpen, setAiOpen] = useState(false);
   const [modal, setModal] = useState<AppModal>(null);
   const [helpSection, setHelpSection] = useState<"guide" | "data-models">("guide");
+  const mapViewportRef = useRef<HTMLDivElement>(null);
+
+  const handleToggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      mapViewportRef.current?.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  };
 
   // Auto-close overlay drawers when switching to small screens
   useEffect(() => {
@@ -170,9 +184,12 @@ export default function App() {
       }
 
       if (layersRes.length > 0) {
-        // Filter out internal bitmask raster from public layers
+        // Filter: show only RESULT layers (classified/continuous), not raw factors or ratings
         const publicLayersRes = layersRes.filter(
-          (l: LayerInfo) => !l.product_id.includes("bitmask") && !l.layer_name?.includes("bitmask"),
+          (l: LayerInfo) =>
+            !l.product_id.includes("bitmask") &&
+            !l.layer_name?.includes("bitmask") &&
+            (l.type === "RESULT" || l.product_id.includes("suitability")),
         );
 
         const defaultClassifiedId = publicLayersRes.find(
@@ -256,32 +273,19 @@ export default function App() {
     loadBackend();
   }, [loadBackend]);
 
-  // Smart auto-sync polling: pings health every 1.5s when disconnected so data renders immediately when backend starts
+  // Event-driven check: only re-check when the user returns/focuses the tab if currently offline
+  // ZERO interval polling — eliminates background requests and completely preserves ngrok quota!
   useEffect(() => {
-    let timer: ReturnType<typeof setInterval> | null = null;
-    let isCancelled = false;
-
-    const poll = async () => {
-      try {
-        const health = await api.getHealth();
-        if (health?.status === "healthy" && !isCancelled) {
-          if (backendStatus !== "connected") {
-            await loadBackend();
-          }
-        }
-      } catch {
-        if (!isCancelled && backendStatus === "connected") {
-          setBackendStatus("offline");
-        }
+    const handleFocus = () => {
+      if (document.visibilityState === "visible" && backendStatus === "offline") {
+        loadBackend();
       }
     };
-
-    const intervalMs = backendStatus === "connected" ? 20000 : 1500;
-    timer = setInterval(poll, intervalMs);
-
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleFocus);
     return () => {
-      isCancelled = true;
-      if (timer) clearInterval(timer);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleFocus);
     };
   }, [backendStatus, loadBackend]);
 
@@ -421,6 +425,7 @@ export default function App() {
 
   const handleSelectLayer = (id: string) => {
     setActiveLayerId(id);
+    // Radio-style: only one layer visible at a time
     setLayers((prev) =>
       prev.map((l) => ({
         ...l,
@@ -431,6 +436,7 @@ export default function App() {
 
   const handleLayerEvidence = (id: string) => {
     setActiveLayerId(id);
+    // Radio-style: only one layer visible at a time
     setLayers((prev) =>
       prev.map((l) => ({
         ...l,
@@ -579,7 +585,7 @@ export default function App() {
         )}
 
         {/* Map Canvas (Dominant centerpiece) */}
-        <div className="relative flex-1 overflow-hidden">
+        <div ref={mapViewportRef} className="relative flex-1 overflow-hidden">
           <MapCanvas
             selectedZone={selectedZone}
             selectedMapCoordinate={selectedMapCoordinate}
@@ -589,6 +595,7 @@ export default function App() {
             onCompare={() => setCompareOpen((v) => !v)}
             layersOpen={layersOpen}
             onToggleLayers={() => setLayersOpen((v) => !v)}
+            onToggleFullscreen={handleToggleFullscreen}
             basemap={basemap}
             onCoordChange={setCoord}
             centerTarget={centerTarget}
