@@ -143,42 +143,57 @@ export default function HelpModal({
     ["Hazard Model", `${hazardName} Multi-Criteria Susceptibility Evaluation`],
     ["Analysis Area", "Geospatial Multi-Criteria Study Domain"],
     ["Spatial Resolution", "30 m ground pixel resolution"],
-    ["Coordinate Reference System", String(isLandslide ? "EPSG:32643 (UTM 43N)" : "EPSG:4326 (WGS84)")],
-    ["Factor Count", `${modelDetail?.criterion_count || (isLandslide ? 14 : 11)} physical criteria`],
-    ["Evaluation Methodology", isLandslide ? "Multi-Criteria Decision Analysis (MCDA)" : "Analytical Hierarchy Process (AHP Saaty)"],
+    [
+      "Coordinate Reference System",
+      String(isLandslide ? "EPSG:32643 (UTM 43N)" : "EPSG:4326 (WGS84)"),
+    ],
+    [
+      "Factor Count",
+      `${modelDetail?.criterion_count || (isLandslide ? 14 : 11)} physical criteria`,
+    ],
+    [
+      "Evaluation Methodology",
+      isLandslide
+        ? "Multi-Criteria Decision Analysis (MCDA)"
+        : "Analytical Hierarchy Process (AHP Saaty)",
+    ],
     ["Canonical Scale", "1 to 5 Relative Susceptibility (Very Low to Very High)"],
     ["Scoring Normalization", "Renormalized Available Evidence + Strict Verification"],
     ["Spatial Package Release", "September 2026 · Canonical Package v1.0"],
   ];
 
-  const weights = modelDetail?.weights || (isLandslide ? [
-    { criterion_id: "slope", weight: 0.23 },
-    { criterion_id: "lithology", weight: 0.15 },
-    { criterion_id: "lineament_density", weight: 0.15 },
-    { criterion_id: "drainage_density", weight: 0.09 },
-    { criterion_id: "rainfall_10_year", weight: 0.08 },
-    { criterion_id: "relative_relief", weight: 0.07 },
-    { criterion_id: "twi", weight: 0.05 },
-    { criterion_id: "geomorphology", weight: 0.04 },
-    { criterion_id: "soil", weight: 0.04 },
-    { criterion_id: "distance_to_faults", weight: 0.03 },
-    { criterion_id: "distance_to_roads", weight: 0.03 },
-    { criterion_id: "lulc", weight: 0.02 },
-    { criterion_id: "aspect", weight: 0.01 },
-    { criterion_id: "ndvi", weight: 0.01 },
-  ] : [
-    { criterion_id: "slope", weight: 0.230588 },
-    { criterion_id: "distance_to_rivers", weight: 0.148021 },
-    { criterion_id: "twi", weight: 0.142168 },
-    { criterion_id: "rainfall", weight: 0.132592 },
-    { criterion_id: "flow_accumulation", weight: 0.111538 },
-    { criterion_id: "drainage_density", weight: 0.066758 },
-    { criterion_id: "lulc", weight: 0.057282 },
-    { criterion_id: "elevation", weight: 0.034521 },
-    { criterion_id: "soil", weight: 0.03173 },
-    { criterion_id: "curvature", weight: 0.028179 },
-    { criterion_id: "ndvi", weight: 0.016624 },
-  ]);
+  const weights =
+    modelDetail?.weights ||
+    (isLandslide
+      ? [
+          { criterion_id: "slope", weight: 0.23 },
+          { criterion_id: "lithology", weight: 0.15 },
+          { criterion_id: "lineament_density", weight: 0.15 },
+          { criterion_id: "drainage_density", weight: 0.09 },
+          { criterion_id: "rainfall_10_year", weight: 0.08 },
+          { criterion_id: "relative_relief", weight: 0.07 },
+          { criterion_id: "twi", weight: 0.05 },
+          { criterion_id: "geomorphology", weight: 0.04 },
+          { criterion_id: "soil", weight: 0.04 },
+          { criterion_id: "distance_to_faults", weight: 0.03 },
+          { criterion_id: "distance_to_roads", weight: 0.03 },
+          { criterion_id: "lulc", weight: 0.02 },
+          { criterion_id: "aspect", weight: 0.01 },
+          { criterion_id: "ndvi", weight: 0.01 },
+        ]
+      : [
+          { criterion_id: "slope", weight: 0.230588 },
+          { criterion_id: "distance_to_rivers", weight: 0.148021 },
+          { criterion_id: "twi", weight: 0.142168 },
+          { criterion_id: "rainfall", weight: 0.132592 },
+          { criterion_id: "flow_accumulation", weight: 0.111538 },
+          { criterion_id: "drainage_density", weight: 0.066758 },
+          { criterion_id: "lulc", weight: 0.057282 },
+          { criterion_id: "elevation", weight: 0.034521 },
+          { criterion_id: "soil", weight: 0.03173 },
+          { criterion_id: "curvature", weight: 0.028179 },
+          { criterion_id: "ndvi", weight: 0.016624 },
+        ]);
 
   return (
     <Modal title="Help & Documentation" onClose={onClose} width={800}>
@@ -205,10 +220,16 @@ export default function HelpModal({
                 background: activeSection === "guide" ? "var(--c-surface)" : "transparent",
                 color: activeSection === "guide" ? "var(--c-text)" : "var(--c-text3)",
                 boxShadow: activeSection === "guide" ? "0 2px 8px rgba(0,0,0,0.25)" : "none",
-                border: activeSection === "guide" ? "1px solid var(--c-border2)" : "1px solid transparent",
+                border:
+                  activeSection === "guide"
+                    ? "1px solid var(--c-border2)"
+                    : "1px solid transparent",
               }}
             >
-              <IconHelp size={14} style={{ color: activeSection === "guide" ? "var(--c-accent)" : "currentColor" }} />
+              <IconHelp
+                size={14}
+                style={{ color: activeSection === "guide" ? "var(--c-accent)" : "currentColor" }}
+              />
               <span>Platform Guide</span>
             </button>
 
@@ -219,15 +240,26 @@ export default function HelpModal({
                 background: activeSection === "data-models" ? "var(--c-surface)" : "transparent",
                 color: activeSection === "data-models" ? "var(--c-text)" : "var(--c-text3)",
                 boxShadow: activeSection === "data-models" ? "0 2px 8px rgba(0,0,0,0.25)" : "none",
-                border: activeSection === "data-models" ? "1px solid var(--c-border2)" : "1px solid transparent",
+                border:
+                  activeSection === "data-models"
+                    ? "1px solid var(--c-border2)"
+                    : "1px solid transparent",
               }}
             >
-              <IconDatabase size={14} style={{ color: activeSection === "data-models" ? "var(--c-accent)" : "currentColor" }} />
+              <IconDatabase
+                size={14}
+                style={{
+                  color: activeSection === "data-models" ? "var(--c-accent)" : "currentColor",
+                }}
+              />
               <span>About the Data & Models</span>
               <span
                 className="hidden sm:inline-block text-[9.5px] px-1.5 py-0.2 rounded font-mono font-medium"
                 style={{
-                  background: activeSection === "data-models" ? "var(--c-accent-dim)" : "rgba(255,255,255,0.05)",
+                  background:
+                    activeSection === "data-models"
+                      ? "var(--c-accent-dim)"
+                      : "rgba(255,255,255,0.05)",
                   color: activeSection === "data-models" ? "var(--c-accent)" : "var(--c-text3)",
                   border: "1px solid var(--c-border)",
                 }}
@@ -358,9 +390,9 @@ export default function HelpModal({
                   MCGSE Multi-Criteria Spatial Evaluation Platform
                 </div>
                 <div className="text-xs text-[var(--c-text2)] leading-relaxed">
-                  MCGSE combines high-resolution environmental datasets (terrain, hydrology, geology,
-                  precipitation) to evaluate relative hazard susceptibility across the active study area at
-                  30-meter resolution.
+                  MCGSE combines high-resolution environmental datasets (terrain, hydrology,
+                  geology, precipitation) to evaluate relative hazard susceptibility across the
+                  active study area at 30-meter resolution.
                 </div>
               </div>
             </div>
@@ -416,7 +448,9 @@ export default function HelpModal({
                         color: "var(--c-text3)",
                       }}
                     >
-                      <span style={{ color: "var(--c-accent)" }} className="font-bold">›</span>
+                      <span style={{ color: "var(--c-accent)" }} className="font-bold">
+                        ›
+                      </span>
                       <span className="truncate">{topic.hint}</span>
                     </div>
                   </div>
@@ -448,7 +482,8 @@ export default function HelpModal({
                     Need Technical Methodology & Factor Weights?
                   </div>
                   <div className="text-[11px] text-[var(--c-text3)]">
-                    View spatial reference systems, Saaty consistency ratios, factor weights, and data sources in the About the Data & Models section.
+                    View spatial reference systems, Saaty consistency ratios, factor weights, and
+                    data sources in the About the Data & Models section.
                   </div>
                 </div>
               </div>
@@ -497,8 +532,9 @@ export default function HelpModal({
                   </span>
                 </div>
                 <div className="text-xs text-[var(--c-text2)] leading-relaxed">
-                  Canonical Spatial Package metadata, mathematical decision matrices, coordinate reference systems,
-                  and environmental factor contributions for the evaluation domain.
+                  Canonical Spatial Package metadata, mathematical decision matrices, coordinate
+                  reference systems, and environmental factor contributions for the evaluation
+                  domain.
                 </div>
               </div>
             </div>
@@ -526,7 +562,9 @@ export default function HelpModal({
                     className="flex items-center justify-between text-xs py-1.5 border-b border-[var(--c-border)] last:border-0"
                   >
                     <span className="text-[var(--c-text3)]">{k}</span>
-                    <span className="font-mono text-[var(--c-text)] text-[11px] font-medium">{v}</span>
+                    <span className="font-mono text-[var(--c-text)] text-[11px] font-medium">
+                      {v}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -557,7 +595,9 @@ export default function HelpModal({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2">
                 {weights.map((w) => {
                   const info = CRITERIA_INFO[w.criterion_id];
-                  const label = info?.label || w.criterion_id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+                  const label =
+                    info?.label ||
+                    w.criterion_id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
                   const pct = (w.weight * 100).toFixed(2);
                   return (
                     <div
@@ -592,7 +632,9 @@ export default function HelpModal({
                       {info && (
                         <div className="flex items-center justify-between text-[10px] text-[var(--c-text3)] pt-0.5">
                           <span>Unit: {info.unit || "Normalized"}</span>
-                          <span className="truncate max-w-[140px] font-mono">{info.source.split(" ")[0]}</span>
+                          <span className="truncate max-w-[140px] font-mono">
+                            {info.source.split(" ")[0]}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -660,9 +702,13 @@ export default function HelpModal({
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-semibold text-[var(--c-text)]">{s.domain}</span>
-                      <span className="text-[10px] font-mono text-[var(--c-accent)]">{s.source}</span>
+                      <span className="text-[10px] font-mono text-[var(--c-accent)]">
+                        {s.source}
+                      </span>
                     </div>
-                    <p className="text-[11px] text-[var(--c-text2)] leading-relaxed m-0">{s.desc}</p>
+                    <p className="text-[11px] text-[var(--c-text2)] leading-relaxed m-0">
+                      {s.desc}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -696,9 +742,10 @@ export default function HelpModal({
               </div>
 
               <p className="text-xs text-[var(--c-text2)] leading-relaxed m-0">
-                The Saaty Consistency Ratio (CR) measures judgment consistency in pairwise factor ratings.
-                CR must remain under 0.10 (10%) for a model to be validated. Current model CR:{" "}
-                <strong className="text-[var(--c-accent)] font-mono">0.0158 (1.58%)</strong> — verified mathematically consistent.
+                The Saaty Consistency Ratio (CR) measures judgment consistency in pairwise factor
+                ratings. CR must remain under 0.10 (10%) for a model to be validated. Current model
+                CR: <strong className="text-[var(--c-accent)] font-mono">0.0158 (1.58%)</strong> —
+                verified mathematically consistent.
               </p>
 
               {showTechnicalAudit && (
@@ -729,7 +776,9 @@ export default function HelpModal({
                   </div>
                   <div className="flex justify-between py-0.5">
                     <span className="text-[var(--c-text3)]">Scoring Engine</span>
-                    <span className="text-[var(--c-text2)]">MCGSE Spatial Engine · Renormalized Available Evidence</span>
+                    <span className="text-[var(--c-text2)]">
+                      MCGSE Spatial Engine · Renormalized Available Evidence
+                    </span>
                   </div>
                 </div>
               )}
@@ -745,7 +794,9 @@ export default function HelpModal({
               }}
             >
               <strong className="text-[var(--c-sand)]">Scientific Usage Note: </strong>
-              Susceptibility scores represent a relative physical model-based evaluation of site characteristics and environmental predisposition. They do not constitute an operational forecast or guarantee of immediate event occurrence.
+              Susceptibility scores represent a relative physical model-based evaluation of site
+              characteristics and environmental predisposition. They do not constitute an
+              operational forecast or guarantee of immediate event occurrence.
             </div>
           </div>
         )}

@@ -1,9 +1,6 @@
 {
   "include": ["backend"],
-  "extraPaths": [
-    "backend",
-    "C:/gee_env/Lib/site-packages"
-  ],
+  "extraPaths": ["backend", "C:/gee_env/Lib/site-packages"],
   "venvPath": "C:/",
   "venv": "gee_env"
 }

@@ -41,8 +41,10 @@ export function getApiBaseUrl(): string {
     } else if (stored && stored.includes("trycloudflare.com")) {
       localStorage.removeItem(STORAGE_KEY);
     }
-  } catch { /* localStorage unavailable */ }
-  return (import.meta.env.VITE_API_BASE_URL || "https://outreach-freely-causal.ngrok-free.dev").replace(/\/+$/, "");
+  } catch {
+    /* localStorage unavailable */
+  }
+  return (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
 }
 
 /** Persist a new backend URL (used by the settings UI). */
@@ -54,12 +56,18 @@ export function setApiBaseUrl(url: string): void {
     } else {
       localStorage.removeItem(STORAGE_KEY);
     }
-  } catch { /* localStorage unavailable */ }
+  } catch {
+    /* localStorage unavailable */
+  }
 }
 
 /** Clear the stored override so the build-time default is used again. */
 export function resetApiBaseUrl(): void {
-  try { localStorage.removeItem(STORAGE_KEY); } catch { /* */ }
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    /* */
+  }
 }
 
 async function request<T>(path: string, options?: RequestInit, retries = 2): Promise<T> {
@@ -85,8 +93,12 @@ async function request<T>(path: string, options?: RequestInit, retries = 2): Pro
   } catch (err: unknown) {
     clearTimeout(timeoutId);
     // Retry on transient failures (network errors, timeouts)
-    if (retries > 0 && err instanceof Error && (err.name === "AbortError" || err.message.includes("fetch"))) {
-      await new Promise(r => setTimeout(r, 500 * (3 - retries)));
+    if (
+      retries > 0 &&
+      err instanceof Error &&
+      (err.name === "AbortError" || err.message.includes("fetch"))
+    ) {
+      await new Promise((r) => setTimeout(r, 500 * (3 - retries)));
       return request<T>(path, options, retries - 1);
     }
     console.error(`Request failed for ${url}:`, err);

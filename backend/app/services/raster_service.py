@@ -475,18 +475,44 @@ def _get_layer_value_range(
     return 0.0, 1.0
 
 
+def invalidate_caches(model_id: str | None = None) -> None:
+    """Invalidate tile, boundary, range, and statistics caches upon package refresh."""
+    if model_id:
+        _stats_cache.pop(model_id, None)
+        to_del_tiles = [
+            k
+            for k in _tile_cache
+            if k.startswith(f"{model_id}:")
+            or f"_{model_id}_" in k
+            or f":{model_id}:" in k
+        ]
+        for k in to_del_tiles:
+            _tile_cache.pop(k, None)
+    else:
+        _tile_cache.clear()
+        _layer_bounds_3857.clear()
+        _layer_range_cache.clear()
+        _stats_cache.clear()
+    logger.info("Raster service caches invalidated (model=%s)", model_id or "all")
+
+
 def render_tile(
-    layer_id: str, z: int, x: int, y: int, tile_size: int = 256
+    layer_id: str,
+    z: int,
+    x: int,
+    y: int,
+    tile_size: int = 256,
+    model_id: str | None = None,
 ) -> bytes | None:
     """
     Render a single map tile as a PNG image in EPSG:3857 Web Mercator.
     Guarantees raster stays strictly on the geographic boundary of the state.
     """
-    cache_key = f"{layer_id}:{z}:{x}:{y}:{tile_size}"
+    cache_key = f"{model_id or 'all'}:{layer_id}:{z}:{x}:{y}:{tile_size}"
     if cache_key in _tile_cache:
         return _tile_cache[cache_key]
 
-    layer = repository.get_layer(layer_id)
+    layer = repository.get_layer(layer_id, model_id=model_id)
     if not layer:
         return None
 

@@ -247,7 +247,9 @@ class AIChatHistoryItem(BaseModel):
 
 
 class StructuredEvidenceItem(BaseModel):
-    id: str = Field(..., description="Stable evidence identifier (e.g. 'flood:weight:slope')")
+    id: str = Field(
+        ..., description="Stable evidence identifier (e.g. 'flood:weight:slope')"
+    )
     model_id: str = Field(..., description="Model identifier")
     category: str = Field(
         ...,
@@ -255,10 +257,18 @@ class StructuredEvidenceItem(BaseModel):
     )
     label: str = Field(..., description="Human-readable label")
     value: Any = Field(..., description="Actual measured or computed value")
-    unit: str | None = Field(None, description="Physical unit if known (e.g., 'mm/yr', 'm', '%')")
-    source: str = Field(..., description="Authoritative source layer, manifest, or service")
-    coordinates: dict[str, float] | None = Field(None, description="Optional lat/lon if applicable")
-    coverage_status: str | None = Field(None, description="Coverage status if applicable")
+    unit: str | None = Field(
+        None, description="Physical unit if known (e.g., 'mm/yr', 'm', '%')"
+    )
+    source: str = Field(
+        ..., description="Authoritative source layer, manifest, or service"
+    )
+    coordinates: dict[str, float] | None = Field(
+        None, description="Optional lat/lon if applicable"
+    )
+    coverage_status: str | None = Field(
+        None, description="Coverage status if applicable"
+    )
     caveats: str | None = Field(None, description="Caveats or notes")
 
 
@@ -266,7 +276,9 @@ class AIStatusEvent(BaseModel):
     stage: str = Field(..., description="Current operational stage identifier")
     message: str = Field(..., description="Human-readable progress description")
     model_id: str | None = Field(None, description="Active GIS model identifier")
-    progress: float | None = Field(None, description="Optional normalized progress (0.0 to 1.0)")
+    progress: float | None = Field(
+        None, description="Optional normalized progress (0.0 to 1.0)"
+    )
 
 
 class AIAssistantRequest(BaseModel):
@@ -338,4 +350,3 @@ class AIHealthResponse(BaseModel):
     model_installed: bool
     installed_models: list[str] = Field(default_factory=list)
     setup_guidance: str | None = None
-

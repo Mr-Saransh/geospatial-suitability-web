@@ -26,7 +26,7 @@ from app.services.repository import (
     CRITERION_UNITS,
     repository,
 )
-from app.services.weights import MODELS_REGISTRY, get_model_config
+from app.services.weights import get_model_config
 
 logger = logging.getLogger(__name__)
 
@@ -106,8 +106,19 @@ def is_greeting_or_intro(question: str) -> bool:
     words = cleaned.split()
     if len(words) <= 3 and any(w in GREETING_WORDS for w in words):
         spatial_terms = {
-            "flood", "landslide", "risk", "slope", "score", "mandi", "shimla",
-            "layer", "weight", "criteria", "coordinate", "raster", "elevation"
+            "flood",
+            "landslide",
+            "risk",
+            "slope",
+            "score",
+            "mandi",
+            "shimla",
+            "layer",
+            "weight",
+            "criteria",
+            "coordinate",
+            "raster",
+            "elevation",
         }
         if not any(st in words for st in spatial_terms):
             return True
@@ -186,6 +197,14 @@ DATA_KEYWORDS = (
     "evidence",
     "facts",
     "inspect facts",
+    "factor",
+    "factors",
+    "model",
+    "models",
+    "susceptibility",
+    "hazard",
+    "ahp",
+    "mcda",
     "weight",
     "weights",
     "statistic",
@@ -251,7 +270,18 @@ def is_coordinate_or_data_question(question: str) -> bool:
     for prefix in CONCEPTUAL_PREFIXES:
         if q_clean.startswith(prefix) or q_clean == prefix:
             # Only treat as data/coordinate if explicitly asking for data or this point
-            if not any(k in q_clean for k in ("here", "this point", "this location", "my coordinate", "data", "weight", "fact")):
+            if not any(
+                k in q_clean
+                for k in (
+                    "here",
+                    "this point",
+                    "this location",
+                    "my coordinate",
+                    "data",
+                    "weight",
+                    "fact",
+                )
+            ):
                 return False
 
     # Coordinate / Location / Construction inquiries
@@ -268,12 +298,37 @@ def is_coordinate_or_data_question(question: str) -> bool:
 
     # Layer-specific data inquiries (e.g., "what is the slope value?", "rainfall numbers")
     layer_names = (
-        "slope", "rainfall", "flow accumulation", "elevation",
-        "distance to rivers", "twi", "aspect", "curvature",
-        "soil", "lithology", "land use", "lulc", "ndvi", "fault"
+        "slope",
+        "rainfall",
+        "flow accumulation",
+        "elevation",
+        "distance to rivers",
+        "twi",
+        "aspect",
+        "curvature",
+        "soil",
+        "lithology",
+        "land use",
+        "lulc",
+        "ndvi",
+        "fault",
     )
     if any(layer in q_clean for layer in layer_names):
-        data_terms = ("value", "number", "level", "contrib", "rating", "measure", "score", "high", "low", "much", "many", "how steep", "data")
+        data_terms = (
+            "value",
+            "number",
+            "level",
+            "contrib",
+            "rating",
+            "measure",
+            "score",
+            "high",
+            "low",
+            "much",
+            "many",
+            "how steep",
+            "data",
+        )
         if any(dt in q_clean for dt in data_terms):
             return True
 
@@ -350,7 +405,10 @@ def retrieve_gis_evidence(
     model_cfg = get_model_config(resolved_id)
 
     # Check if the user specifically asked for coordinate or data evidence
-    is_coord_or_data = is_coordinate_or_data_question(question)
+    has_coords = latitude is not None and longitude is not None
+    is_coord_or_data = (
+        has_coords or is_comparison or is_coordinate_or_data_question(question)
+    )
     if not is_coord_or_data:
         # Normal conversation / conceptual inquiry:
         # Do NOT extract point evidence or attach facts accordion
@@ -389,12 +447,14 @@ def retrieve_gis_evidence(
     if model_cfg:
         for k, v in model_cfg.classification_ranges.items():
             label = model_cfg.classification_labels.get(k, f"Class {k}")
-            ranges_list.append({
-                "class": k,
-                "label": label,
-                "min": v[0],
-                "max": v[1],
-            })
+            ranges_list.append(
+                {
+                    "class": k,
+                    "label": label,
+                    "min": v[0],
+                    "max": v[1],
+                }
+            )
             items.append(
                 create_evidence_item(
                     item_id=f"{resolved_id}:range:class_{k}",
@@ -428,7 +488,9 @@ def retrieve_gis_evidence(
                 model_id=resolved_id,
                 category="model_metadata",
                 label="Scoring Methodology",
-                value=model_cfg.metadata.get("method", "Multi-Criteria Decision Analysis"),
+                value=model_cfg.metadata.get(
+                    "method", "Multi-Criteria Decision Analysis"
+                ),
                 source="Package Specification",
             )
         )
@@ -580,12 +642,12 @@ def retrieve_gis_evidence(
                         or pt_result.get("final_status")
                         or pt_result.get("coverage_status", "VALID")
                     )
-                    evidence_count = pt_result.get(
-                        "evidence_count"
-                    ) or pt_result.get("valid_criteria_count", 0)
-                    evidence_total = pt_result.get(
-                        "evidence_total"
-                    ) or pt_result.get("total_criteria_count", 0)
+                    evidence_count = pt_result.get("evidence_count") or pt_result.get(
+                        "valid_criteria_count", 0
+                    )
+                    evidence_total = pt_result.get("evidence_total") or pt_result.get(
+                        "total_criteria_count", 0
+                    )
                     missing_crit = (
                         pt_result.get("missing_criteria_names")
                         or pt_result.get("missing_criteria")
@@ -611,11 +673,7 @@ def retrieve_gis_evidence(
                         criteria_list = []
 
                     sorted_factors = sorted(
-                        [
-                            c
-                            for c in criteria_list
-                            if c.get("contribution") is not None
-                        ],
+                        [c for c in criteria_list if c.get("contribution") is not None],
                         key=lambda x: x.get("contribution", 0),
                         reverse=True,
                     )
@@ -629,9 +687,7 @@ def retrieve_gis_evidence(
                             "contribution": f.get("contribution"),
                         }
                         for f in (
-                            sorted_factors[:4]
-                            if sorted_factors
-                            else criteria_list[:4]
+                            sorted_factors[:4] if sorted_factors else criteria_list[:4]
                         )
                     ]
 
@@ -642,8 +698,7 @@ def retrieve_gis_evidence(
                             "rating": f.get("rating"),
                         }
                         for f in criteria_list
-                        if f.get("classification") == "limiting"
-                        or f.get("rating") == 1
+                        if f.get("classification") == "limiting" or f.get("rating") == 1
                     ]
 
                     evidence["point_inspection"] = {
@@ -704,9 +759,7 @@ def retrieve_gis_evidence(
                         unit = CRITERION_UNITS.get(crit_name, "")
                         c_val = tf.get("contribution")
                         contrib_str = (
-                            f"{c_val:.2f}"
-                            if isinstance(c_val, (int, float))
-                            else "N/A"
+                            f"{c_val:.2f}" if isinstance(c_val, (int, float)) else "N/A"
                         )
                         items.append(
                             create_evidence_item(
@@ -766,9 +819,7 @@ def retrieve_gis_evidence(
             stats = compute_statistics(resolved_id)
             if "error" not in stats:
                 evidence["statistics"] = {
-                    "valid_coverage_pct": round(
-                        stats.get("valid_coverage_pct", 0), 2
-                    ),
+                    "valid_coverage_pct": round(stats.get("valid_coverage_pct", 0), 2),
                     "nodata_coverage_pct": round(
                         stats.get("nodata_coverage_pct", 0), 2
                     ),
@@ -805,13 +856,17 @@ def retrieve_gis_evidence(
                     )
                 )
                 if stats.get("score_mean") is not None:
+                    raw_mean = stats["score_mean"]
+                    mean_val = float(raw_mean) if raw_mean is not None else 0.0
+                    raw_std = stats.get("score_std")
+                    std_val = float(raw_std) if raw_std is not None else 0.0
                     items.append(
                         create_evidence_item(
                             item_id=f"{resolved_id}:stats:mean_score",
                             model_id=resolved_id,
                             category="statistics",
                             label="Statewide Mean Score",
-                            value=f"{stats.get('score_mean'):.2f} ± {stats.get('score_std', 0):.2f}",
+                            value=f"{mean_val:.2f} ± {std_val:.2f}",
                             unit="score",
                             source="Statewide Statistical Aggregate",
                         )
@@ -823,26 +878,24 @@ def retrieve_gis_evidence(
                             model_id=resolved_id,
                             category="statistics",
                             label=f"Class {cd.get('class_value')} ({cd.get('label')}) Area",
-                            value=f"{cd.get('percentage'):.1f}% ({cd.get('area_sq_km', 0):.0f} km²)",
+                            value=f"{float(cd.get('percentage') or 0):.1f}% ({float(cd.get('area_sq_km') or 0):.0f} km²)",
                             source="Suitability Distribution Summary",
                         )
                     )
         except Exception as e:
-            logger.warning(
-                "Could not compute statistics for %s: %s", resolved_id, e
-            )
+            logger.warning("Could not compute statistics for %s: %s", resolved_id, e)
 
     # 4. Available Layers summary
     layers = repository.get_layers_for_model(resolved_id)
     evidence["layers_count"] = len(layers)
     evidence["published_layers"] = [
         {
-            "id": l.get("product_id"),
-            "name": l.get("display_name"),
-            "type": l.get("type"),
-            "unit": l.get("unit"),
+            "id": lyr.get("product_id"),
+            "name": lyr.get("display_name"),
+            "type": lyr.get("type"),
+            "unit": lyr.get("unit"),
         }
-        for l in layers[:10]
+        for lyr in layers[:10]
     ]
 
     return {
@@ -883,19 +936,25 @@ def format_evidence_for_prompt(evidence_result: dict[str, Any]) -> str:
         lines.append("\n### MULTI-MODEL COMPARISON:")
         pm = comp.get("primary_model", {})
         cm = comp.get("comparison_model", {})
-        lines.append(f"- Model 1: {pm.get('name')} ({pm.get('criteria_count')} criteria, CRS {pm.get('crs')}, Method: {pm.get('method')})")
-        lines.append(f"- Model 2: {cm.get('name')} ({cm.get('criteria_count')} criteria, CRS {cm.get('crs')}, Method: {cm.get('method')})")
+        lines.append(
+            f"- Model 1: {pm.get('name')} ({pm.get('criteria_count')} criteria, CRS {pm.get('crs')}, Method: {pm.get('method')})"
+        )
+        lines.append(
+            f"- Model 2: {cm.get('name')} ({cm.get('criteria_count')} criteria, CRS {cm.get('crs')}, Method: {cm.get('method')})"
+        )
         lines.append(f"- Shared Factors: {', '.join(comp.get('common_criteria', []))}")
-        lines.append(f"- Unique to {pm.get('name')}: {', '.join(comp.get('primary_unique_criteria', []))}")
-        lines.append(f"- Unique to {cm.get('name')}: {', '.join(comp.get('comparison_unique_criteria', []))}")
+        lines.append(
+            f"- Unique to {pm.get('name')}: {', '.join(comp.get('primary_unique_criteria', []))}"
+        )
+        lines.append(
+            f"- Unique to {cm.get('name')}: {', '.join(comp.get('comparison_unique_criteria', []))}"
+        )
 
     # Criteria weights
     weights = ev.get("criteria_weights", [])
     if weights:
         top_weights = sorted(weights, key=lambda x: x["weight"], reverse=True)
-        w_strs = [
-            f"{w['criterion']} ({w['weight']*100:.1f}%)" for w in top_weights
-        ]
+        w_strs = [f"{w['criterion']} ({w['weight'] * 100:.1f}%)" for w in top_weights]
         lines.append(f"- Factor Weights: {', '.join(w_strs)}")
 
     # Point inspection
@@ -905,9 +964,7 @@ def format_evidence_for_prompt(evidence_result: dict[str, Any]) -> str:
         lines.append(
             f"\n### POINT INSPECTION at ({coords.get('latitude', 0):.4f}°N, {coords.get('longitude', 0):.4f}°E):"
         )
-        lines.append(
-            f"- Coverage Status: {pt.get('coverage_status', 'UNKNOWN')}"
-        )
+        lines.append(f"- Coverage Status: {pt.get('coverage_status', 'UNKNOWN')}")
         score = pt.get("suitability_score")
         if score is not None:
             lines.append(
@@ -915,19 +972,13 @@ def format_evidence_for_prompt(evidence_result: dict[str, Any]) -> str:
                 f"(Class {pt.get('suitability_class')}: {pt.get('suitability_label')})"
             )
         if pt.get("missing_criteria"):
-            lines.append(
-                f"- Missing Criteria: {', '.join(pt.get('missing_criteria'))}"
-            )
+            lines.append(f"- Missing Criteria: {', '.join(pt.get('missing_criteria'))}")
         top_factors = pt.get("top_factors", [])
         if top_factors:
             f_strs = []
             for f in top_factors:
                 c_val = f.get("contribution")
-                c_str = (
-                    f"{c_val:.2f}"
-                    if isinstance(c_val, (int, float))
-                    else "N/A"
-                )
+                c_str = f"{c_val:.2f}" if isinstance(c_val, (int, float)) else "N/A"
                 f_strs.append(
                     f"{f.get('criterion')} (raw={f.get('raw_value')}, rating={f.get('rating')}/5, contribution={c_str})"
                 )
@@ -935,8 +986,7 @@ def format_evidence_for_prompt(evidence_result: dict[str, Any]) -> str:
         limiting = pt.get("limiting_factors", [])
         if limiting:
             l_strs = [
-                f"{f.get('criterion')} (rating={f.get('rating')})"
-                for f in limiting
+                f"{f.get('criterion')} (rating={f.get('rating')})" for f in limiting
             ]
             lines.append(f"- Limiting Factors: {'; '.join(l_strs)}")
 
@@ -944,9 +994,7 @@ def format_evidence_for_prompt(evidence_result: dict[str, Any]) -> str:
     stats = ev.get("statistics")
     if stats:
         lines.append("\n### STATEWIDE STATISTICS:")
-        lines.append(
-            f"- Valid Analysis Coverage: {stats.get('valid_coverage_pct')}%"
-        )
+        lines.append(f"- Valid Analysis Coverage: {stats.get('valid_coverage_pct')}%")
         lines.append(
             f"- Mean Score: {stats.get('score_mean')} (Std: {stats.get('score_std')})"
         )

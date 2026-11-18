@@ -128,7 +128,7 @@ async def ask_ai(req: AIAssistantRequest, request: Request):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve GIS package evidence.",
-        )
+        ) from e
 
     history_items: list[dict[str, str]] = []
     if req.history:
@@ -332,7 +332,9 @@ async def ask_ai_stream(req: AIAssistantRequest, request: Request):
                 {
                     "type": "status",
                     "stage": "generating_answer",
-                    "message": "Synthesizing answer from spatial intelligence..." if show_evidence else "Responding to your question...",
+                    "message": "Synthesizing answer from spatial intelligence..."
+                    if show_evidence
+                    else "Responding to your question...",
                 },
             )
 
@@ -374,12 +376,8 @@ async def ask_ai_stream(req: AIAssistantRequest, request: Request):
                 "items": evidence_result.get("items", []) if show_evidence else [],
                 "coverage": evidence_result.get("coverage") if show_evidence else None,
                 "warnings": all_warnings,
-                "model_used": last_done.get("model_used")
-                if last_done
-                else None,
-                "source": last_done.get("source", "ollama")
-                if last_done
-                else "ollama",
+                "model_used": last_done.get("model_used") if last_done else None,
+                "source": last_done.get("source", "ollama") if last_done else "ollama",
             }
             yield _format_sse("done", done_payload)
 

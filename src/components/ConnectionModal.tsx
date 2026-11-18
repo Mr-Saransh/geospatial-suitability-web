@@ -18,7 +18,10 @@ export default function ConnectionModal({ open, onClose, status, onReconnect }: 
 
   if (!open) return null;
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://geospatial-suitability-web.dssintern1.workers.dev";
+  const origin =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : "https://geospatial-suitability-web.dssintern1.workers.dev";
   const mobileShareUrl = currentUrl ? `${origin}/?api=${encodeURIComponent(currentUrl)}` : origin;
 
   const handleCopyShare = async () => {
@@ -78,8 +81,8 @@ export default function ConnectionModal({ open, onClose, status, onReconnect }: 
                 status === "connected"
                   ? "bg-[#00c896]"
                   : status === "connecting"
-                  ? "bg-[#f59e0b] animate-pulse"
-                  : "bg-[#ef4444]"
+                    ? "bg-[#f59e0b] animate-pulse"
+                    : "bg-[#ef4444]"
               }`}
             />
             <h3
@@ -113,11 +116,15 @@ export default function ConnectionModal({ open, onClose, status, onReconnect }: 
                 status === "connected"
                   ? "text-[#00c896]"
                   : status === "connecting"
-                  ? "text-[#f59e0b]"
-                  : "text-[#ef4444]"
+                    ? "text-[#f59e0b]"
+                    : "text-[#ef4444]"
               }`}
             >
-              {status === "connected" ? "● Connected (Live)" : status === "connecting" ? "◌ Connecting…" : "○ Offline"}
+              {status === "connected"
+                ? "● Connected (Live)"
+                : status === "connecting"
+                  ? "◌ Connecting…"
+                  : "○ Offline"}
             </span>
           </div>
 
@@ -172,7 +179,9 @@ export default function ConnectionModal({ open, onClose, status, onReconnect }: 
               </button>
             </div>
             <p className="text-[11px] text-[var(--c-text2)] leading-relaxed">
-              Open this link on your phone. It contains the <code className="font-mono text-[var(--c-accent)]">?api=...</code> parameter so your phone automatically syncs with the current tunnel without setting any variables!
+              Open this link on your phone. It contains the{" "}
+              <code className="font-mono text-[var(--c-accent)]">?api=...</code> parameter so your
+              phone automatically syncs with the current tunnel without setting any variables!
             </p>
           </div>
 

@@ -24,7 +24,12 @@ export default function ResultPopup({
   const [minimized, setMinimized] = useState(false);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const dragStartRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
+  const dragStartRef = useRef<{
+    startX: number;
+    startY: number;
+    origX: number;
+    origY: number;
+  } | null>(null);
 
   const m = SUIT_META[zone.cls] || SUIT_META["low"];
   const criteria = zone.criteria || [];
@@ -77,9 +82,7 @@ export default function ResultPopup({
         style={{
           bottom: 54,
           left: "50%",
-          transform: pos
-            ? `translate(calc(-50% + ${pos.x}px), ${pos.y}px)`
-            : "translateX(-50%)",
+          transform: pos ? `translate(calc(-50% + ${pos.x}px), ${pos.y}px)` : "translateX(-50%)",
           background: "var(--c-chip-bg)",
           boxShadow: `0 8px 24px rgba(0,0,0,0.35), 0 0 10px ${m.color}20`,
           maxWidth: "calc(100vw - 24px)",
@@ -143,9 +146,7 @@ export default function ResultPopup({
       style={{
         bottom: 54,
         left: "50%",
-        transform: pos
-          ? `translate(calc(-50% + ${pos.x}px), ${pos.y}px)`
-          : "translateX(-50%)",
+        transform: pos ? `translate(calc(-50% + ${pos.x}px), ${pos.y}px)` : "translateX(-50%)",
         background: "var(--c-chip-bg)",
         border: `1px solid ${m.color}35`,
         boxShadow: `0 12px 36px rgba(0,0,0,0.4), 0 0 0 1px ${m.color}15`,
@@ -276,4 +277,3 @@ export default function ResultPopup({
     </div>
   );
 }
-

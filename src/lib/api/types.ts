@@ -184,9 +184,16 @@ export interface AIChatHistoryItem {
 export interface StructuredEvidenceItem {
   id: string;
   model_id: string;
-  category: "model_metadata" | "criteria_weights" | "point_inspection" | "statistics" | "model_comparison" | "limitation" | string;
+  category:
+    | "model_metadata"
+    | "criteria_weights"
+    | "point_inspection"
+    | "statistics"
+    | "model_comparison"
+    | "limitation"
+    | string;
   label: string;
-  value: any;
+  value: unknown;
   unit?: string | null;
   source: string;
   coordinates?: { latitude: number; longitude: number } | null;
@@ -361,4 +368,3 @@ export interface AIHealthResponse {
   installed_models: string[];
   setup_guidance?: string | null;
 }
-

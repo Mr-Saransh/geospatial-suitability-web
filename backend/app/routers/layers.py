@@ -41,12 +41,17 @@ def list_layers(
 
 
 @router.get("/layers/{layer_id:path}", response_model=LayerInfo)
-def get_layer(layer_id: str):
+def get_layer(
+    layer_id: str,
+    model_id: str | None = Query(
+        None, description="Optional model ID to disambiguate multi-model layer lookup"
+    ),
+):
     """
     Get metadata for a specific layer.
     Resolves legacy aliases (e.g. flood_11_factor_v1_full_suitability) transparently.
     """
-    layer = repository.get_layer(layer_id)
+    layer = repository.get_layer(layer_id, model_id=model_id)
     if not layer:
         raise HTTPException(
             status_code=404, detail=f"Layer '{layer_id}' not found in canonical package"
@@ -56,12 +61,20 @@ def get_layer(layer_id: str):
 
 
 @router.get("/tiles/{layer_id:path}/{z}/{x}/{y}.png")
-def get_tile(layer_id: str, z: int, x: int, y: int):
+def get_tile(
+    layer_id: str,
+    z: int,
+    x: int,
+    y: int,
+    model_id: str | None = Query(
+        None, description="Optional model ID to disambiguate multi-model layer lookup"
+    ),
+):
     """
     Render and return a map tile for the specified layer in EPSG:3857.
     Supports all canonical layers: factors, ratings, results, and quality masks.
     """
-    tile_data = render_tile(layer_id, z, x, y)
+    tile_data = render_tile(layer_id, z, x, y, model_id=model_id)
     if tile_data is None:
         raise HTTPException(
             status_code=404,

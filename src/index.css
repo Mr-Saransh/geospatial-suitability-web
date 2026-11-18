@@ -9,34 +9,34 @@
   --font-mono: "DM Mono", monospace;
 
   /* Forest Graphite Ground & Surfaces */
-  --c-base: #19231F;
-  --c-surface: #222E27;
-  --c-panel: #26342C;
-  --c-raised: #2C3930;
+  --c-base: #19231f;
+  --c-surface: #222e27;
+  --c-panel: #26342c;
+  --c-raised: #2c3930;
   --c-overlay: #344439;
 
   /* Borders & Separators */
-  --c-border: #38493D;
+  --c-border: #38493d;
   --c-border2: #405045;
 
   /* Natural Neutral Typography */
-  --c-text: #F0EEE5;
-  --c-text2: #B8C3B7;
-  --c-text3: #94A194;
+  --c-text: #f0eee5;
+  --c-text2: #b8c3b7;
+  --c-text3: #94a194;
 
   /* Primary Accent: Sage */
-  --c-accent: #88B59A;
+  --c-accent: #88b59a;
   --c-accent-hover: #9ec2ad;
   --c-accent-dim: rgba(136, 181, 154, 0.15);
 
   /* Secondary Accent: Warm Sand */
-  --c-sand: #D0A86F;
+  --c-sand: #d0a86f;
   --c-sand-dim: rgba(208, 168, 111, 0.15);
 
   /* Neutralized legacy aliases mapped to Sage / Sand */
-  --c-blue: #88B59A;
-  --c-cyan: #88B59A;
-  --c-teal: #88B59A;
+  --c-blue: #88b59a;
+  --c-cyan: #88b59a;
+  --c-teal: #88b59a;
 
   /* Canonical Susceptibility Hazard Scale (PRESERVED - DO NOT ALTER) */
   --c-vh: #ef4444;
@@ -47,56 +47,56 @@
 
   /* Status */
   --c-success: #10b981;
-  --c-warn: #D0A86F;
+  --c-warn: #d0a86f;
   --c-error: #ef4444;
 }
 
 :root,
 [data-theme="dark"] {
-  --c-base: #19231F;
-  --c-surface: #222E27;
-  --c-panel: #26342C;
-  --c-raised: #2C3930;
+  --c-base: #19231f;
+  --c-surface: #222e27;
+  --c-panel: #26342c;
+  --c-raised: #2c3930;
   --c-overlay: #344439;
 
-  --c-card-bg: #26342C;
+  --c-card-bg: #26342c;
   --c-chip-bg: rgba(34, 46, 39, 0.94);
-  --c-track: #35453A;
+  --c-track: #35453a;
 
-  --c-border: #38493D;
+  --c-border: #38493d;
   --c-border2: #405045;
 
-  --c-text: #F0EEE5;
-  --c-text2: #B8C3B7;
-  --c-text3: #94A194;
+  --c-text: #f0eee5;
+  --c-text2: #b8c3b7;
+  --c-text3: #94a194;
 
-  --c-accent: #88B59A;
+  --c-accent: #88b59a;
   --c-accent-dim: rgba(136, 181, 154, 0.15);
-  --c-sand: #D0A86F;
+  --c-sand: #d0a86f;
   --c-sand-dim: rgba(208, 168, 111, 0.15);
 }
 
 [data-theme="light"] {
-  --c-base: #F4F6F4;
-  --c-surface: #FFFFFF;
-  --c-panel: #EDF1ED;
-  --c-raised: #FFFFFF;
-  --c-overlay: #E1E8E1;
+  --c-base: #f4f6f4;
+  --c-surface: #ffffff;
+  --c-panel: #edf1ed;
+  --c-raised: #ffffff;
+  --c-overlay: #e1e8e1;
 
-  --c-card-bg: #FFFFFF;
+  --c-card-bg: #ffffff;
   --c-chip-bg: rgba(255, 255, 255, 0.96);
-  --c-track: #DFE6DF;
+  --c-track: #dfe6df;
 
-  --c-border: #D5DDD5;
-  --c-border2: #BCC8BC;
+  --c-border: #d5ddd5;
+  --c-border2: #bcc8bc;
 
-  --c-text: #19231F;
-  --c-text2: #3E4D42;
-  --c-text3: #6E7F72;
+  --c-text: #19231f;
+  --c-text2: #3e4d42;
+  --c-text3: #6e7f72;
 
   --c-accent: #457358;
   --c-accent-dim: rgba(69, 115, 88, 0.12);
-  --c-sand: #A0783F;
+  --c-sand: #a0783f;
   --c-sand-dim: rgba(160, 120, 63, 0.12);
 }
 
@@ -159,8 +159,7 @@ body,
   border-radius: 50%;
   background: var(--c-text);
   border: 2px solid var(--c-accent);
-  box-shadow:
-    0 1px 4px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
   cursor: pointer;
   transition:
     transform 0.1s ease,
@@ -223,7 +222,6 @@ select:disabled {
 .sidebar-locate-btn:hover {
   filter: brightness(1.1);
 }
-
 
 /* Transitions */
 .fade {

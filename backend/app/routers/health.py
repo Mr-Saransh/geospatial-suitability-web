@@ -66,6 +66,8 @@ async def health():
         layers_count=total_rasters,
         ollama_reachable=ollama_info.get("ollama_reachable", False),
         ollama_status=ollama_info.get("status", "ollama_offline"),
-        ollama_configured_model=ollama_info.get("configured_model", settings.ollama_model),
+        ollama_configured_model=ollama_info.get(
+            "configured_model", settings.ollama_model
+        ),
         ollama_model_installed=ollama_info.get("model_installed", False),
     )

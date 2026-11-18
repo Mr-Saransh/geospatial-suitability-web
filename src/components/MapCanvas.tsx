@@ -116,7 +116,9 @@ const AuthenticatedTileLayer = L.TileLayer.extend({
     tile.alt = "";
     tile.setAttribute("role", "presentation");
 
-    const url = (this as unknown as { getTileUrl: (coords: L.Coords) => string }).getTileUrl(coords);
+    const url = (this as unknown as { getTileUrl: (coords: L.Coords) => string }).getTileUrl(
+      coords,
+    );
     const controller = new AbortController();
     (tile as unknown as { _abortController: AbortController })._abortController = controller;
 
@@ -158,7 +160,9 @@ const AuthenticatedTileLayer = L.TileLayer.extend({
     if (tiles) {
       for (const key of Object.keys(tiles)) {
         const tile = tiles[key];
-        const el = tile?.el as unknown as { _objectUrl?: string; _abortController?: AbortController } | undefined;
+        const el = tile?.el as unknown as
+          | { _objectUrl?: string; _abortController?: AbortController }
+          | undefined;
         if (el) {
           if (el._abortController) {
             el._abortController.abort();
@@ -171,7 +175,9 @@ const AuthenticatedTileLayer = L.TileLayer.extend({
         }
       }
     }
-    return (L.TileLayer.prototype as unknown as { _abortLoading?: () => void })._abortLoading?.call(this);
+    return (L.TileLayer.prototype as unknown as { _abortLoading?: () => void })._abortLoading?.call(
+      this,
+    );
   },
 
   _removeTile(key: string) {
@@ -188,10 +194,9 @@ const AuthenticatedTileLayer = L.TileLayer.extend({
         t._objectUrl = undefined;
       }
     }
-    return (L.TileLayer.prototype as unknown as { _removeTile: (key: string) => void })._removeTile.call(
-      this,
-      key,
-    );
+    return (
+      L.TileLayer.prototype as unknown as { _removeTile: (key: string) => void }
+    )._removeTile.call(this, key);
   },
 });
 
@@ -231,6 +236,7 @@ function RasterTileLayer({
       map.removeLayer(layer);
       layerRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- opacity changes are handled imperatively by the separate useEffect below to prevent recreating tilelayer
   }, [map, url, zIndex]);
 
   useEffect(() => {
@@ -600,7 +606,6 @@ export default function MapCanvas({
           <span className="text-[11px] font-mono text-[var(--c-text2)] hidden sm:inline">30m</span>
         </div>
       </div>
-
 
       {/* Clean Bottom Status Bar */}
       <div

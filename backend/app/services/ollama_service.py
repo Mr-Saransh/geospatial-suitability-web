@@ -75,7 +75,11 @@ class OllamaService:
                     )
 
                     active_model = self.configured_model
-                    if not has_model and len(model_names) > 0 and "OLLAMA_MODEL" not in os.environ:
+                    if (
+                        not has_model
+                        and len(model_names) > 0
+                        and "OLLAMA_MODEL" not in os.environ
+                    ):
                         active_model = model_names[0]
                         has_model = True
 
@@ -137,15 +141,19 @@ class OllamaService:
         coords = ev.get("coordinates")
         pt = ev.get("point_inspection")
         model_name = ev.get("model_name", "Geospatial Hazard Model")
-        model_id = ev.get("model_id", evidence_result.get("model_id", "flood_11_factor_v1"))
-        is_landslide_model = "landslide" in model_id.lower() or "landslide" in model_name.lower()
+        model_id = ev.get(
+            "model_id", evidence_result.get("model_id", "flood_11_factor_v1")
+        )
+        is_landslide_model = (
+            "landslide" in model_id.lower() or "landslide" in model_name.lower()
+        )
         hazard_type = "Landslide" if is_landslide_model else "Flood"
 
         # ── 1. GREETINGS & INTRODUCTIONS ──────────────────────────
         if is_greeting_or_intro(question):
             return (
-                f"### 👋 Hello! Welcome to **MCGSE AI**\n\n"
-                f"I am your evidence-grounded spatial intelligence assistant for **Himachal Pradesh**.\n\n"
+                "### 👋 Hello! Welcome to **MCGSE AI**\n\n"
+                "I am your evidence-grounded spatial intelligence assistant for **Himachal Pradesh**.\n\n"
                 "**Here is how I can help you:**\n"
                 "- 📍 **Inspect Specific Locations**: Click anywhere on the map to evaluate flood or landslide hazard susceptibility, score ratings (1–5), and key local drivers.\n"
                 "- 🏠 **Construction & Safety Inquiries**: Ask questions like *'Should we build a house here?'* to get plain-language hazard evaluations and practical advice.\n"
@@ -155,7 +163,17 @@ class OllamaService:
             )
 
         # ── 2. CONCEPT: WHAT IS GIS? ───────────────────────────────
-        if any(k in q_clean for k in ("what is gis", "what's gis", "define gis", "explain gis", "meaning of gis", "what gis")):
+        if any(
+            k in q_clean
+            for k in (
+                "what is gis",
+                "what's gis",
+                "define gis",
+                "explain gis",
+                "meaning of gis",
+                "what gis",
+            )
+        ):
             if "10 words" in q_clean or "ten words" in q_clean:
                 return "**GIS** is a digital mapping system combining location with real-world data."
             return (
@@ -168,7 +186,17 @@ class OllamaService:
             )
 
         # ── 3. CONCEPT: WHAT IS AHP / MCDA? ────────────────────────
-        if any(k in q_clean for k in ("what is ahp", "what is mcda", "analytic hierarchy", "multi-criteria", "how are weights", "consistency ratio")):
+        if any(
+            k in q_clean
+            for k in (
+                "what is ahp",
+                "what is mcda",
+                "analytic hierarchy",
+                "multi-criteria",
+                "how are weights",
+                "consistency ratio",
+            )
+        ):
             return (
                 "### ⚖️ What is AHP (Analytic Hierarchy Process)?\n\n"
                 "The **Analytic Hierarchy Process (AHP)** is a structured mathematical technique developed by Thomas Saaty for multi-criteria decision analysis (MCDA).\n\n"
@@ -183,9 +211,24 @@ class OllamaService:
         is_building_query = any(
             k in q_clean
             for k in (
-                "build", "house", "construct", "construction", "home", "building",
-                "living", "safe to live", "develop", "settle", "plot", "hotel",
-                "structure", "property", "buy land", "safe here", "should we", "can we live"
+                "build",
+                "house",
+                "construct",
+                "construction",
+                "home",
+                "building",
+                "living",
+                "safe to live",
+                "develop",
+                "settle",
+                "plot",
+                "hotel",
+                "structure",
+                "property",
+                "buy land",
+                "safe here",
+                "should we",
+                "can we live",
             )
         )
         if is_building_query:
@@ -202,18 +245,22 @@ class OllamaService:
                     "*Click anywhere across Himachal Pradesh on the map to evaluate that location!*"
                 )
 
+            raw_lat = coords.get("latitude") if coords else None
+            raw_lon = coords.get("longitude") if coords else None
+            lat = float(raw_lat) if raw_lat is not None else 0.0
+            lon = float(raw_lon) if raw_lon is not None else 0.0
+
             if pt.get("coverage_status") == "OUTSIDE_ANALYSIS_AREA":
                 return (
                     f"### ⚠️ Location Outside Analysis Boundary\n\n"
-                    f"The selected point at **({coords.get('latitude'):.4f}°N, {coords.get('longitude'):.4f}°E)** lies outside the active "
+                    f"The selected point at **({lat:.4f}°N, {lon:.4f}°E)** lies outside the active "
                     "Himachal Pradesh state analysis boundary. Please click a location within Himachal Pradesh to inspect building suitability."
                 )
 
-            score = pt.get("suitability_score")
+            raw_score = pt.get("suitability_score")
+            score = float(raw_score) if raw_score is not None else None
             cls_val = pt.get("suitability_class")
             cls_label = pt.get("suitability_label") or "Susceptibility Evaluated"
-            lat = coords.get("latitude", 0.0)
-            lon = coords.get("longitude", 0.0)
 
             # Build conversational verdict
             if score is not None:
@@ -231,7 +278,9 @@ class OllamaService:
                         "Hazard exposure is low, making it suitable for development with standard building drainage."
                     )
                 elif score < 3.40:
-                    verdict_header = "🟡 **Moderate Hazard — Engineering Precautions Required**"
+                    verdict_header = (
+                        "🟡 **Moderate Hazard — Engineering Precautions Required**"
+                    )
                     verdict_summary = (
                         f"This location falls into a **Moderate Susceptibility zone** (Score: **{score:.2f} / 5.00**, {cls_label}). "
                         "Building here requires engineered site preparation, elevated plinths, and proper stormwater diversion."
@@ -243,14 +292,18 @@ class OllamaService:
                         "Construction here carries substantial natural hazard risk. Detailed mitigation is necessary."
                     )
                 else:
-                    verdict_header = "🔴 **Very High Hazard — Construction Strongly Discouraged**"
+                    verdict_header = (
+                        "🔴 **Very High Hazard — Construction Strongly Discouraged**"
+                    )
                     verdict_summary = (
                         f"🚨 **High Risk Alert**: This site is classified as **Very High Susceptibility** (Score: **{score:.2f} / 5.00**, {cls_label}). "
                         "Building a permanent home here involves severe hazard exposure and is strongly discouraged."
                     )
             else:
                 verdict_header = "ℹ️ **Inspection Details Available**"
-                verdict_summary = f"Inspection completed for coordinates ({lat:.4f}°N, {lon:.4f}°E)."
+                verdict_summary = (
+                    f"Inspection completed for coordinates ({lat:.4f}°N, {lon:.4f}°E)."
+                )
 
             # Extract factor details
             top_factors = pt.get("top_factors", [])
@@ -274,23 +327,37 @@ class OllamaService:
                             f"- **Distance to Rivers (~{d_km:.2f} km)**: The site is situated well away from active river channels, safely outside riverine flash-flood plains."
                         )
                     except (ValueError, TypeError):
-                        factor_bullets.append(f"- **Distance to Rivers**: `{raw} {unit}` from mapped watercourses.")
+                        factor_bullets.append(
+                            f"- **Distance to Rivers**: `{raw} {unit}` from mapped watercourses."
+                        )
                 elif crit == "flow_accumulation" and raw is not None:
                     factor_bullets.append(
                         f"- **Flow Accumulation ({raw} cells)**: Surface runoff accumulation is very low, meaning rainfall does not naturally channel or pool into this specific location."
                     )
                 elif crit == "slope" and raw is not None:
-                    factor_bullets.append(
-                        f"- **Terrain Slope ({raw:.1f}°)**: The terrain has a notable slope. Sloping topography allows surface water to drain away rapidly, keeping flood pooling low."
-                    )
+                    try:
+                        s_val = float(raw)
+                        factor_bullets.append(
+                            f"- **Terrain Slope ({s_val:.1f}°)**: The terrain has a notable slope. Sloping topography allows surface water to drain away rapidly, keeping flood pooling low."
+                        )
+                    except (ValueError, TypeError):
+                        factor_bullets.append(f"- **Terrain Slope**: `{raw} {unit}`")
                 elif crit == "rainfall" and raw is not None:
-                    factor_bullets.append(
-                        f"- **Precipitation Volume (~{raw:.0f} mm/yr)**: The area receives significant seasonal rainfall, but local topography promotes rapid drainage."
-                    )
+                    try:
+                        r_val = float(raw)
+                        factor_bullets.append(
+                            f"- **Precipitation Volume (~{r_val:.0f} mm/yr)**: The area receives significant seasonal rainfall, but local topography promotes rapid drainage."
+                        )
+                    except (ValueError, TypeError):
+                        factor_bullets.append(
+                            f"- **Precipitation Volume**: `{raw} {unit}`"
+                        )
 
             if not factor_bullets and top_factors:
                 for f in top_factors[:4]:
-                    factor_bullets.append(f"- **{f.get('criterion', '').replace('_', ' ').title()}**: `{f.get('raw_value')} {f.get('unit', '')}`")
+                    factor_bullets.append(
+                        f"- **{f.get('criterion', '').replace('_', ' ').title()}**: `{f.get('raw_value')} {f.get('unit', '')}`"
+                    )
 
             lines = [
                 f"### 🏠 House Construction Assessment at ({lat:.4f}°N, {lon:.4f}°E)\n",
@@ -302,7 +369,9 @@ class OllamaService:
 
             # Mountain Topography Secondary Hazard Advisory
             if steep_slope_val is not None and steep_slope_val > 25:
-                lines.append("\n### ⚠️ Mountain Terrain Advisory: Landslide Check Recommended!")
+                lines.append(
+                    "\n### ⚠️ Mountain Terrain Advisory: Landslide Check Recommended!"
+                )
                 lines.append(
                     f"In Himachal Pradesh's mountainous terrain, steep slopes ({steep_slope_val:.1f}°) naturally shed surface water (lowering flood risk), "
                     "**but steep slopes can elevate landslide and slope failure risks**."
@@ -342,7 +411,7 @@ class OllamaService:
             ),
             "twi": (
                 "Topographic Wetness Index (TWI)",
-                "TWI ($\ln(a / \tan \beta)$) combines upstream contributing area and local slope angle. It identifies zones prone to water table saturation and swampy conditions where soils remain permanently wet.",
+                "TWI ($\\ln(a / \\tan \\beta)$) combines upstream contributing area and local slope angle. It identifies zones prone to water table saturation and swampy conditions where soils remain permanently wet.",
             ),
             "distance_to_rivers": (
                 "Distance to Rivers",
@@ -368,15 +437,31 @@ class OllamaService:
                 if pt and pt.get("top_factors"):
                     for tf in pt.get("top_factors", []):
                         if tf.get("criterion") == crit_key:
+                            c_lat = (
+                                float(coords.get("latitude") or 0.0) if coords else 0.0
+                            )
+                            c_lon = (
+                                float(coords.get("longitude") or 0.0) if coords else 0.0
+                            )
                             res_lines.append(
-                                f"\n> 📍 *At your selected coordinate (**{coords.get('latitude'):.4f}°N, {coords.get('longitude'):.4f}°E**), "
+                                f"\n> 📍 *At your selected coordinate (**{c_lat:.4f}°N, {c_lon:.4f}°E**), "
                                 f"the measured value is **{tf.get('raw_value')} {tf.get('unit', '')}** (Score Rating: {tf.get('rating')}/5).* "
                             )
                             break
                 return "\n".join(res_lines)
 
         # ── 6. MODEL COMPARISON ───────────────────────────────────
-        if any(k in q_clean for k in ("compare", "difference between", "versus", " vs ", "both models", "flood and landslide")):
+        if any(
+            k in q_clean
+            for k in (
+                "compare",
+                "difference between",
+                "versus",
+                " vs ",
+                "both models",
+                "flood and landslide",
+            )
+        ):
             return (
                 "### ⚖️ Flood Model vs. Landslide Model Comparison\n\n"
                 "Both models are calibrated for **Himachal Pradesh**, but they analyze fundamentally different disaster mechanisms:\n\n"
@@ -391,27 +476,39 @@ class OllamaService:
             )
 
         # ── 7. STATEWIDE STATISTICS ───────────────────────────────
-        if any(k in q_clean for k in ("stat", "average", "coverage", "percent", "distribution", "statewide")):
+        if any(
+            k in q_clean
+            for k in (
+                "stat",
+                "average",
+                "coverage",
+                "percent",
+                "distribution",
+                "statewide",
+            )
+        ):
             stats = ev.get("statistics")
             if stats:
                 dist_lines = []
                 for cd in stats.get("class_distribution", []):
-                    dist_lines.append(f"- **Class {cd.get('class')} ({cd.get('label')})**: {cd.get('percentage'):.1f}% of state ({cd.get('area_sq_km', 0):.0f} km²)")
+                    dist_lines.append(
+                        f"- **Class {cd.get('class')} ({cd.get('label')})**: {cd.get('percentage'):.1f}% of state ({cd.get('area_sq_km', 0):.0f} km²)"
+                    )
                 return (
                     f"### 📊 Statewide {hazard_type} Statistics (Himachal Pradesh)\n\n"
                     f"- **Valid Analysis Coverage**: **{stats.get('valid_coverage_pct')}%** of state area analyzed\n"
                     f"- **Statewide Mean Score**: **{stats.get('score_mean')} ± {stats.get('score_std')}** (out of 5.00)\n\n"
-                    "**Suitability Distribution Breakdown:**\n"
-                    + "\n".join(dist_lines)
+                    "**Suitability Distribution Breakdown:**\n" + "\n".join(dist_lines)
                 )
 
         # ── 8. GENERAL POINT INSPECTION BREAKDOWN ──────────────────
         if coords and pt and pt.get("suitability_score") is not None:
-            score = pt.get("suitability_score")
+            raw_score = pt.get("suitability_score")
+            score = float(raw_score) if raw_score is not None else 0.0
             cls_val = pt.get("suitability_class")
             cls_label = pt.get("suitability_label") or "Analyzed"
-            lat = coords.get("latitude", 0.0)
-            lon = coords.get("longitude", 0.0)
+            lat = float(coords.get("latitude") or 0.0) if coords else 0.0
+            lon = float(coords.get("longitude") or 0.0) if coords else 0.0
 
             lines = [
                 f"### 📍 Spatial Assessment for ({lat:.4f}°N, {lon:.4f}°E)\n",
@@ -420,7 +517,9 @@ class OllamaService:
             ]
             for f in pt.get("top_factors", [])[:4]:
                 crit_clean = f.get("criterion", "").replace("_", " ").title()
-                lines.append(f"- **{crit_clean}**: `{f.get('raw_value')} {f.get('unit', '')}` (Rating: {f.get('rating')}/5)")
+                lines.append(
+                    f"- **{crit_clean}**: `{f.get('raw_value')} {f.get('unit', '')}` (Rating: {f.get('rating')}/5)"
+                )
 
             lines.append(
                 f"\n**Summary**: With {pt.get('valid_criteria_count')}/{pt.get('total_criteria_count')} valid spatial criteria, "
@@ -432,7 +531,7 @@ class OllamaService:
         # ── 9. DEFAULT CONVERSATIONAL RESPONSE ────────────────────
         return (
             f"### 🧭 Geospatial Decision Support ({model_name})\n\n"
-            f"Regarding your query: *\"{question}\"*\n\n"
+            f'Regarding your query: *"{question}"*\n\n'
             f"In our **{hazard_type} Susceptibility Analysis** for Himachal Pradesh, spatial risk is evaluated using multi-criteria decision analysis across 30-meter terrain cells.\n\n"
             "**Helpful actions you can take:**\n"
             "- 📍 **Click any point on the map** to inspect exact suitability scores, hazard classes, and environmental criteria.\n"
@@ -477,9 +576,7 @@ class OllamaService:
                 "Please provide a grounded, direct answer using only the evidence above."
             )
 
-        messages: list[dict[str, str]] = [
-            {"role": "system", "content": SYSTEM_PROMPT}
-        ]
+        messages: list[dict[str, str]] = [{"role": "system", "content": SYSTEM_PROMPT}]
 
         if history:
             capped_history = history[-settings.ai_max_history :]
@@ -494,7 +591,10 @@ class OllamaService:
         # For models with native internal thinking, prefill empty thinking tags
         # to ensure fast, direct generation without burning tokens on internal CoT
         m_lower = target_model.lower()
-        if any(k in m_lower for k in ("qwen3.5", "qwen-3.5", "deepseek-r1", "r1", "thinking")):
+        if any(
+            k in m_lower
+            for k in ("qwen3.5", "qwen-3.5", "deepseek-r1", "r1", "thinking")
+        ):
             messages.append({"role": "assistant", "content": "<think>\n</think>"})
 
         return messages
@@ -508,10 +608,14 @@ class OllamaService:
     ) -> dict[str, Any]:
         """Non-streaming generation with full fallback handling."""
         health = await self.get_health()
-        target_model = requested_model or getattr(self, "_active_model", self.configured_model)
+        target_model = requested_model or getattr(
+            self, "_active_model", self.configured_model
+        )
 
         if not health["ollama_reachable"] or not health["model_installed"]:
-            fallback_text = self._generate_fallback_answer(question, evidence_result, health)
+            fallback_text = self._generate_fallback_answer(
+                question, evidence_result, health
+            )
             warn = (
                 health.get("setup_guidance")
                 or f"Local Ollama model '{target_model}' is not installed. Used verified GIS evidence report."
@@ -554,10 +658,18 @@ class OllamaService:
                                 "source": "ollama",
                                 "warning": None,
                             }
-                    logger.warning("Ollama API responded with status %d: %s", resp.status_code, resp.text)
+                    logger.warning(
+                        "Ollama API responded with status %d: %s",
+                        resp.status_code,
+                        resp.text,
+                    )
             except httpx.TimeoutException:
-                logger.error("Ollama request timed out after %.1f s", settings.ollama_timeout)
-                fallback_text = self._generate_fallback_answer(question, evidence_result, health)
+                logger.error(
+                    "Ollama request timed out after %.1f s", settings.ollama_timeout
+                )
+                fallback_text = self._generate_fallback_answer(
+                    question, evidence_result, health
+                )
                 return {
                     "answer": fallback_text,
                     "model_used": "evidence_summary",
@@ -567,7 +679,9 @@ class OllamaService:
             except Exception as e:
                 logger.error("Error communicating with Ollama: %s", e)
 
-        fallback_text = self._generate_fallback_answer(question, evidence_result, health)
+        fallback_text = self._generate_fallback_answer(
+            question, evidence_result, health
+        )
         return {
             "answer": fallback_text,
             "model_used": "evidence_summary",
@@ -590,11 +704,15 @@ class OllamaService:
         - {"type": "done", "answer": "...", "model_used": "...", "source": "..."}
         """
         health = await self.get_health()
-        target_model = requested_model or getattr(self, "_active_model", self.configured_model)
+        target_model = requested_model or getattr(
+            self, "_active_model", self.configured_model
+        )
 
         # Fallback if Ollama is not ready
         if not health["ollama_reachable"] or not health["model_installed"]:
-            fallback_text = self._generate_fallback_answer(question, evidence_result, health)
+            fallback_text = self._generate_fallback_answer(
+                question, evidence_result, health
+            )
             words = fallback_text.split(" ")
             chunk_size = 3
             for i in range(0, len(words), chunk_size):
@@ -636,8 +754,12 @@ class OllamaService:
                 async with httpx.AsyncClient(timeout=settings.ollama_timeout) as client:
                     async with client.stream("POST", url, json=payload) as response:
                         if response.status_code != 200:
-                            logger.warning("Ollama stream error status: %d", response.status_code)
-                            fallback_text = self._generate_fallback_answer(question, evidence_result, health)
+                            logger.warning(
+                                "Ollama stream error status: %d", response.status_code
+                            )
+                            fallback_text = self._generate_fallback_answer(
+                                question, evidence_result, health
+                            )
                             yield {"type": "token", "text": fallback_text}
                             yield {
                                 "type": "done",
@@ -650,7 +772,9 @@ class OllamaService:
 
                         async for line in response.aiter_lines():
                             if is_disconnected and await is_disconnected():
-                                logger.info("Client disconnected during generation; aborting stream.")
+                                logger.info(
+                                    "Client disconnected during generation; aborting stream."
+                                )
                                 return
 
                             if not line.strip():
@@ -667,11 +791,15 @@ class OllamaService:
                                 if chunk.get("done"):
                                     break
                             except Exception as parse_err:
-                                logger.debug("Error parsing Ollama chunk: %s", parse_err)
+                                logger.debug(
+                                    "Error parsing Ollama chunk: %s", parse_err
+                                )
 
                 full_answer = "".join(accumulated_tokens).strip()
                 if not full_answer:
-                    fallback_text = self._generate_fallback_answer(question, evidence_result, health)
+                    fallback_text = self._generate_fallback_answer(
+                        question, evidence_result, health
+                    )
                     words = fallback_text.split(" ")
                     chunk_size = 3
                     for i in range(0, len(words), chunk_size):
@@ -685,15 +813,21 @@ class OllamaService:
                 yield {
                     "type": "done",
                     "answer": full_answer,
-                    "model_used": target_model if accumulated_tokens else "evidence_summary",
+                    "model_used": target_model
+                    if accumulated_tokens
+                    else "evidence_summary",
                     "source": "ollama" if accumulated_tokens else "evidence_fallback",
                     "warning": None,
                 }
                 return
 
             except httpx.TimeoutException:
-                logger.error("Ollama streaming timed out after %.1f s", settings.ollama_timeout)
-                fallback_text = self._generate_fallback_answer(question, evidence_result, health)
+                logger.error(
+                    "Ollama streaming timed out after %.1f s", settings.ollama_timeout
+                )
+                fallback_text = self._generate_fallback_answer(
+                    question, evidence_result, health
+                )
                 yield {"type": "token", "text": "\n\n" + fallback_text}
                 yield {
                     "type": "done",
@@ -704,7 +838,9 @@ class OllamaService:
                 }
             except Exception as e:
                 logger.error("Error streaming from Ollama: %s", e)
-                fallback_text = self._generate_fallback_answer(question, evidence_result, health)
+                fallback_text = self._generate_fallback_answer(
+                    question, evidence_result, health
+                )
                 yield {"type": "token", "text": fallback_text}
                 yield {
                     "type": "done",

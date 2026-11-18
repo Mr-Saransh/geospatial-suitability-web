@@ -175,7 +175,11 @@ class TestAIAssistantEndpoint(unittest.TestCase):
         # Mock /api/tags
         mock_get.return_value = AsyncMock(
             status_code=200,
-            json=lambda: {"models": [{"name": settings.ollama_model, "model": settings.ollama_model}]},
+            json=lambda: {
+                "models": [
+                    {"name": settings.ollama_model, "model": settings.ollama_model}
+                ]
+            },
         )
         # Mock /api/chat
         mock_post.return_value = AsyncMock(
@@ -220,10 +224,15 @@ class TestAIAssistantEndpoint(unittest.TestCase):
         self.assertIn("answer", data)
         self.assertIn("evidence", data)
         # Must disclose fallback / guidance
-        self.assertTrue(len(data["warnings"]) > 0 or data["source"] in ("ollama", "evidence_fallback"))
+        self.assertTrue(
+            len(data["warnings"]) > 0
+            or data["source"] in ("ollama", "evidence_fallback")
+        )
 
     # 13. Rate limiting enforcement
-    @patch("app.routers.ai.ollama_service.generate_grounded_answer", new_callable=AsyncMock)
+    @patch(
+        "app.routers.ai.ollama_service.generate_grounded_answer", new_callable=AsyncMock
+    )
     def test_rate_limiting_enforcement(self, mock_generate):
         mock_generate.return_value = {
             "answer": "Instant response",
@@ -239,11 +248,15 @@ class TestAIAssistantEndpoint(unittest.TestCase):
             _rate_limit_records[client_ip] = []
 
             for i in range(3):
-                res = self.client.post("/api/v1/ai/ask", json={"question": f"Question {i}"})
+                res = self.client.post(
+                    "/api/v1/ai/ask", json={"question": f"Question {i}"}
+                )
                 self.assertEqual(res.status_code, 200)
 
             # 4th request must be rate limited
-            res = self.client.post("/api/v1/ai/ask", json={"question": "Excess question"})
+            res = self.client.post(
+                "/api/v1/ai/ask", json={"question": "Excess question"}
+            )
             self.assertEqual(res.status_code, 429)
             self.assertIn("Retry-After", res.headers)
         finally:
@@ -352,7 +365,8 @@ class TestAIAssistantEndpoint(unittest.TestCase):
         data = res.json()
         ans = data["answer"].lower()
         # Should greet or introduce
-        self.assertTrue(any(w in ans for w in ("welcome", "hello", "hi", "assistant", "mcgse ai")))
+        self.assertTrue(
+            any(w in ans for w in ("welcome", "hello", "hi", "assistant", "mcgse ai"))
+        )
         # Should NOT dump factor weights or raw table headers on a simple hi
         self.assertNotIn("factor weights & criteria", ans)
-

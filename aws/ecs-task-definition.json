@@ -1,0 +1,70 @@
+{
+  "family": "mcgse-webgis-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "2048",
+  "memory": "4096",
+  "volumes": [
+    {
+      "name": "spatial-knowledge-efs",
+      "efsVolumeConfiguration": {
+        "fileSystemId": "fs-0123456789abcdef0",
+        "rootDirectory": "/spatial_knowledge",
+        "transitEncryption": "ENABLED"
+      }
+    }
+  ],
+  "containerDefinitions": [
+    {
+      "name": "mcgse-backend",
+      "image": "<AWS_ACCOUNT_ID>.dkr.ecr.<AWS_REGION>.amazonaws.com/mcgse-backend:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "hostPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "ENVIRONMENT", "value": "production" },
+        {
+          "name": "SPATIAL_KNOWLEDGE_ROOT",
+          "value": "/mnt/efs/Himachal_Pradesh_Spatial_Knowledge.gdb"
+        },
+        {
+          "name": "FLOOD_SPATIAL_KNOWLEDGE_ROOT",
+          "value": "/mnt/efs/Himachal_Pradesh_Spatial_Knowledge.gdb"
+        },
+        {
+          "name": "LANDSLIDE_SPATIAL_KNOWLEDGE_ROOT",
+          "value": "/mnt/efs/Himachal_Pradesh_Spatial_Knowledge.gdb"
+        },
+        { "name": "CORS_ORIGINS", "value": "*" },
+        { "name": "AI_RATE_LIMIT_PER_MINUTE", "value": "30" }
+      ],
+      "mountPoints": [
+        {
+          "sourceVolume": "spatial-knowledge-efs",
+          "containerPath": "/mnt/efs",
+          "readOnly": true
+        }
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 15
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/mcgse-webgis",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "backend"
+        }
+      }
+    }
+  ]
+}

@@ -126,15 +126,13 @@ export default function MapLayersPanel({
 
   if (!open) return null;
 
-  // Radio-style: only one layer visible at a time
+  // Radio-style: click eye or row to activate; click active layer eye to toggle off
   const toggleLayer = (id: string) => {
     const target = layers.find((l) => l.id === id);
     if (target?.visible) {
-      // Already visible, just select it (don't hide — always keep one visible)
-      onSelectLayer(id);
+      setLayers(layers.map((l) => (l.id === id ? { ...l, visible: false } : l)));
       return;
     }
-    // Make only this layer visible, hide all others
     setLayers(layers.map((l) => ({ ...l, visible: l.id === id })));
     onSelectLayer(id);
   };
@@ -143,28 +141,69 @@ export default function MapLayersPanel({
     setLayers(layers.map((l) => (l.id === id ? { ...l, opacity: v } : l)));
   };
 
-  // Filter: only show RESULT layers (classified/continuous), hide raw FACTOR, RATING, QUALITY
-  const displayLayers = layers.filter(
-    (l) =>
-      l.layerType === "RESULT" ||
-      l.group === "composite" ||
-      l.id.includes("suitability"),
-  );
-
-  // Categories — only Results category since raw/rating/quality are hidden
+  // Categories (Excluding missing criteria bitmasks per public UI rules)
   const categories = [
     {
       id: "results",
       label: "Susceptibility Layers",
       icon: "results" as const,
-      layers: displayLayers
+      layers: layers
+        .filter(
+          (l) =>
+            l.group === "composite" || l.layerType === "RESULT" || l.id.includes("suitability"),
+        )
         .sort((a, b) => {
           const idxA = RESULT_ORDER.indexOf(a.id);
           const idxB = RESULT_ORDER.indexOf(b.id);
           return (idxA !== -1 ? idxA : 99) - (idxB !== -1 ? idxB : 99);
         }),
     },
+    {
+      id: "hydro",
+      label: "Hydrology",
+      icon: "hydro" as const,
+      layers: layers.filter((l) => l.group === "hydrological"),
+    },
+    {
+      id: "topo",
+      label: "Terrain",
+      icon: "topo" as const,
+      layers: layers.filter((l) => l.group === "topographic"),
+    },
+    {
+      id: "geo",
+      label: "Geology",
+      icon: "geo" as const,
+      layers: layers.filter((l) => l.group === "geological"),
+    },
+    {
+      id: "env",
+      label: "Environment",
+      icon: "env" as const,
+      layers: layers.filter((l) => l.group === "environmental"),
+    },
+    {
+      id: "quality",
+      label: "Data Coverage",
+      icon: "quality" as const,
+      layers: layers.filter(
+        (l) =>
+          (l.group === "quality" || l.layerType === "QUALITY" || l.id.includes("criteria")) &&
+          !l.id.includes("bitmask"),
+      ),
+    },
   ];
+
+  const assignedIds = new Set(categories.flatMap((c) => c.layers.map((l) => l.id)));
+  const otherLayers = layers.filter((l) => !assignedIds.has(l.id) && !l.id.includes("bitmask"));
+  if (otherLayers.length > 0) {
+    categories.push({
+      id: "other",
+      label: "Other Criteria",
+      icon: "results" as const,
+      layers: otherLayers,
+    });
+  }
 
   const content = (
     <div className="flex flex-col flex-1 min-h-0 h-full overflow-hidden">
@@ -185,20 +224,27 @@ export default function MapLayersPanel({
             Map Layers
           </span>
           <span
-            className="text-[11px] font-medium px-1.5 py-0.5 rounded hidden"
+            className="text-[11px] font-medium px-1.5 py-0.5 rounded"
             style={{
               background: "var(--c-accent-dim)",
               color: "var(--c-accent)",
             }}
           >
-            {layers.length}
+            {layers.filter((l) => !l.id.includes("bitmask")).length}
           </span>
         </div>
 
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setLayers(layers.map((l) => ({ ...l, visible: false })))}
+            className="px-1.5 py-0.5 rounded text-[11px] transition-colors hover:bg-[rgba(255,255,255,0.05)] cursor-pointer text-[var(--c-text3)] hover:text-[var(--c-text)]"
+            title="Hide all rasters"
+          >
+            Clear
+          </button>
+          <button
             onClick={onClose}
-            className="w-6 h-6 flex items-center justify-center rounded transition-colors hover:bg-[rgba(255,255,255,0.06)] text-[var(--c-text3)] hover:text-[var(--c-text)] ml-1"
+            className="w-6 h-6 flex items-center justify-center rounded transition-colors hover:bg-[rgba(255,255,255,0.06)] text-[var(--c-text3)] hover:text-[var(--c-text)] ml-1 cursor-pointer"
             title="Close panel (Esc)"
             aria-label="Close Map Layers panel"
           >
@@ -224,13 +270,15 @@ export default function MapLayersPanel({
         ) : (
           categories.map((cat) => {
             if (!cat.layers.length) return null;
+            const hasActive = cat.layers.some((l) => l.id === activeLayerId || l.visible);
             return (
               <LayerCategory
                 key={cat.id}
                 label={cat.label}
                 icon={cat.icon}
                 count={cat.layers.length}
-                defaultOpen={cat.id === "results"}
+                defaultOpen={cat.id === "results" || hasActive}
+                hasActive={hasActive}
               >
                 {cat.layers.map((l) => (
                   <LayerItem
@@ -267,7 +315,10 @@ export default function MapLayersPanel({
   if (isMobile) {
     return (
       <div className="fixed inset-x-0 top-0 bottom-14 z-[1250] flex flex-col justify-end pointer-events-none">
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs pointer-events-auto" onClick={onClose} />
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs pointer-events-auto"
+          onClick={onClose}
+        />
         <div
           className="relative z-10 flex flex-col shadow-2xl bottom-sheet-enter mobile-bottom-sheet overflow-hidden pointer-events-auto"
           style={{
@@ -281,9 +332,7 @@ export default function MapLayersPanel({
           }}
         >
           <div className="drag-handle flex-shrink-0" />
-          <div className="flex-1 min-h-0 flex flex-col overflow-hidden pb-4">
-            {content}
-          </div>
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden pb-4">{content}</div>
         </div>
       </div>
     );
@@ -309,15 +358,23 @@ function LayerCategory({
   icon,
   count,
   defaultOpen = false,
+  hasActive = false,
   children,
 }: {
   label: string;
   icon: string;
   count: number;
   defaultOpen?: boolean;
+  hasActive?: boolean;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+
+  useEffect(() => {
+    if (hasActive) {
+      setOpen(true);
+    }
+  }, [hasActive]);
 
   return (
     <div>

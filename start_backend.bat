@@ -16,6 +16,31 @@ echo.
 echo  ====================================================================
 echo.
 
+:: Discover Python
+if not defined PYTHON_EXE (
+    if exist "C:\gee_env\python.exe" (
+        set "PYTHON_EXE=C:\gee_env\python.exe"
+    ) else if exist "%~dp0backend\.venv\Scripts\python.exe" (
+        set "PYTHON_EXE=%~dp0backend\.venv\Scripts\python.exe"
+    ) else (
+        set "PYTHON_EXE=python"
+    )
+)
+
+:: Discover Ngrok
+if not defined NGROK_EXE (
+    where ngrok >nul 2>&1
+    if not errorlevel 1 (
+        set "NGROK_EXE=ngrok"
+    ) else if exist "C:\Users\ADMIN\Desktop\Private\ngrok.exe" (
+        set "NGROK_EXE=C:\Users\ADMIN\Desktop\Private\ngrok.exe"
+    ) else if exist "%~dp0ngrok.exe" (
+        set "NGROK_EXE=%~dp0ngrok.exe"
+    ) else (
+        set "NGROK_EXE=ngrok"
+    )
+)
+
 :: [1/4] Ensure AI Runtime (Ollama) is running
 echo  [1/4] Checking AI Runtime...
 curl.exe -s http://127.0.0.1:11434/api/tags >nul 2>&1
@@ -53,7 +78,7 @@ taskkill /IM ngrok.exe /F >nul 2>&1
 powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }" >nul 2>&1
 
 pushd "%~dp0backend"
-start "MCGSE Backend" /min C:\gee_env\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+start "MCGSE Backend" /min "%PYTHON_EXE%" -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 popd
 
 :: Wait for local backend to be healthy
@@ -85,7 +110,7 @@ echo.
 :: [3/4] Start Ngrok tunnel with static domain
 echo  [3/4] Starting Ngrok public tunnel...
 taskkill /IM ngrok.exe /F >nul 2>&1
-start "MCGSE Ngrok Tunnel" /min "C:\Users\ADMIN\Desktop\Private\ngrok.exe" http 8000 --url https://outreach-freely-causal.ngrok-free.dev --log stdout
+start "MCGSE Ngrok Tunnel" /min "%NGROK_EXE%" http 8000 --url https://outreach-freely-causal.ngrok-free.dev --log stdout
 
 :: Brief 2-second settle time for ngrok process to bind
 powershell -NoProfile -Command "Start-Sleep -Seconds 2" >nul 2>&1
@@ -152,7 +177,7 @@ if errorlevel 1 (
     echo  [%TIME%] [WATCHDOG] Backend crashed! Restarting FastAPI on port 8000...
     powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }" >nul 2>&1
     pushd "%~dp0backend"
-    start "MCGSE Backend" /min C:\gee_env\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+    start "MCGSE Backend" /min "%PYTHON_EXE%" -m uvicorn app.main:app --host 0.0.0.0 --port 8000
     popd
     set BACKEND_BACK=0
     for /L %%I in (1,1,20) do (
@@ -176,7 +201,7 @@ if errorlevel 1 (
 tasklist /FI "IMAGENAME eq ngrok.exe" 2>nul | find /I "ngrok.exe" >nul 2>&1
 if errorlevel 1 (
     echo  [%TIME%] [WATCHDOG] Ngrok process died! Restarting...
-    start "MCGSE Ngrok Tunnel" /min "C:\Users\ADMIN\Desktop\Private\ngrok.exe" http 8000 --url https://outreach-freely-causal.ngrok-free.dev --log stdout
+    start "MCGSE Ngrok Tunnel" /min "%NGROK_EXE%" http 8000 --url https://outreach-freely-causal.ngrok-free.dev --log stdout
     powershell -NoProfile -Command "Start-Sleep -Seconds 3" >nul 2>&1
     echo  [%TIME%] [WATCHDOG] Ngrok restarted successfully.
 )

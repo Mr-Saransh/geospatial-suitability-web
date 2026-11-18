@@ -322,9 +322,14 @@ export default function Navbar({
               >
                 MCGSE
               </span>
-              <span className="text-[11px] text-[var(--c-text3)] font-mono font-medium">Web-GIS</span>
+              <span className="text-[11px] text-[var(--c-text3)] font-mono font-medium">
+                Web-GIS
+              </span>
             </div>
-            <IconSidebar size={15} style={{ color: sidebarOpen ? "var(--c-accent)" : "var(--c-text3)" }} />
+            <IconSidebar
+              size={15}
+              style={{ color: sidebarOpen ? "var(--c-accent)" : "var(--c-text3)" }}
+            />
           </button>
 
           {/* Model selector dropdown */}
@@ -342,7 +347,10 @@ export default function Navbar({
               <span
                 className="w-2 h-2 rounded-full flex-shrink-0"
                 style={{
-                  background: model === "Cyclone" || model === "Drought" ? "var(--c-sand)" : "var(--c-accent)",
+                  background:
+                    model === "Cyclone" || model === "Drought"
+                      ? "var(--c-sand)"
+                      : "var(--c-accent)",
                 }}
               />
               <span className="font-semibold">{model}</span>
@@ -486,14 +494,17 @@ export default function Navbar({
                         border: "1px solid var(--c-border)",
                       }}
                     >
-                      {s.isOutsideHp ? "Outside Bounds" : s.type === "coordinate" ? "Coords" : "Location"}
+                      {s.isOutsideHp
+                        ? "Outside Bounds"
+                        : s.type === "coordinate"
+                          ? "Coords"
+                          : "Location"}
                     </span>
                   </button>
                 ))}
               </div>
             )}
           </div>
-
 
           {/* Compare Layers Action Button (Beside Search on Desktop/Tablet) */}
           <button
@@ -506,7 +517,10 @@ export default function Navbar({
               color: compareOpen ? "var(--c-accent)" : "var(--c-text2)",
             }}
           >
-            <IconCompare size={15} style={{ color: compareOpen ? "var(--c-accent)" : "var(--c-text2)" }} />
+            <IconCompare
+              size={15}
+              style={{ color: compareOpen ? "var(--c-accent)" : "var(--c-text2)" }}
+            />
             <span>Compare</span>
           </button>
         </div>
@@ -528,30 +542,6 @@ export default function Navbar({
             <NavBtn label="Export" Icon={IconExport} onClick={onExport} />
             <NavBtn label="Help" Icon={IconHelp} onClick={onHelp} />
           </div>
-
-          {/* Backend Connection Status Badge */}
-          <button
-            onClick={() => setConnectionOpen(true)}
-            title={`Backend Status: ${backendStatus} — Click to view / change API URL`}
-            className="flex items-center gap-1.5 h-9 sm:h-10 px-2 sm:px-2.5 rounded-lg text-xs font-mono font-medium transition-colors hover:bg-[rgba(255,255,255,0.06)] cursor-pointer"
-            style={{
-              background: "var(--c-panel)",
-              border: "1px solid var(--c-border)",
-            }}
-          >
-            <span
-              className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                backendStatus === "connected"
-                  ? "bg-[#00c896]"
-                  : backendStatus === "connecting"
-                  ? "bg-[#f59e0b] animate-pulse"
-                  : "bg-[#ef4444]"
-              }`}
-            />
-            <span className="hidden sm:inline text-[11px] text-[var(--c-text2)] capitalize">
-              {backendStatus === "connected" ? "Live" : backendStatus === "connecting" ? "Sync" : "Offline"}
-            </span>
-          </button>
 
           {/* Theme Switcher */}
           <button
@@ -614,7 +604,10 @@ export default function Navbar({
                   }}
                 >
                   <div className="flex items-center gap-2.5">
-                    <IconLayers size={16} style={{ color: layersOpen ? "var(--c-accent)" : "var(--c-text2)" }} />
+                    <IconLayers
+                      size={16}
+                      style={{ color: layersOpen ? "var(--c-accent)" : "var(--c-text2)" }}
+                    />
                     <span className="font-medium">Map Layers</span>
                   </div>
                   {layerCount !== undefined && (
@@ -643,12 +636,13 @@ export default function Navbar({
                   }}
                 >
                   <div className="flex items-center gap-2.5">
-                    <IconCompare size={16} style={{ color: compareOpen ? "var(--c-accent)" : "var(--c-text2)" }} />
+                    <IconCompare
+                      size={16}
+                      style={{ color: compareOpen ? "var(--c-accent)" : "var(--c-text2)" }}
+                    />
                     <span className="font-medium">Compare Layers</span>
                   </div>
-                  {compareOpen && (
-                    <span className="w-2 h-2 rounded-full bg-[var(--c-accent)]" />
-                  )}
+                  {compareOpen && <span className="w-2 h-2 rounded-full bg-[var(--c-accent)]" />}
                 </button>
 
                 {/* 3. Analytics (Mobile) */}
@@ -664,12 +658,13 @@ export default function Navbar({
                   }}
                 >
                   <div className="flex items-center gap-2.5">
-                    <IconChart size={16} style={{ color: rightOpen ? "var(--c-accent)" : "var(--c-text2)" }} />
+                    <IconChart
+                      size={16}
+                      style={{ color: rightOpen ? "var(--c-accent)" : "var(--c-text2)" }}
+                    />
                     <span className="font-medium">Analytics & Stats</span>
                   </div>
-                  {rightOpen && (
-                    <span className="w-2 h-2 rounded-full bg-[var(--c-accent)]" />
-                  )}
+                  {rightOpen && <span className="w-2 h-2 rounded-full bg-[var(--c-accent)]" />}
                 </button>
 
                 {/* 4. MCGSE AI (Mobile) */}
@@ -685,12 +680,13 @@ export default function Navbar({
                   }}
                 >
                   <div className="flex items-center gap-2.5">
-                    <IconBot size={16} style={{ color: aiOpen ? "var(--c-accent)" : "var(--c-text2)" }} />
+                    <IconBot
+                      size={16}
+                      style={{ color: aiOpen ? "var(--c-accent)" : "var(--c-text2)" }}
+                    />
                     <span className="font-medium">MCGSE AI Assistant</span>
                   </div>
-                  {aiOpen && (
-                    <span className="w-2 h-2 rounded-full bg-[var(--c-accent)]" />
-                  )}
+                  {aiOpen && <span className="w-2 h-2 rounded-full bg-[var(--c-accent)]" />}
                 </button>
 
                 {/* Divider on mobile before secondary actions */}
@@ -725,7 +721,6 @@ export default function Navbar({
               </div>
             )}
           </div>
-
         </div>
       </div>
 
@@ -738,12 +733,7 @@ export default function Navbar({
       )}
 
       {/* Backdrop for model selector dropdown */}
-      {modelOpen && (
-        <div
-          className="fixed inset-0 z-[1200]"
-          onClick={() => setModelOpen(false)}
-        />
-      )}
+      {modelOpen && <div className="fixed inset-0 z-[1200]" onClick={() => setModelOpen(false)} />}
 
       {/* Backend & Tunnel Connection Modal */}
       <ConnectionModal

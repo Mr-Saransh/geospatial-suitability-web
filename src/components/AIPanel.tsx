@@ -9,7 +9,15 @@ import type {
   AIDoneStreamEvent,
 } from "../lib/api/types";
 import { api } from "../lib/api/client";
-import { IconBot, IconSend, IconX, IconInfo, IconChevronD, IconChevronU, IconRefresh } from "../icons";
+import {
+  IconBot,
+  IconSend,
+  IconX,
+  IconInfo,
+  IconChevronD,
+  IconChevronU,
+  IconRefresh,
+} from "../icons";
 import { Btn } from "../ui";
 
 interface Props {
@@ -27,21 +35,36 @@ interface Props {
 function formatMarkdown(text: string): string {
   const formatted = text
     // Markdown headers
-    .replace(/^### (.*?)$/gm, '<h4 style="font-weight:700;font-size:13px;color:var(--c-text);margin-top:10px;margin-bottom:4px;letter-spacing:-0.01em">$1</h4>')
-    .replace(/^## (.*?)$/gm, '<h3 style="font-weight:700;font-size:14px;color:var(--c-text);margin-top:12px;margin-bottom:6px;letter-spacing:-0.01em">$1</h3>')
+    .replace(
+      /^### (.*?)$/gm,
+      '<h4 style="font-weight:700;font-size:13px;color:var(--c-text);margin-top:10px;margin-bottom:4px;letter-spacing:-0.01em">$1</h4>',
+    )
+    .replace(
+      /^## (.*?)$/gm,
+      '<h3 style="font-weight:700;font-size:14px;color:var(--c-text);margin-top:12px;margin-bottom:6px;letter-spacing:-0.01em">$1</h3>',
+    )
     // Callouts / blockquotes
-    .replace(/^> (.*?)$/gm, '<div style="border-left:3px solid var(--c-accent);padding:4px 10px;margin:8px 0;background:var(--c-accent-dim);border-radius:0 6px 6px 0;font-size:11px;color:var(--c-text2);line-height:1.45">$1</div>')
+    .replace(
+      /^> (.*?)$/gm,
+      '<div style="border-left:3px solid var(--c-accent);padding:4px 10px;margin:8px 0;background:var(--c-accent-dim);border-radius:0 6px 6px 0;font-size:11px;color:var(--c-text2);line-height:1.45">$1</div>',
+    )
     // Bold & italic
     .replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--c-text);font-weight:600">$1</strong>')
     .replace(/\*(.*?)\*/g, '<em style="color:var(--c-text2)">$1</em>')
     // Inline code
     .replace(
       /`([^`]+)`/g,
-      '<code style="background:var(--c-panel);padding:1px 5px;border-radius:4px;font-family:var(--font-mono);color:var(--c-accent);font-size:11px">$1</code>'
+      '<code style="background:var(--c-panel);padding:1px 5px;border-radius:4px;font-family:var(--font-mono);color:var(--c-accent);font-size:11px">$1</code>',
     )
     // Ordered and unordered lists
-    .replace(/^([0-9]+)\. (.*?)$/gm, '<li style="margin-left:18px;list-style-type:decimal;margin-bottom:3px">$2</li>')
-    .replace(/^[-•] (.*?)$/gm, '<li style="margin-left:16px;list-style-type:disc;margin-bottom:3px">$1</li>')
+    .replace(
+      /^([0-9]+)\. (.*?)$/gm,
+      '<li style="margin-left:18px;list-style-type:decimal;margin-bottom:3px">$2</li>',
+    )
+    .replace(
+      /^[-•] (.*?)$/gm,
+      '<li style="margin-left:16px;list-style-type:disc;margin-bottom:3px">$1</li>',
+    )
     // Double newlines as paragraphs
     .replace(/\n\n/g, '</p><p style="margin-top:8px">')
     // Single newlines
@@ -55,14 +78,33 @@ function isCoordinateOrDataQuestion(question: string): boolean {
   if (!q) return false;
 
   // Greetings or general introduction
-  const greetings = ["hi", "hello", "hey", "howdy", "good morning", "good evening", "who are you", "what can you do"];
+  const greetings = [
+    "hi",
+    "hello",
+    "hey",
+    "howdy",
+    "good morning",
+    "good evening",
+    "who are you",
+    "what can you do",
+  ];
   if (greetings.includes(q)) return false;
 
   // Conceptual questions like "what is gis in 10 words?" or "what is gis?"
   const conceptualStarts = [
-    "what is gis", "what's gis", "what does gis", "define gis", "explain gis",
-    "what is mcda", "what is ahp", "what is remote sensing", "what is dem",
-    "who are you", "what are you", "what can you do", "how does this work",
+    "what is gis",
+    "what's gis",
+    "what does gis",
+    "define gis",
+    "explain gis",
+    "what is mcda",
+    "what is ahp",
+    "what is remote sensing",
+    "what is dem",
+    "who are you",
+    "what are you",
+    "what can you do",
+    "how does this work",
   ];
   for (const prefix of conceptualStarts) {
     if (q.startsWith(prefix) || q === prefix) {
@@ -74,14 +116,65 @@ function isCoordinateOrDataQuestion(question: string): boolean {
 
   // Coordinate / Location / Construction indicators
   const coordPatterns = [
-    "here", "this place", "this location", "this point", "this spot", "this site", "this area",
-    "these coordinates", "selected point", "clicked point", "my location", "at point", "at coordinate",
-    "coordinate", "coordinates", "latitude", "longitude", "lat", "lon", "lng",
-    "build", "house", "home", "building", "construct", "construction", "safe to build",
-    "suitable", "suitability", "risk here", "hazard here", "flood here", "landslide here",
-    "score here", "limiting criteria", "limiting factor", "top factor", "primary factor",
-    "contributing factor", "why is this", "why classified", "why very low", "why low", "why moderate", "why high",
-    "shimla", "mandi", "kullu", "manali", "solan", "dharamshala", "kangra", "chamba", "bilaspur", "una", "hamirpur", "kinnaur", "lahaul", "spiti"
+    "here",
+    "this place",
+    "this location",
+    "this point",
+    "this spot",
+    "this site",
+    "this area",
+    "these coordinates",
+    "selected point",
+    "clicked point",
+    "my location",
+    "at point",
+    "at coordinate",
+    "coordinate",
+    "coordinates",
+    "latitude",
+    "longitude",
+    "lat",
+    "lon",
+    "lng",
+    "build",
+    "house",
+    "home",
+    "building",
+    "construct",
+    "construction",
+    "safe to build",
+    "suitable",
+    "suitability",
+    "risk here",
+    "hazard here",
+    "flood here",
+    "landslide here",
+    "score here",
+    "limiting criteria",
+    "limiting factor",
+    "top factor",
+    "primary factor",
+    "contributing factor",
+    "why is this",
+    "why classified",
+    "why very low",
+    "why low",
+    "why moderate",
+    "why high",
+    "shimla",
+    "mandi",
+    "kullu",
+    "manali",
+    "solan",
+    "dharamshala",
+    "kangra",
+    "chamba",
+    "bilaspur",
+    "una",
+    "hamirpur",
+    "kinnaur",
+    "lahaul",
+    "spiti",
   ];
   if (coordPatterns.some((k) => q.includes(k))) return true;
 
@@ -90,21 +183,70 @@ function isCoordinateOrDataQuestion(question: string): boolean {
 
   // Data / Factor / Weight / Statistics indicators
   const dataPatterns = [
-    "data", "dataset", "datasets", "evidence", "facts", "inspect facts", "weight", "weights",
-    "statistic", "statistics", "stats", "distribution", "percentage", "percent", "breakdown",
-    "coverage", "raster", "pixel", "raw value", "matrix", "pairwise", "consistency ratio",
-    "cr value", "values", "numbers", "compare models", "model comparison", "criteria"
+    "data",
+    "dataset",
+    "datasets",
+    "evidence",
+    "facts",
+    "inspect facts",
+    "weight",
+    "weights",
+    "statistic",
+    "statistics",
+    "stats",
+    "distribution",
+    "percentage",
+    "percent",
+    "breakdown",
+    "coverage",
+    "raster",
+    "pixel",
+    "raw value",
+    "matrix",
+    "pairwise",
+    "consistency ratio",
+    "cr value",
+    "values",
+    "numbers",
+    "compare models",
+    "model comparison",
+    "criteria",
   ];
   if (dataPatterns.some((k) => q.includes(k))) return true;
 
   // Layer-specific data inquiries
   const layerNames = [
-    "slope", "rainfall", "flow accumulation", "elevation",
-    "distance to rivers", "twi", "aspect", "curvature",
-    "soil", "lithology", "land use", "lulc", "ndvi", "fault"
+    "slope",
+    "rainfall",
+    "flow accumulation",
+    "elevation",
+    "distance to rivers",
+    "twi",
+    "aspect",
+    "curvature",
+    "soil",
+    "lithology",
+    "land use",
+    "lulc",
+    "ndvi",
+    "fault",
   ];
   if (layerNames.some((layer) => q.includes(layer))) {
-    const dataTerms = ["value", "number", "level", "contrib", "rating", "measure", "score", "high", "low", "much", "many", "how steep", "data"];
+    const dataTerms = [
+      "value",
+      "number",
+      "level",
+      "contrib",
+      "rating",
+      "measure",
+      "score",
+      "high",
+      "low",
+      "much",
+      "many",
+      "how steep",
+      "data",
+    ];
     if (dataTerms.some((dt) => q.includes(dt))) return true;
   }
 
@@ -131,17 +273,25 @@ function EvidenceAccordion({
   const comp = evidence.model_comparison;
 
   const handleCopy = () => {
-    const lines: string[] = [`## Verified Spatial Facts (${evidence.model_name || evidence.model_id})`];
+    const lines: string[] = [
+      `## Verified Spatial Facts (${evidence.model_name || evidence.model_id})`,
+    ];
     if (coords) {
-      lines.push(`- Coordinates: ${coords.latitude.toFixed(4)}°N, ${coords.longitude.toFixed(4)}°E`);
+      lines.push(
+        `- Coordinates: ${coords.latitude.toFixed(4)}°N, ${coords.longitude.toFixed(4)}°E`,
+      );
       if (evidence.suitability_score != null) {
-        lines.push(`- Score: ${evidence.suitability_score.toFixed(2)} (${evidence.suitability_label || ""})`);
+        lines.push(
+          `- Score: ${evidence.suitability_score.toFixed(2)} (${evidence.suitability_label || ""})`,
+        );
       }
     }
     if (items.length > 0) {
       lines.push("\n### Atomic Evidence Items:");
       items.forEach((it) => {
-        lines.push(`- [${it.category}] ${it.label}: ${it.value} ${it.unit || ""} (Source: ${it.source})`);
+        lines.push(
+          `- [${it.category}] ${it.label}: ${it.value} ${it.unit || ""} (Source: ${it.source})`,
+        );
       });
     }
     navigator.clipboard.writeText(lines.join("\n"));
@@ -249,7 +399,10 @@ function EvidenceAccordion({
                       {String(it.value)} {it.unit ? `${it.unit}` : ""}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between text-[9px]" style={{ color: "var(--c-text3)" }}>
+                  <div
+                    className="flex items-center justify-between text-[9px]"
+                    style={{ color: "var(--c-text3)" }}
+                  >
                     <span className="truncate max-w-[200px]">Source: {it.source}</span>
                     {it.coverage_status && <span className="font-mono">{it.coverage_status}</span>}
                   </div>
@@ -274,7 +427,8 @@ function EvidenceAccordion({
                     <div className="flex justify-between">
                       <span className="text-[var(--c-text3)]">Suitability Score</span>
                       <span className="font-mono text-[var(--c-accent)] font-semibold">
-                        {pt.suitability_score.toFixed(2)} / 5.00 ({pt.suitability_label || `Class ${pt.suitability_class}`})
+                        {pt.suitability_score.toFixed(2)} / 5.00 (
+                        {pt.suitability_label || `Class ${pt.suitability_class}`})
                       </span>
                     </div>
                   )}
@@ -289,7 +443,10 @@ function EvidenceAccordion({
                       <span
                         key={w.criterion}
                         className="px-1.5 py-0.2 rounded text-[9px] font-mono"
-                        style={{ background: "var(--c-surface)", border: "1px solid var(--c-border2)" }}
+                        style={{
+                          background: "var(--c-surface)",
+                          border: "1px solid var(--c-border2)",
+                        }}
                       >
                         {w.criterion.replace(/_/g, " ")}: {(w.weight * 100).toFixed(1)}%
                       </span>
@@ -318,6 +475,7 @@ function EvidenceAccordion({
 }
 
 export default function AIPanel({
+  open = true,
   zone,
   onClose,
   onLayerEvidence,
@@ -326,8 +484,7 @@ export default function AIPanel({
   isMobile = false,
 }: Props) {
   const isLandslide =
-    activeModelId.includes("landslide") ||
-    activeModelName.toLowerCase().includes("landslide");
+    activeModelId.includes("landslide") || activeModelName.toLowerCase().includes("landslide");
   const hazardName = isLandslide ? "Landslide" : activeModelName || "Flood";
 
   const [aiHealth, setAiHealth] = useState<AIHealthResponse | null>(null);
@@ -356,11 +513,14 @@ export default function AIPanel({
   }, []);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading, currentStageMessage]);
+    if (open) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [open, messages, loading, currentStageMessage]);
 
   // Support Escape to close
   useEffect(() => {
+    if (!open) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         onClose();
@@ -368,7 +528,7 @@ export default function AIPanel({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, [open, onClose]);
 
   const handleStopGenerating = useCallback(() => {
     if (abortControllerRef.current) {
@@ -475,8 +635,8 @@ export default function AIPanel({
                   next[lastIdx] = {
                     role: "assistant",
                     text: doneData.answer || next[lastIdx].text,
-                    evidence: shouldShowEvidence ? (doneData.evidence || undefined) : undefined,
-                    items: shouldShowEvidence ? (doneData.items || []) : [],
+                    evidence: shouldShowEvidence ? doneData.evidence || undefined : undefined,
+                    items: shouldShowEvidence ? doneData.items || [] : [],
                     warnings: doneData.warnings,
                     source: doneData.source,
                     modelUsed: doneData.model_used || undefined,
@@ -504,7 +664,7 @@ export default function AIPanel({
               });
             },
           },
-          controller.signal
+          controller.signal,
         );
       } catch (err: unknown) {
         if (!controller.signal.aborted) {
@@ -547,7 +707,7 @@ export default function AIPanel({
         abortControllerRef.current = null;
       }
     },
-    [activeModelId, zone, messages, loading]
+    [activeModelId, zone, messages, loading],
   );
 
   const handleRetry = useCallback(() => {
@@ -616,7 +776,7 @@ export default function AIPanel({
           </div>
         </div>
 
-        <Btn onClick={onClose} className="w-7 h-7 cursor-pointer" title="Close assistant (Esc)">
+        <Btn onClick={onClose} className="w-7 h-7 cursor-pointer" title="Minimize AI (Esc)">
           <IconX size={13} />
         </Btn>
       </div>
@@ -632,12 +792,11 @@ export default function AIPanel({
         <div className="flex items-center gap-1.5 min-w-0 text-[11px]">
           {zone ? (
             <span className="font-mono text-[var(--c-accent)] truncate">
-              📍 Point: {zone.lat.toFixed(3)}°N, {zone.lng.toFixed(3)}°E (Score {zone.score.toFixed(2)})
+              📍 Point: {zone.lat.toFixed(3)}°N, {zone.lng.toFixed(3)}°E (Score{" "}
+              {zone.score.toFixed(2)})
             </span>
           ) : (
-            <span className="font-mono text-[var(--c-text3)]">
-              Statewide Spatial Analysis
-            </span>
+            <span className="font-mono text-[var(--c-text3)]">Statewide Spatial Analysis</span>
           )}
         </div>
 
@@ -683,8 +842,8 @@ export default function AIPanel({
                     msg.role === "user"
                       ? "var(--c-accent)"
                       : msg.error
-                      ? "rgba(239, 68, 68, 0.4)"
-                      : "var(--c-border)"
+                        ? "rgba(239, 68, 68, 0.4)"
+                        : "var(--c-border)"
                   }`,
                 }}
               >
@@ -840,7 +999,10 @@ export default function AIPanel({
             <IconSend size={14} />
           </button>
         </div>
-        <div className="flex items-center justify-between mt-1.5 text-[10px]" style={{ color: "var(--c-text3)" }}>
+        <div
+          className="flex items-center justify-between mt-1.5 text-[10px]"
+          style={{ color: "var(--c-text3)" }}
+        >
           <div className="flex items-center gap-1">
             <IconInfo size={10} />
             <span>Evidence-grounded spatial intelligence</span>
@@ -857,8 +1019,14 @@ export default function AIPanel({
 
   if (isMobile) {
     return (
-      <div className="fixed inset-x-0 top-0 bottom-14 z-[1250] flex flex-col justify-end pointer-events-none">
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs pointer-events-auto" onClick={onClose} />
+      <div
+        className="fixed inset-x-0 top-0 bottom-14 z-[1250] flex flex-col justify-end pointer-events-none"
+        style={{ display: open ? "flex" : "none" }}
+      >
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs pointer-events-auto"
+          onClick={onClose}
+        />
         <div
           className="relative z-10 flex flex-col shadow-2xl bottom-sheet-enter mobile-bottom-sheet overflow-hidden pointer-events-auto"
           style={{
@@ -872,9 +1040,7 @@ export default function AIPanel({
           }}
         >
           <div className="drag-handle flex-shrink-0" />
-          <div className="flex-1 min-h-0 flex flex-col overflow-hidden pb-3">
-            {panelContent}
-          </div>
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden pb-3">{panelContent}</div>
         </div>
       </div>
     );
@@ -884,6 +1050,7 @@ export default function AIPanel({
     <div
       className="fixed right-3 bottom-3 top-14 z-[1200] w-[370px] max-w-[calc(100vw-24px)] flex flex-col rounded-xl shadow-2xl overflow-hidden backdrop-blur-md"
       style={{
+        display: open ? "flex" : "none",
         background: "var(--c-surface)",
         border: "1px solid var(--c-border)",
         boxShadow: "0 18px 48px rgba(0,0,0,0.6)",

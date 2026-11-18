@@ -758,7 +758,9 @@ function CoverageTab({
         }}
       >
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-[var(--c-text)]">Data Sources & Integrity</span>
+          <span className="text-xs font-semibold text-[var(--c-text)]">
+            Data Sources & Integrity
+          </span>
           {onOpenHelp && (
             <button
               onClick={() => onOpenHelp("data-models")}
@@ -777,5 +779,3 @@ function CoverageTab({
     </div>
   );
 }
-
-

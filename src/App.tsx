@@ -92,7 +92,9 @@ export default function App() {
   const [activeModelName, setActiveModelName] = useState("Flood");
   const [modelDetail, setModelDetail] = useState<ModelDetail | null>(null);
   const [statistics, setStatistics] = useState<AnalysisStatistics | null>(null);
-  const [backendStatus, setBackendStatus] = useState<"connected" | "connecting" | "offline">("connecting");
+  const [backendStatus, setBackendStatus] = useState<"connected" | "connecting" | "offline">(
+    "connecting",
+  );
 
   // Layers state — default to the canonical available-evidence classified product
   const [layers, setLayers] = useState<Layer[]>(INITIAL_LAYERS);
@@ -184,12 +186,9 @@ export default function App() {
       }
 
       if (layersRes.length > 0) {
-        // Filter: show only RESULT layers (classified/continuous), not raw factors or ratings
+        // Filter out internal bitmask raster from public layers
         const publicLayersRes = layersRes.filter(
-          (l: LayerInfo) =>
-            !l.product_id.includes("bitmask") &&
-            !l.layer_name?.includes("bitmask") &&
-            (l.type === "RESULT" || l.product_id.includes("suitability")),
+          (l: LayerInfo) => !l.product_id.includes("bitmask") && !l.layer_name?.includes("bitmask"),
         );
 
         const defaultClassifiedId = publicLayersRes.find(
@@ -245,7 +244,7 @@ export default function App() {
             criterion_id: l.criterion_id,
             group,
             groupLabel,
-            visible: l.product_id === (defaultClassifiedId || layersRes[0].product_id),
+            visible: l.product_id === (defaultClassifiedId || publicLayersRes[0].product_id),
             opacity: isResult ? 85 : 75,
             unit: l.unit || critMeta?.unit || "",
             source: l.description || critMeta?.source || "Canonical Spatial Package",
@@ -424,25 +423,30 @@ export default function App() {
   );
 
   const handleSelectLayer = (id: string) => {
-    setActiveLayerId(id);
+    const targetLayer = layers.find((l) => l.id === id || l.criterion_id === id);
+    const targetId = targetLayer ? targetLayer.id : id;
+    setActiveLayerId(targetId);
     // Radio-style: only one layer visible at a time
     setLayers((prev) =>
       prev.map((l) => ({
         ...l,
-        visible: l.id === id,
+        visible: l.id === targetId,
       })),
     );
   };
 
   const handleLayerEvidence = (id: string) => {
-    setActiveLayerId(id);
+    const targetLayer = layers.find((l) => l.id === id || l.criterion_id === id);
+    const targetId = targetLayer ? targetLayer.id : id;
+    setActiveLayerId(targetId);
     // Radio-style: only one layer visible at a time
     setLayers((prev) =>
       prev.map((l) => ({
         ...l,
-        visible: l.id === id,
+        visible: l.id === targetId,
       })),
     );
+    setLayersOpen(true);
   };
 
   const handleModelChange = (modelName: string) => {
@@ -618,18 +622,17 @@ export default function App() {
           />
 
           {/* Independent Floating AI Assistant Panel */}
-          {aiOpen && (
-            <AIPanel
-              zone={selectedZone}
-              activeLayer={activeLayer}
-              onClose={() => setAiOpen(false)}
-              onLayerEvidence={handleLayerEvidence}
-              onSelectLayer={handleSelectLayer}
-              activeModelId={activeModelId}
-              activeModelName={activeModelName}
-              isMobile={isMobile}
-            />
-          )}
+          <AIPanel
+            open={aiOpen}
+            zone={selectedZone}
+            activeLayer={activeLayer}
+            onClose={() => setAiOpen(false)}
+            onLayerEvidence={handleLayerEvidence}
+            onSelectLayer={handleSelectLayer}
+            activeModelId={activeModelId}
+            activeModelName={activeModelName}
+            isMobile={isMobile}
+          />
 
           {/* Quick Floating inspection result chip if coordinate selected and right panel closed */}
           {coordinateSelected && selectedZone && !rightOpen && (

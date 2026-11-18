@@ -20,6 +20,7 @@ import logging
 import math
 import sqlite3
 import struct
+import time
 from pathlib import Path
 from typing import Any
 
@@ -132,6 +133,8 @@ class SpatialKnowledgeRepository:
         self.aliases: dict[str, dict] = {}
         self.loaded = False
         self._boundary_cache: dict[str, dict] = {}
+        self._package_mtimes: dict[str, float] = {}  # root_path_str -> manifest mtime
+        self._last_refresh_check: float = 0.0
 
     def load(self) -> None:
         """
@@ -150,9 +153,16 @@ class SpatialKnowledgeRepository:
         self._layers_by_product_id.clear()
         self._layers_by_model.clear()
         self.aliases.clear()
+        self._package_mtimes.clear()
 
         for root in all_roots:
             self._load_package(root)
+            m_path = root / "manifest.json"
+            if m_path.exists():
+                try:
+                    self._package_mtimes[str(root)] = m_path.stat().st_mtime
+                except OSError:
+                    pass
 
         self.loaded = True
         logger.info(
@@ -161,6 +171,83 @@ class SpatialKnowledgeRepository:
             len(self.layers),
             len(self.packages),
         )
+
+    def check_refresh(self, min_interval: float = 2.0) -> bool:
+        """
+        Check if any configured package has been updated or newly published on disk.
+        Throttled by min_interval to prevent filesystem overhead on high-frequency requests.
+        Ensures failed publications do not replace active packages (validates before swap).
+        Returns True if a reload occurred.
+        """
+        now = time.time()
+        if now - self._last_refresh_check < min_interval:
+            return False
+        self._last_refresh_check = now
+
+        all_roots = settings.all_configured_roots()
+        changed = False
+
+        # Check if number of configured roots changed
+        current_root_strs = {str(r) for r in all_roots}
+        if set(self._package_mtimes.keys()) != current_root_strs:
+            changed = True
+
+        if not changed:
+            for root in all_roots:
+                m_path = root / "manifest.json"
+                if not m_path.exists():
+                    continue
+                try:
+                    mtime = m_path.stat().st_mtime
+                    if (
+                        str(root) not in self._package_mtimes
+                        or mtime > self._package_mtimes[str(root)]
+                    ):
+                        changed = True
+                        break
+                except OSError:
+                    continue
+
+        if not changed:
+            return False
+
+        # Validate that manifests are well-formed before reloading
+        for root in all_roots:
+            m_path = root / "manifest.json"
+            if m_path.exists():
+                try:
+                    with open(m_path, encoding="utf-8") as f:
+                        test_manifest = json.load(f)
+                    if not test_manifest.get("model_id") or not test_manifest.get(
+                        "layers"
+                    ):
+                        logger.warning(
+                            "Package at %s has incomplete manifest during refresh check; skipping refresh",
+                            root.name,
+                        )
+                        return False
+                except Exception as ex:
+                    logger.warning(
+                        "Package at %s has corrupt manifest (%s); skipping refresh",
+                        root.name,
+                        ex,
+                    )
+                    return False
+
+        logger.info(
+            "Package change detected on disk. Refreshing Spatial Knowledge Repository..."
+        )
+        self.load()
+
+        # Invalidate raster caches in raster_service
+        try:
+            from app.services.raster_service import invalidate_caches
+
+            invalidate_caches()
+        except ImportError:
+            pass
+
+        return True
 
     def _load_package(self, root: Path) -> None:
         """Load a single Spatial Knowledge Package directory."""
@@ -357,10 +444,35 @@ class SpatialKnowledgeRepository:
             }
 
             model_layers.append(layer_dict)
-            self._layers_by_product_id[pid] = layer_dict
+            # Index by model-prefixed key to avoid multi-model collision
+            self._layers_by_product_id[f"{model_id}:{pid}"] = layer_dict
+            self._layers_by_product_id[f"{model_id}/{pid}"] = layer_dict
+            self._layers_by_product_id[f"{model_id}_{pid}"] = layer_dict
+
+            if pid.startswith(f"{model_id}_"):
+                stripped = pid[len(model_id) + 1 :]
+                self._layers_by_product_id[f"{model_id}:{stripped}"] = layer_dict
+                self._layers_by_product_id[f"{model_id}/{stripped}"] = layer_dict
+                if (
+                    stripped not in self._layers_by_product_id
+                    or "flood" in model_id.lower()
+                ):
+                    self._layers_by_product_id[stripped] = layer_dict
+
+            # Also index by plain pid (prefer flood/primary model or first registrant)
+            if pid not in self._layers_by_product_id or "flood" in model_id.lower():
+                self._layers_by_product_id[pid] = layer_dict
+
             # Also index by layer_name and relative_path basename
             if layer.get("layer_name") and layer["layer_name"] != pid:
-                self._layers_by_product_id[layer["layer_name"]] = layer_dict
+                lname = layer["layer_name"]
+                self._layers_by_product_id[f"{model_id}:{lname}"] = layer_dict
+                self._layers_by_product_id[f"{model_id}_{lname}"] = layer_dict
+                if (
+                    lname not in self._layers_by_product_id
+                    or "flood" in model_id.lower()
+                ):
+                    self._layers_by_product_id[lname] = layer_dict
 
         self._layers_by_model[model_id] = model_layers
         self.layers.extend(model_layers)
@@ -425,13 +537,66 @@ class SpatialKnowledgeRepository:
         """
         Lookup layer metadata by product_id, alias, or layer_name.
         Resolves legacy aliases transparently without duplicate files.
+        Safely disambiguates multi-model packages sharing common factor names (e.g. slope).
         """
+        self.check_refresh()
+
         if not layer_id:
             return None
 
         cleaned = layer_id.strip()
-        if ":" in cleaned:
-            cleaned = cleaned.split(":")[-1]
+
+        # Check for model prefix like "flood_11_factor_v1:slope" or "flood_11_factor_v1/slope"
+        for sep in (":", "/"):
+            if sep in cleaned:
+                prefix, remainder = cleaned.split(sep, 1)
+                if prefix in self.models:
+                    model_id = prefix
+                    cleaned = remainder
+                    break
+
+        # If model_id is provided, check model-scoped index and layers first
+        if model_id:
+            scoped_keys = [
+                f"{model_id}:{cleaned}",
+                f"{model_id}_{cleaned}",
+                cleaned,
+            ]
+            if cleaned.startswith(f"{model_id}_"):
+                stripped = cleaned[len(model_id) + 1 :]
+                scoped_keys.append(stripped)
+                scoped_keys.append(f"{model_id}:{stripped}")
+
+            for sk in scoped_keys:
+                if (
+                    sk in self._layers_by_product_id
+                    and self._layers_by_product_id[sk].get("model") == model_id
+                ):
+                    return self._layers_by_product_id[sk]
+
+            # Check model aliases
+            if cleaned in self.aliases:
+                target = self.aliases[cleaned].get("target")
+                if target:
+                    if f"{model_id}:{target}" in self._layers_by_product_id:
+                        return self._layers_by_product_id[f"{model_id}:{target}"]
+                    if f"{model_id}_{target}" in self._layers_by_product_id:
+                        return self._layers_by_product_id[f"{model_id}_{target}"]
+                    if target in self._layers_by_product_id:
+                        return self._layers_by_product_id[target]
+
+            # Model-scoped layer search
+            for layer in self._layers_by_model.get(model_id, []):
+                if layer["product_id"].lower() == cleaned.lower():
+                    return layer
+                if (
+                    layer.get("canonical_filename", "").lower()
+                    == f"{cleaned.lower()}.tif"
+                    or layer.get("canonical_filename", "").lower() == cleaned.lower()
+                ):
+                    return layer
+                if cleaned.lower() in layer["relative_path"].lower():
+                    return layer
 
         # 1. Check aliases
         if cleaned in self.aliases:
@@ -443,14 +608,8 @@ class SpatialKnowledgeRepository:
         if cleaned in self._layers_by_product_id:
             return self._layers_by_product_id[cleaned]
 
-        # 3. Model-scoped search if model_id provided
-        search_space = (
-            self._layers_by_model.get(model_id, self.layers)
-            if model_id
-            else self.layers
-        )
-
-        for layer in search_space:
+        # 3. Global search across all layers
+        for layer in self.layers:
             if layer["product_id"].lower() == cleaned.lower():
                 return layer
             if (
@@ -465,6 +624,7 @@ class SpatialKnowledgeRepository:
 
     def get_layers_for_model(self, model_id: str | None = None) -> list[dict]:
         """Return all layers belonging to a model, or all layers if model_id is None."""
+        self.check_refresh()
         if not model_id:
             return self.layers
         return self._layers_by_model.get(model_id, [])

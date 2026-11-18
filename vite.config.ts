@@ -7,7 +7,7 @@ import fs from "node:fs";
 // Load Figma site configuration if available (graceful fallback outside Figma Make)
 let siteConfiguration: Record<string, unknown> = {};
 try {
-  const sitePath = path.resolve(__dirname, "./.figma/make/site.json");
+  const sitePath = path.resolve(import.meta.dirname || process.cwd(), "./.figma/make/site.json");
   if (fs.existsSync(sitePath)) {
     siteConfiguration = JSON.parse(fs.readFileSync(sitePath, "utf-8"));
   }
@@ -36,7 +36,7 @@ export default defineConfig(({ mode }) => {
     ],
     resolve: {
       alias: {
-        "@": path.resolve(__dirname, "./src"),
+        "@": path.resolve(import.meta.dirname || process.cwd(), "./src"),
       },
     },
     server: {

@@ -341,9 +341,7 @@ export default function Sidebar({
                 <span className="text-[11px] font-medium text-[var(--c-text2)]">
                   {isLandslide ? "Landslide" : "Flood"} Susceptibility
                 </span>
-                <span className="text-[10px] font-mono text-[var(--c-text3)]">
-                  Canonical 1–5
-                </span>
+                <span className="text-[10px] font-mono text-[var(--c-text3)]">Canonical 1–5</span>
               </div>
 
               {/* Class rows */}
@@ -378,9 +376,7 @@ export default function Sidebar({
               </div>
 
               {/* Explanatory note */}
-              <div
-                className="text-[10.5px] leading-relaxed pt-1.5 border-t border-[var(--c-border)] text-[var(--c-text3)]"
-              >
+              <div className="text-[10.5px] leading-relaxed pt-1.5 border-t border-[var(--c-border)] text-[var(--c-text3)]">
                 Susceptibility is a relative model-based assessment, not a guaranteed event or
                 prediction.
               </div>
@@ -405,9 +401,7 @@ export default function Sidebar({
                     style={{
                       background: active ? "var(--c-accent-dim)" : "var(--c-panel)",
                       color: active ? "var(--c-accent)" : "var(--c-text2)",
-                      border: active
-                        ? "1px solid var(--c-accent)"
-                        : "1px solid var(--c-border)",
+                      border: active ? "1px solid var(--c-accent)" : "1px solid var(--c-border)",
                     }}
                   >
                     <b.Icon
@@ -465,9 +459,7 @@ function SideSection({
         className="flex items-center w-full px-3.5 py-2.5 transition-colors cursor-pointer select-none hover:bg-[rgba(255,255,255,0.02)]"
       >
         <SectionIcon type={icon} />
-        <span
-          className="flex-1 text-left text-[13px] font-semibold ml-2 text-[var(--c-text)]"
-        >
+        <span className="flex-1 text-left text-[13px] font-semibold ml-2 text-[var(--c-text)]">
           {label}
         </span>
         {actions && (
@@ -501,16 +493,12 @@ function DropdownField({
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[10.5px] text-[var(--c-text3)] font-medium">
-        {label}
-      </label>
+      <label className="text-[10.5px] text-[var(--c-text3)] font-medium">{label}</label>
       <div className="relative">
         <span className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none z-10">
           <DropdownIcon type={icon} />
         </span>
-        <div className="sidebar-select-wrapper [&>select]:pl-8">
-          {children}
-        </div>
+        <div className="sidebar-select-wrapper [&>select]:pl-8">{children}</div>
       </div>
     </div>
   );
