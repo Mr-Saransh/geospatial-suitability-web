@@ -21,6 +21,19 @@ import type {
 
 const STORAGE_KEY = "mcgse_api_url";
 
+/** Validate that candidate API URLs strictly use safe HTTP/HTTPS protocols */
+function isValidApiUrl(url: string): boolean {
+  if (!url) return false;
+  try {
+    // Relative path or absolute URL
+    if (url.startsWith("/")) return true;
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 /** Return the currently active backend base URL (no trailing slash). */
 export function getApiBaseUrl(): string {
   try {
@@ -29,16 +42,16 @@ export function getApiBaseUrl(): string {
       const queryApi = params.get("api");
       if (queryApi) {
         const clean = queryApi.trim().replace(/\/+$/, "");
-        if (clean) {
+        if (clean && isValidApiUrl(clean)) {
           localStorage.setItem(STORAGE_KEY, clean);
           return clean;
         }
       }
     }
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored && !stored.includes("trycloudflare.com")) {
+    if (stored && isValidApiUrl(stored) && !stored.includes("trycloudflare.com")) {
       return stored.replace(/\/+$/, "");
-    } else if (stored && stored.includes("trycloudflare.com")) {
+    } else if (stored) {
       localStorage.removeItem(STORAGE_KEY);
     }
   } catch {
@@ -51,7 +64,7 @@ export function getApiBaseUrl(): string {
 export function setApiBaseUrl(url: string): void {
   try {
     const clean = url.trim().replace(/\/+$/, "");
-    if (clean) {
+    if (clean && isValidApiUrl(clean)) {
       localStorage.setItem(STORAGE_KEY, clean);
     } else {
       localStorage.removeItem(STORAGE_KEY);

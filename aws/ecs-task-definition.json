@@ -40,7 +40,10 @@
           "name": "LANDSLIDE_SPATIAL_KNOWLEDGE_ROOT",
           "value": "/mnt/efs/Himachal_Pradesh_Spatial_Knowledge.gdb"
         },
-        { "name": "CORS_ORIGINS", "value": "*" },
+        { "name": "CORS_ORIGINS", "value": "https://gis.example.com" },
+        { "name": "ENABLE_SECURITY_HEADERS", "value": "true" },
+        { "name": "ENABLE_DOCS_IN_PRODUCTION", "value": "false" },
+        { "name": "MAX_REQUEST_BODY_SIZE", "value": "1048576" },
         { "name": "AI_RATE_LIMIT_PER_MINUTE", "value": "30" }
       ],
       "mountPoints": [

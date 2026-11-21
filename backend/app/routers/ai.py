@@ -10,6 +10,7 @@ Exposes:
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import json
 import logging
 import time
@@ -57,14 +58,44 @@ def _check_rate_limit(client_ip: str) -> None:
     _rate_limit_records[client_ip].append(now)
 
 
+def _is_ip_in_network_or_match(ip_str: str, target: str) -> bool:
+    try:
+        ip = ipaddress.ip_address(ip_str)
+        if "/" in target:
+            net = ipaddress.ip_network(target, strict=False)
+            return ip in net
+        return ip == ipaddress.ip_address(target)
+    except ValueError:
+        return False
+
+
+def _is_trusted_proxy(ip_str: str) -> bool:
+    for trusted in settings.trusted_proxies:
+        if _is_ip_in_network_or_match(ip_str, trusted):
+            return True
+    return False
+
+
 def _get_client_ip(request: Request) -> str:
-    """Extract client IP handling proxy headers securely."""
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    if request.client:
-        return request.client.host
-    return "127.0.0.1"
+    """
+    Extract client IP safely.
+    X-Forwarded-For is ONLY inspected if the direct connection originates
+    from a configured trusted proxy (e.g. ALB, CloudFront, Nginx reverse proxy).
+    This prevents rate-limit bypass via spoofed X-Forwarded-For headers from untrusted clients.
+    """
+    direct_ip = request.client.host if request.client else "127.0.0.1"
+
+    if _is_trusted_proxy(direct_ip):
+        forwarded = request.headers.get("X-Forwarded-For")
+        if forwarded:
+            candidates = [p.strip() for p in forwarded.split(",") if p.strip()]
+            for candidate in candidates:
+                try:
+                    ipaddress.ip_address(candidate)
+                    return candidate
+                except ValueError:
+                    continue
+    return direct_ip
 
 
 def _format_sse(event_type: str, data: dict[str, Any]) -> str:
@@ -132,8 +163,11 @@ async def ask_ai(req: AIAssistantRequest, request: Request):
 
     history_items: list[dict[str, str]] = []
     if req.history:
-        for h in req.history:
-            history_items.append({"role": h.role, "content": h.content})
+        for h in req.history[-settings.ai_max_history:]:
+            history_items.append({
+                "role": h.role,
+                "content": h.content[:settings.ai_max_question_length],
+            })
 
     try:
         generation = await ollama_service.generate_grounded_answer(
@@ -211,8 +245,11 @@ async def ask_ai_stream(req: AIAssistantRequest, request: Request):
 
     history_items: list[dict[str, str]] = []
     if req.history:
-        for h in req.history:
-            history_items.append({"role": h.role, "content": h.content})
+        for h in req.history[-settings.ai_max_history:]:
+            history_items.append({
+                "role": h.role,
+                "content": h.content[:settings.ai_max_question_length],
+            })
 
     async def event_generator() -> AsyncGenerator[str, None]:
         try:

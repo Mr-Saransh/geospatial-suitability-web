@@ -54,8 +54,9 @@ services:
     restart: unless-stopped
     profiles:
       - with-ai
+    # Bind strictly to host loopback to prevent exposing Ollama to the public network
     ports:
-      - "11434:11434"
+      - "127.0.0.1:11434:11434"
     volumes:
       - ollama-models:/root/.ollama
     networks:

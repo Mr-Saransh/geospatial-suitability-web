@@ -32,8 +32,18 @@ interface Props {
   isMobile?: boolean;
 }
 
+function escapeHtml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function formatMarkdown(text: string): string {
-  const formatted = text
+  const safeText = escapeHtml(text);
+  const formatted = safeText
     // Markdown headers
     .replace(
       /^### (.*?)$/gm,

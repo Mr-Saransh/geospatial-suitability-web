@@ -75,6 +75,20 @@ class SpatialKnowledgeSettings:
             os.getenv("AI_MAX_CONCURRENT_GENERATIONS", "2")
         )
 
+        # 4. Production Security Settings
+        self.trusted_proxies_raw: str = os.getenv(
+            "TRUSTED_PROXIES", "127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+        )
+        self.max_request_body_size: int = int(
+            os.getenv("MAX_REQUEST_BODY_SIZE", "1048576")  # 1 MB default
+        )
+        self.enable_security_headers: bool = (
+            os.getenv("ENABLE_SECURITY_HEADERS", "true").lower() in ("true", "1", "yes")
+        )
+        self.enable_docs_in_production: bool = (
+            os.getenv("ENABLE_DOCS_IN_PRODUCTION", "false").lower() in ("true", "1", "yes")
+        )
+
     @property
     def default_package_root(self) -> Path | None:
         """Default package root for generic queries."""
@@ -101,6 +115,25 @@ class SpatialKnowledgeSettings:
             origin.strip().strip("'\"").rstrip("/")
             for origin in self.cors_origins_raw.split(",")
             if origin.strip().strip("'\"")
+        ]
+
+    @property
+    def cors_allow_credentials(self) -> bool:
+        """
+        Credentials must never be allowed with wildcard '*' origin as per RFC/Fetch specs
+        and to prevent cross-site request hijacking.
+        """
+        return self.cors_origins != ["*"]
+
+    @property
+    def trusted_proxies(self) -> list[str]:
+        """Parsed list of trusted proxy IP addresses or subnets."""
+        if not self.trusted_proxies_raw:
+            return ["127.0.0.1", "::1"]
+        return [
+            p.strip().strip("'\"")
+            for p in self.trusted_proxies_raw.split(",")
+            if p.strip().strip("'\"")
         ]
 
     def get_package_root(self, model_id: str | None = None) -> Path:

@@ -516,6 +516,8 @@ class SpatialKnowledgeRepository:
         """
         if not relative_path:
             raise ValueError("Empty relative path")
+        if "\x00" in relative_path:
+            raise ValueError("Null byte detected in path")
         rel = Path(relative_path)
         if rel.is_absolute():
             raise ValueError(f"Unsafe absolute path: {relative_path}")
